@@ -1,0 +1,41 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Rust-analyzer
+rust-project.json
+
+# Benchmark results (criterion)
+target/criterion/
+
+# Hyperfine benchmark results
+benchmarks/hyperfine/*.md
+!benchmarks/hyperfine/compare.md
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Environment files
+.env
+.env.local
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.log
+
