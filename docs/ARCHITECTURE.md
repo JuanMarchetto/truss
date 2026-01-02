@@ -48,7 +48,7 @@ Editor / CLI / WASM
  truss-lsp / truss-cli / truss-wasm   (adapters)
         │
         ▼
-      truss-core  ←←← system core
+      truss-core  (system core)
         │
         ├─ Parser (tree-sitter)
         ├─ Incremental AST

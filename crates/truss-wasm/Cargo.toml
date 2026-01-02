@@ -1,0 +1,22 @@
+[package]
+name = "truss-wasm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "truss_wasm"
+path = "lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+truss-core = { path = "../truss-core" }
+
+# WASM dependencies will be added when implementation begins
+# wasm-bindgen = "0.2"
+
+# Note: Release profile optimization will be configured at workspace level
+# when WASM implementation begins
+

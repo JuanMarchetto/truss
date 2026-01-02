@@ -36,7 +36,7 @@ This fixture serves as a **baseline** for correctness and performance.
 
 ---
 
-### `medium-scheduled.yml`
+### `medium.yml`
 
 **Complexity:** Medium  
 **Characteristics:**

@@ -13,7 +13,7 @@ compare:
 	hyperfine \
 		--warmup 5 \
 		--export-markdown benchmarks/hyperfine/compare.md \
-		'./target/release/truss validate benchmarks/fixtures/large.yml' \
-		'competitors/yaml-language-server/run.sh benchmarks/fixtures/large.yml'
+		'./target/release/truss validate benchmarks/fixtures/complex-dynamic.yml' \
+		'competitors/yaml-language-server/run.sh benchmarks/fixtures/complex-dynamic.yml'
 
 ci: build test bench

@@ -1,0 +1,19 @@
+[package]
+name = "truss-lsp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "truss_lsp"
+path = "lib.rs"
+
+[dependencies]
+truss-core = { path = "../truss-core" }
+
+# LSP dependencies will be added when implementation begins
+# tower-lsp = "0.20"
+# tokio = { version = "1", features = ["full"] }
+

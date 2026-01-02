@@ -51,7 +51,7 @@ bench-cli:
 	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Running CLI benchmarks{{RESET}}"'
 	hyperfine \
 		--warmup 5 \
-		'./target/release/truss validate benchmarks/fixtures/large.yml'
+		'./target/release/truss validate benchmarks/fixtures/complex-dynamic.yml'
 
 # -------------------------
 # Compare (Truss vs competitors)

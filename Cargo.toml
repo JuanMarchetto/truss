@@ -1,9 +1,15 @@
-[package]
-name = "truss"
+[workspace]
+members = [
+    "crates/truss-core",
+    "crates/truss-cli",
+    "crates/truss-lsp",
+    "crates/truss-wasm",
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_yaml = "0.9"
-clap = { version = "4", features = ["derive"] }
+authors = ["Truss Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/truss"
