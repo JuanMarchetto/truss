@@ -125,7 +125,12 @@ impl ValidationRule for GitHubActionsSchemaRule {
         // Check if this looks like a GitHub Actions workflow
         // Basic check: should have 'name' or 'on' at top level
         let has_name = source.contains("name:");
-        let has_on = source.contains("on:");
+        
+        // Check for 'on:' at start of line (not 'runs-on:' etc)
+        let has_on = source.lines().any(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with("on:") || trimmed.starts_with("\"on\":") || trimmed.starts_with("'on':")
+        });
 
         if !has_name && !has_on {
             // Might not be a GitHub Actions workflow, skip validation

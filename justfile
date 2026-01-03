@@ -35,7 +35,11 @@ test:
 
 test-core:
 	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Running core tests{{RESET}}"'
-	cargo test -p truss-core
+	cargo test -p truss-core --no-fail-fast
+
+test-validation:
+	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Running all validation tests{{RESET}}"'
+	@bash scripts/test-validation.sh
 
 # -------------------------
 # Bench (Rust / Criterion)
@@ -70,12 +74,3 @@ compare-smoke:
 		'cargo run --release -- benchmarks/fixtures/simple.yml' \
 		'actionlint benchmarks/fixtures/simple.yml' \
 		'yamllint benchmarks/fixtures/simple.yml'
-
-# -------------------------
-# Full pipeline (local CI)
-# -------------------------
-ci:
-	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Running local CI pipeline{{RESET}}"'
-	just build
-	just test
-	just bench
