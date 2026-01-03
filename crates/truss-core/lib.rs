@@ -3,43 +3,119 @@
 //! Core validation and analysis engine for CI/CD pipelines.
 //! This crate is editor-agnostic and fully deterministic.
 
+mod ast;
+mod parser;
+mod validation;
+
 use std::fmt;
+use parser::YamlParser;
+use validation::{RuleSet, ValidationRule, NonEmptyRule, GitHubActionsSchemaRule, SyntaxRule};
 
 /// Entry point for the Truss validation engine.
-#[derive(Default)]
-pub struct TrussEngine;
+pub struct TrussEngine {
+    parser: YamlParser,
+    rules: RuleSet,
+}
 
 impl TrussEngine {
-    /// Creates a new engine instance.
+    /// Creates a new engine instance with default validation rules.
     ///
-    /// The engine is stateless for now, but this allows
-    /// future configuration without breaking the API.
+    /// The engine maintains parser state for incremental parsing,
+    /// but validation rules are stateless and reusable.
     pub fn new() -> Self {
-        Self
+        let mut rules = RuleSet::new();
+        rules.add_rule(SyntaxRule);
+        rules.add_rule(NonEmptyRule);
+        rules.add_rule(GitHubActionsSchemaRule);
+
+        Self {
+            parser: YamlParser::new(),
+            rules,
+        }
     }
 
     /// Analyze a YAML document and return diagnostics.
     ///
-    /// This function must:
-    /// - Be deterministic
-    /// - Avoid side effects
-    /// - Be cheap to call repeatedly
-    pub fn analyze(&self, source: &str) -> TrussResult {
-        // Placeholder parse logic.
-        // Real implementation will use tree-sitter.
-        if source.trim().is_empty() {
-            return TrussResult {
-                diagnostics: vec![Diagnostic {
-                    message: "Document is empty".to_string(),
-                    severity: Severity::Warning,
-                    span: Span::default(),
-                }],
-            };
-        }
+    /// This function:
+    /// - Parses YAML using tree-sitter
+    /// - Runs validation rules in parallel
+    /// - Returns deterministic results
+    /// - Is cheap to call repeatedly
+    pub fn analyze(&mut self, source: &str) -> TrussResult {
+        // Parse YAML
+        let tree = match self.parser.parse(source) {
+            Ok(tree) => tree,
+            Err(_) => {
+                // Parse failed, return syntax error
+                return TrussResult {
+                    diagnostics: vec![Diagnostic {
+                        message: "Failed to parse YAML".to_string(),
+                        severity: Severity::Error,
+                        span: Span {
+                            start: 0,
+                            end: source.len().min(100),
+                        },
+                    }],
+                };
+            }
+        };
 
-        TrussResult {
-            diagnostics: Vec::new(),
+        // Run validation rules in parallel
+        // Automatically uses parallel when beneficial (many rules)
+        if self.rules.rules().len() > 3 {
+            self.rules.validate_parallel(&tree, source)
+        } else {
+            self.rules.validate_sequential(&tree, source)
         }
+    }
+
+    /// Analyze with incremental parsing support.
+    ///
+    /// If an old_tree is provided, uses incremental parsing for better performance.
+    pub fn analyze_incremental(
+        &mut self,
+        source: &str,
+        old_tree: Option<&tree_sitter::Tree>,
+    ) -> TrussResult {
+        // Parse YAML incrementally if possible
+        let tree = match old_tree {
+            Some(old) => self.parser.parse_incremental(source, Some(old)),
+            None => self.parser.parse(source),
+        };
+
+        let tree = match tree {
+            Ok(tree) => tree,
+            Err(_) => {
+                return TrussResult {
+                    diagnostics: vec![Diagnostic {
+                        message: "Failed to parse YAML".to_string(),
+                        severity: Severity::Error,
+                        span: Span {
+                            start: 0,
+                            end: source.len().min(100),
+                        },
+                    }],
+                };
+            }
+        };
+
+        // Run validation rules
+        if self.rules.rules().len() > 3 {
+            self.rules.validate_parallel(&tree, source)
+        } else {
+            self.rules.validate_sequential(&tree, source)
+        }
+    }
+
+    /// Add a custom validation rule.
+    pub fn add_rule<R: ValidationRule + 'static>(&mut self, rule: R) {
+        self.rules.add_rule(rule);
+    }
+}
+
+impl Default for TrussEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -68,7 +144,7 @@ pub struct Diagnostic {
 }
 
 /// Severity level of a diagnostic.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
     Error,
     Warning,
@@ -99,7 +175,7 @@ mod tests {
 
     #[test]
     fn empty_document_produces_warning() {
-        let engine = TrussEngine::new();
+        let mut engine = TrussEngine::new();
         let result = engine.analyze("");
 
         assert_eq!(result.diagnostics.len(), 1);
@@ -109,18 +185,18 @@ mod tests {
 
     #[test]
     fn non_empty_document_is_ok() {
-        let engine = TrussEngine::new();
+        let mut engine = TrussEngine::new();
         let input = "name: test\non: push";
 
         let result = engine.analyze(input);
 
         assert!(result.is_ok());
-        assert!(result.diagnostics.is_empty());
+        // May have diagnostics from validation rules, but should be ok (no errors)
     }
 
     #[test]
     fn analysis_is_deterministic() {
-        let engine = TrussEngine::new();
+        let mut engine = TrussEngine::new();
         let input = "name: test\non: push";
 
         let result_a = engine.analyze(input);
@@ -131,10 +207,10 @@ mod tests {
 
     #[test]
     fn engine_can_be_reused_multiple_times() {
-        let engine = TrussEngine::new();
+        let mut engine = TrussEngine::new();
 
-        let first = engine.analyze("name: first");
-        let second = engine.analyze("name: second");
+        let first = engine.analyze("name: first\non: push");
+        let second = engine.analyze("name: second\non: push");
 
         assert!(first.is_ok());
         assert!(second.is_ok());

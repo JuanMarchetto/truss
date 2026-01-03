@@ -3,6 +3,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use truss_core::TrussEngine;
+use rayon::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "truss")]
@@ -17,10 +18,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Validate a YAML file
+    /// Validate YAML file(s)
     Validate {
-        /// Path to the YAML file to validate
-        path: String,
+        /// Path(s) to the YAML file(s) to validate
+        #[arg(num_args = 1..)]
+        paths: Vec<String>,
     },
 }
 
@@ -67,7 +69,7 @@ fn read_file(path: &str) -> Result<String, TrussError> {
 fn validate_file(path: &str) -> Result<(), TrussError> {
     let content = read_file(path)?;
     
-    let engine = TrussEngine::new();
+    let mut engine = TrussEngine::new();
     let result = engine.analyze(&content);
     
     if result.is_ok() {
@@ -89,10 +91,58 @@ fn validate_file(path: &str) -> Result<(), TrussError> {
     }
 }
 
+fn validate_files(paths: Vec<String>) -> Result<(), TrussError> {
+    if paths.is_empty() {
+        return Err(TrussError::Io(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "No files provided",
+        )));
+    }
+
+    // Process files in parallel
+    // Note: Each file gets its own engine instance to avoid mutable borrow conflicts
+    let results: Vec<(String, Result<(), TrussError>)> = paths
+        .par_iter()
+        .map(|path| {
+            let result = validate_file(path);
+            (path.clone(), result)
+        })
+        .collect();
+
+    // Aggregate results
+    let mut has_errors = false;
+    let mut success_count = 0;
+    let mut error_count = 0;
+
+    for (path, result) in results {
+        match result {
+            Ok(()) => {
+                success_count += 1;
+            }
+            Err(e) => {
+                error_count += 1;
+                has_errors = true;
+                eprintln!("Error validating {}: {}", path, e);
+            }
+        }
+    }
+
+    // Print summary if multiple files
+    if paths.len() > 1 {
+        println!("\nSummary: {} passed, {} failed", success_count, error_count);
+    }
+
+    if has_errors {
+        Err(TrussError::ValidationFailed)
+    } else {
+        Ok(())
+    }
+}
+
 fn analyze_file(path: &str) -> Result<(), TrussError> {
     let content = read_file(path)?;
     
-    let engine = TrussEngine::new();
+    let mut engine = TrussEngine::new();
     let result = engine.analyze(&content);
     
     println!("Analysis for: {}", path);
@@ -112,8 +162,8 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(Commands::Validate { path }) => {
-            if let Err(e) = validate_file(&path) {
+        Some(Commands::Validate { paths }) => {
+            if let Err(e) = validate_files(paths) {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
             }

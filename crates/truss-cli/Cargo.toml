@@ -13,4 +13,5 @@ path = "src/main.rs"
 [dependencies]
 truss-core = { path = "../truss-core" }
 clap = { version = "4", features = ["derive"] }
+rayon = "1.8"
 

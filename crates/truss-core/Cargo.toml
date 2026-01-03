@@ -10,5 +10,10 @@ repository.workspace = true
 name = "truss_core"
 path = "lib.rs"
 
+[dependencies]
+tree-sitter = "0.21"
+tree-sitter-yaml = "0.7"
+rayon = "1.8"
+
 [dev-dependencies]
 criterion = "0.5"

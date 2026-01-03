@@ -37,6 +37,11 @@ These rules must guide all technical decisions:
 5. **Developer Experience Matters**  
    Clear, actionable error messages are part of the product, not an afterthought.
 
+6. **Concurrency by Design**  
+   - Independent operations must be parallelizable
+   - Concurrency decisions must be benchmarked and measured
+   - Determinism must be maintained regardless of execution order
+
 ---
 
 ## 3. Target Architecture (High Level)

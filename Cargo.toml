@@ -10,6 +10,6 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["Truss Contributors"]
+authors = ["Juan Patricio Marchetto"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/truss"
+repository = "https://github.com/JuanMarchetto/truss"
