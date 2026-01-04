@@ -61,12 +61,8 @@ impl TrussEngine {
         };
 
         // Run validation rules in parallel
-        // Automatically uses parallel when beneficial (many rules)
-        if self.rules.rules().len() > 3 {
-            self.rules.validate_parallel(&tree, source)
-        } else {
-            self.rules.validate_sequential(&tree, source)
-        }
+        // Rayon automatically optimizes for small workloads, so always use parallel
+        self.rules.validate_parallel(&tree, source)
     }
 
     /// Analyze with incremental parsing support.
@@ -99,12 +95,9 @@ impl TrussEngine {
             }
         };
 
-        // Run validation rules
-        if self.rules.rules().len() > 3 {
-            self.rules.validate_parallel(&tree, source)
-        } else {
-            self.rules.validate_sequential(&tree, source)
-        }
+        // Run validation rules in parallel
+        // Rayon automatically optimizes for small workloads, so always use parallel
+        self.rules.validate_parallel(&tree, source)
     }
 
     /// Add a custom validation rule.
