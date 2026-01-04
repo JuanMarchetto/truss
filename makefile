@@ -10,10 +10,6 @@ bench:
 	cargo bench -p truss-core
 
 compare:
-	hyperfine \
-		--warmup 5 \
-		--export-markdown benchmarks/hyperfine/compare.md \
-		'./target/release/truss validate benchmarks/fixtures/complex-dynamic.yml' \
-		'competitors/yaml-language-server/run.sh benchmarks/fixtures/complex-dynamic.yml'
+	bash scripts/compare-competitors.sh
 
 ci: build test bench

@@ -39,8 +39,11 @@ just test
 # Validate a GitHub Actions workflow file
 ./target/release/truss validate path/to/workflow.yml
 
-# Analyze a workflow file (legacy syntax)
-./target/release/truss path/to/workflow.yml
+# Validate multiple files
+./target/release/truss validate file1.yml file2.yml
+
+# Quiet mode (suppress output, only exit code)
+./target/release/truss validate --quiet path/to/workflow.yml
 ```
 
 ## Project Structure

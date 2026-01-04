@@ -55,22 +55,15 @@ bench-cli:
 	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Running CLI benchmarks{{RESET}}"'
 	hyperfine \
 		--warmup 5 \
-		'./target/release/truss validate benchmarks/fixtures/complex-dynamic.yml'
+		'./target/release/truss validate --quiet benchmarks/fixtures/complex-dynamic.yml'
 
 # -------------------------
 # Compare (Truss vs competitors)
 # -------------------------
 compare:
-	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Comparing Truss vs yaml-language-server{{RESET}}"'
-	hyperfine \
-		--warmup 5 \
-		--export-markdown benchmarks/hyperfine/compare.md \
-		'./target/release/truss validate benchmarks/fixtures/complex-dynamic.yml' \
-		'competitors/yaml-language-server/run.sh benchmarks/fixtures/complex-dynamic.yml'
+	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Comparing Truss vs all competitors{{RESET}}"'
+	@bash scripts/compare-competitors.sh
 
 compare-smoke:
-	hyperfine \
-		--warmup 3 \
-		'cargo run --release -- benchmarks/fixtures/simple.yml' \
-		'actionlint benchmarks/fixtures/simple.yml' \
-		'yamllint benchmarks/fixtures/simple.yml'
+	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Quick smoke test comparison{{RESET}}"'
+	@bash scripts/compare-competitors.sh benchmarks/fixtures/simple.yml 3 benchmarks/hyperfine/compare-smoke.md

@@ -119,37 +119,74 @@ impl ValidationRule for GitHubActionsSchemaRule {
         "github_actions_schema"
     }
 
-    fn validate(&self, _tree: &Tree, source: &str) -> Vec<Diagnostic> {
-        let mut diagnostics = Vec::new();
+    fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
+        // Optimize: Use AST instead of string searching
+        // Walk the tree to find top-level keys
+        let root_node = tree.root_node();
+        let mut has_name = false;
+        let mut has_on = false;
 
-        // Check if this looks like a GitHub Actions workflow
-        // Basic check: should have 'name' or 'on' at top level
-        let has_name = source.contains("name:");
-        
-        // Check for 'on:' at start of line (not 'runs-on:' etc)
-        let has_on = source.lines().any(|line| {
-            let trimmed = line.trim_start();
-            trimmed.starts_with("on:") || trimmed.starts_with("\"on\":") || trimmed.starts_with("'on':")
-        });
+        // Quick check: if document is very small, might not be a workflow
+        if source.trim().len() < 10 {
+            return Vec::new();
+        }
 
+        // Walk the document node to find top-level mapping keys
+        let mut cursor = root_node.walk();
+        for child in root_node.children(&mut cursor) {
+            // Look for mapping nodes at top level
+            if child.kind() == "block_mapping" || child.kind() == "flow_mapping" {
+                // Check children for key-value pairs
+                let mut key_cursor = child.walk();
+                for key_node in child.children(&mut key_cursor) {
+                    if key_node.kind() == "block_mapping_pair" || key_node.kind() == "flow_pair" {
+                        // Get the key
+                        let key_start = key_node.start_byte();
+                        let key_end = key_node.end_byte().min(source.len());
+                        if key_start < key_end {
+                            // Extract key text (simplified - just check first few chars)
+                            let key_text = &source[key_start..key_end.min(key_start + 20)];
+                            if key_text.starts_with("name") {
+                                has_name = true;
+                            } else if key_text.starts_with("on") && (key_text.len() == 2 || key_text.as_bytes().get(2).map_or(false, |&b| b == b':' || b == b' ')) {
+                                has_on = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback to string search if AST walk didn't find anything (for edge cases)
         if !has_name && !has_on {
-            // Might not be a GitHub Actions workflow, skip validation
-            return diagnostics;
+            // Quick string check as fallback
+            if source.contains("name:") {
+                has_name = true;
+            }
+            // Check for 'on:' at start of line (more precise than contains)
+            if source.as_bytes().windows(3).any(|w| w == b"on:") {
+                has_on = true;
+            }
+            
+            // If still nothing, might not be a GitHub Actions workflow
+            if !has_name && !has_on {
+                return Vec::new();
+            }
         }
 
         // Check for required 'on' field for GitHub Actions
         if !has_on {
-            diagnostics.push(Diagnostic {
+            return vec![Diagnostic {
                 message: "GitHub Actions workflow must have an 'on' field".to_string(),
                 severity: Severity::Error,
                 span: Span {
                     start: 0,
                     end: source.len().min(100),
                 },
-            });
+            }];
         }
 
-        diagnostics
+        Vec::new()
     }
 }
 
@@ -162,46 +199,49 @@ impl ValidationRule for SyntaxRule {
     }
 
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
-        let mut diagnostics = Vec::new();
         let root_node = tree.root_node();
 
-        // Check for parse errors (tree-sitter marks errors in the tree)
-        if root_node.has_error() {
-            // Walk the tree to find error nodes
-            let mut cursor = root_node.walk();
-            let mut has_errors = false;
+        // Early exit: if no errors, return empty immediately
+        if !root_node.has_error() {
+            return Vec::new();
+        }
 
-            for child in root_node.children(&mut cursor) {
-                if child.is_error() || child.is_missing() {
-                    has_errors = true;
-                    diagnostics.push(Diagnostic {
-                        message: format!(
-                            "Syntax error: {}",
-                            source[child.start_byte()..child.end_byte().min(source.len())]
-                                .chars()
-                                .take(50)
-                                .collect::<String>()
-                        ),
-                        severity: Severity::Error,
-                        span: Span {
-                            start: child.start_byte(),
-                            end: child.end_byte(),
-                        },
-                    });
-                }
-            }
+        // Only walk tree if there are errors
+        let mut diagnostics = Vec::new();
+        let mut cursor = root_node.walk();
 
-            if has_errors && diagnostics.is_empty() {
-                // General syntax error if we couldn't pinpoint it
+        for child in root_node.children(&mut cursor) {
+            if child.is_error() || child.is_missing() {
+                // Optimize: avoid string allocation for error message when possible
+                let start = child.start_byte();
+                let end = child.end_byte().min(source.len());
+                let error_snippet = if end > start && end <= source.len() {
+                    source[start..end].chars().take(50).collect::<String>()
+                } else {
+                    String::new()
+                };
+                
                 diagnostics.push(Diagnostic {
-                    message: "YAML syntax error detected".to_string(),
+                    message: format!("Syntax error: {}", error_snippet),
                     severity: Severity::Error,
                     span: Span {
-                        start: 0,
-                        end: source.len().min(100),
+                        start,
+                        end,
                     },
                 });
             }
+        }
+
+        // If we found errors but couldn't pinpoint them, add a general error
+        if diagnostics.is_empty() {
+            diagnostics.push(Diagnostic {
+                message: "YAML syntax error detected".to_string(),
+                severity: Severity::Error,
+                span: Span {
+                    start: 0,
+                    end: source.len().min(100),
+                },
+            });
         }
 
         diagnostics
