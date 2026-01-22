@@ -60,7 +60,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "JobNeedsRule not yet implemented"]
 fn test_job_needs_nonexistent_job() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -89,7 +88,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "JobNeedsRule not yet implemented"]
 fn test_job_needs_circular_dependency() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -121,7 +119,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "JobNeedsRule not yet implemented"]
 fn test_job_needs_self_reference() {
     let mut engine = TrussEngine::new();
     let yaml = r#"

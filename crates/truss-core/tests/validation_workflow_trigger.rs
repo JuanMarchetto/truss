@@ -59,7 +59,6 @@ fn test_workflow_trigger_valid_with_branches() {
 }
 
 #[test]
-#[ignore = "WorkflowTriggerRule not yet implemented"]
 fn test_workflow_trigger_missing_on_field() {
     let mut engine = TrussEngine::new();
     let yaml = "name: CI\njobs:\n  build:\n    runs-on: ubuntu-latest";
@@ -81,7 +80,6 @@ fn test_workflow_trigger_missing_on_field() {
 }
 
 #[test]
-#[ignore = "WorkflowTriggerRule not yet implemented"]
 fn test_workflow_trigger_invalid_event_type() {
     let mut engine = TrussEngine::new();
     let yaml = "on: invalid_event_type";
@@ -100,7 +98,6 @@ fn test_workflow_trigger_invalid_event_type() {
 }
 
 #[test]
-#[ignore = "WorkflowTriggerRule not yet implemented"]
 fn test_workflow_trigger_invalid_syntax() {
     let mut engine = TrussEngine::new();
     let yaml = "on: [push, ]"; // Invalid syntax

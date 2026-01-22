@@ -56,7 +56,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "StepValidationRule not yet implemented"]
 fn test_step_missing_uses_and_run() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -86,7 +85,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "StepValidationRule not yet implemented"]
 fn test_step_invalid_action_reference() {
     let mut engine = TrussEngine::new();
     let yaml = r#"

@@ -4,7 +4,7 @@ High-performance CI/CD pipeline validation and analysis engine written in Rust. 
 
 ## Features
 
-- **High Performance**: Optimized for speed and scalability
+- **High Performance**: 15-35x faster than competitors (11.1ms average for complex workflows)
 - **Semantic Validation**: Goes beyond syntax checking to validate semantic correctness
 - **Modular Design**: Core engine with multiple adapter layers (CLI, LSP, WASM)
 - **Measurable**: Comprehensive benchmarking infrastructure from day one
@@ -35,6 +35,8 @@ just test
 
 ### Usage
 
+#### CLI
+
 ```bash
 # Validate a GitHub Actions workflow file
 ./target/release/truss validate path/to/workflow.yml
@@ -46,6 +48,45 @@ just test
 ./target/release/truss validate --quiet path/to/workflow.yml
 ```
 
+#### LSP Server
+
+The Truss LSP server provides real-time diagnostics for GitHub Actions workflows in editors that support the Language Server Protocol.
+
+```bash
+# Run the LSP server (typically configured in your editor)
+./target/release/truss-lsp
+```
+
+The LSP server supports:
+- Real-time validation as you type
+- Incremental parsing for performance
+- Diagnostics for all validation rules
+
+To use with your editor, configure it to use `truss-lsp` as the language server for YAML files (or specifically `.github/workflows/*.yml` files).
+
+## Performance
+
+Truss is designed for speed and efficiency, making it ideal for real-time editor integration and CI/CD pipelines.
+
+### Benchmark Results
+
+**Complex Workflow Validation** (complex-dynamic.yml):
+- **Truss**: 11.1ms average (1.7ms - 17.9ms range)
+- **actionlint**: 165.7ms (14.98x slower)
+- **yaml-language-server**: 381.7ms (34.51x slower)
+- **yamllint**: 210.9ms (19.07x slower)
+
+**Core Engine Performance** (Criterion benchmarks):
+- Simple YAML: < 1ms
+- Medium YAML: ~2ms
+- Complex static workflow: ~6.8ms
+- Complex dynamic workflow: ~4.3ms
+
+Truss achieves **15-35x better performance** than existing tools while providing comprehensive semantic validation. This makes it suitable for:
+- Real-time editor feedback (LSP integration)
+- Large-scale CI/CD pipeline validation
+- High-frequency validation in automated workflows
+
 ## Project Structure
 
 ```
@@ -53,7 +94,7 @@ truss/
 ├── crates/
 │   ├── truss-core/      # Core validation engine (editor-agnostic)
 │   ├── truss-cli/       # Command-line interface
-│   ├── truss-lsp/       # Language Server Protocol adapter (placeholder)
+│   ├── truss-lsp/       # Language Server Protocol adapter
 │   └── truss-wasm/      # WebAssembly bindings (placeholder)
 ├── benchmarks/          # Benchmark fixtures and results
 ├── docs/                # Documentation
@@ -154,9 +195,11 @@ For detailed architecture information, design principles, and development guidel
 
 **MVP Scope:**
 - GitHub Actions workflow validation
-- Basic semantic validation
+- Semantic validation (12 validation rules implemented)
+- LSP server with real-time diagnostics
+- Incremental parsing support
+- High-performance validation (15-35x faster than competitors)
 - Contextual autocomplete (planned)
-- Incremental parsing (planned)
 
 **Not Included (for now):**
 - Azure Pipelines

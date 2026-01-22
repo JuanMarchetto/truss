@@ -77,7 +77,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "WorkflowNameRule not yet implemented"]
 fn test_workflow_name_valid_long() {
     let mut engine = TrussEngine::new();
     // 300 characters should exceed typical GitHub Actions name limit (255)
@@ -127,7 +126,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "WorkflowNameRule not yet implemented"]
 fn test_workflow_name_invalid_empty() {
     let mut engine = TrussEngine::new();
     let yaml = r#"

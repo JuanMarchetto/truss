@@ -52,7 +52,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "JobNameRule not yet implemented"]
 fn test_job_name_duplicate() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -82,7 +81,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "JobNameRule not yet implemented"]
 fn test_job_name_invalid_characters() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -106,7 +104,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "JobNameRule not yet implemented"]
 fn test_job_name_reserved_names() {
     let mut engine = TrussEngine::new();
     let yaml = r#"

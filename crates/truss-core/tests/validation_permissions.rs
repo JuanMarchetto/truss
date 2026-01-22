@@ -126,7 +126,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "PermissionsRule not yet implemented"]
 fn test_permissions_invalid_scope() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -156,7 +155,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "PermissionsRule not yet implemented"]
 fn test_permissions_invalid_value() {
     let mut engine = TrussEngine::new();
     let yaml = r#"

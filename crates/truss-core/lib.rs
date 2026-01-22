@@ -9,7 +9,11 @@ mod validation;
 
 use std::fmt;
 use parser::YamlParser;
-use validation::{RuleSet, ValidationRule, NonEmptyRule, GitHubActionsSchemaRule, SyntaxRule};
+use validation::{
+    RuleSet, ValidationRule, NonEmptyRule, GitHubActionsSchemaRule, SyntaxRule,
+    WorkflowTriggerRule, JobNameRule, JobNeedsRule, StepValidationRule,
+    ExpressionValidationRule, PermissionsRule, EnvironmentRule, WorkflowNameRule,
+};
 
 /// Entry point for the Truss validation engine.
 pub struct TrussEngine {
@@ -27,6 +31,14 @@ impl TrussEngine {
         rules.add_rule(SyntaxRule);
         rules.add_rule(NonEmptyRule);
         rules.add_rule(GitHubActionsSchemaRule);
+        rules.add_rule(WorkflowTriggerRule);
+        rules.add_rule(JobNameRule);
+        rules.add_rule(JobNeedsRule);
+        rules.add_rule(StepValidationRule);
+        rules.add_rule(ExpressionValidationRule);
+        rules.add_rule(PermissionsRule);
+        rules.add_rule(EnvironmentRule);
+        rules.add_rule(WorkflowNameRule);
 
         Self {
             parser: YamlParser::new(),
@@ -42,11 +54,9 @@ impl TrussEngine {
     /// - Returns deterministic results
     /// - Is cheap to call repeatedly
     pub fn analyze(&mut self, source: &str) -> TrussResult {
-        // Parse YAML
         let tree = match self.parser.parse(source) {
             Ok(tree) => tree,
             Err(_) => {
-                // Parse failed, return syntax error
                 return TrussResult {
                     diagnostics: vec![Diagnostic {
                         message: "Failed to parse YAML".to_string(),
@@ -60,8 +70,6 @@ impl TrussEngine {
             }
         };
 
-        // Run validation rules in parallel
-        // Rayon automatically optimizes for small workloads, so always use parallel
         self.rules.validate_parallel(&tree, source)
     }
 
@@ -73,7 +81,6 @@ impl TrussEngine {
         source: &str,
         old_tree: Option<&tree_sitter::Tree>,
     ) -> TrussResult {
-        // Parse YAML incrementally if possible
         let tree = match old_tree {
             Some(old) => self.parser.parse_incremental(source, Some(old)),
             None => self.parser.parse(source),
@@ -95,9 +102,76 @@ impl TrussEngine {
             }
         };
 
-        // Run validation rules in parallel
-        // Rayon automatically optimizes for small workloads, so always use parallel
         self.rules.validate_parallel(&tree, source)
+    }
+
+    /// Analyze a YAML document and return both diagnostics and the parsed tree.
+    ///
+    /// This is useful for LSP implementations that need to store the tree
+    /// for incremental parsing on subsequent edits.
+    pub fn analyze_with_tree(&mut self, source: &str) -> (TrussResult, tree_sitter::Tree) {
+        let tree = match self.parser.parse(source) {
+            Ok(tree) => tree,
+            Err(_) => {
+                let result = TrussResult {
+                    diagnostics: vec![Diagnostic {
+                        message: "Failed to parse YAML".to_string(),
+                        severity: Severity::Error,
+                        span: Span {
+                            start: 0,
+                            end: source.len().min(100),
+                        },
+                    }],
+                };
+                let dummy_tree = self.parser.parse("").unwrap_or_else(|_| {
+                    panic!("Failed to create dummy tree");
+                });
+                return (result, dummy_tree);
+            }
+        };
+
+        // Run validation rules in parallel
+        let result = self.rules.validate_parallel(&tree, source);
+        (result, tree)
+    }
+
+    /// Analyze with incremental parsing and return both diagnostics and the parsed tree.
+    ///
+    /// This is useful for LSP implementations that need to store the tree
+    /// for incremental parsing on subsequent edits.
+    pub fn analyze_incremental_with_tree(
+        &mut self,
+        source: &str,
+        old_tree: Option<&tree_sitter::Tree>,
+    ) -> (TrussResult, tree_sitter::Tree) {
+        let tree = match old_tree {
+            Some(old) => self.parser.parse_incremental(source, Some(old)),
+            None => self.parser.parse(source),
+        };
+
+        let tree = match tree {
+            Ok(tree) => tree,
+            Err(_) => {
+                let result = TrussResult {
+                    diagnostics: vec![Diagnostic {
+                        message: "Failed to parse YAML".to_string(),
+                        severity: Severity::Error,
+                        span: Span {
+                            start: 0,
+                            end: source.len().min(100),
+                        },
+                    }],
+                };
+                let dummy_tree = self.parser.parse("").unwrap_or_else(|_| {
+                    panic!("Failed to create dummy tree");
+                });
+                return (result, dummy_tree);
+            }
+        };
+
+        // Run validation rules in parallel
+        let result = self.rules.validate_parallel(&tree, source);
+        (result, tree)
     }
 
     /// Add a custom validation rule.
@@ -184,7 +258,6 @@ mod tests {
         let result = engine.analyze(input);
 
         assert!(result.is_ok());
-        // May have diagnostics from validation rules, but should be ok (no errors)
     }
 
     #[test]

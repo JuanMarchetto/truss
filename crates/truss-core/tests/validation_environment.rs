@@ -106,7 +106,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "EnvironmentRule not yet implemented"]
 fn test_environment_invalid_name_format() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -160,7 +159,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "EnvironmentRule not yet implemented"]
 fn test_environment_valid_with_protection_rules() {
     let mut engine = TrussEngine::new();
     let yaml = r#"

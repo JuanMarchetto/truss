@@ -77,7 +77,6 @@ fn validate_file(path: &str, quiet: bool) -> Result<(), TrussError> {
         if !quiet {
             println!("✓ Valid: {}", path);
             
-            // Print any warnings or info messages
             for diagnostic in &result.diagnostics {
                 if diagnostic.severity != truss_core::Severity::Error {
                     println!("  {}", diagnostic);
@@ -87,7 +86,6 @@ fn validate_file(path: &str, quiet: bool) -> Result<(), TrussError> {
         Ok(())
     } else {
         if !quiet {
-            // Print all diagnostics
             for diagnostic in &result.diagnostics {
                 eprintln!("  {}", diagnostic);
             }

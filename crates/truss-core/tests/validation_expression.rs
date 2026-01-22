@@ -112,7 +112,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "ExpressionValidationRule not yet implemented"]
 fn test_expression_invalid_unclosed() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -143,7 +142,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "ExpressionValidationRule not yet implemented"]
 fn test_expression_invalid_undefined_context() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
@@ -170,7 +168,6 @@ jobs:
 }
 
 #[test]
-#[ignore = "ExpressionValidationRule not yet implemented"]
 fn test_expression_invalid_syntax() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
