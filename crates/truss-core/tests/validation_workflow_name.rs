@@ -77,7 +77,7 @@ jobs:
 }
 
 #[test]
-fn test_workflow_name_valid_long() {
+fn test_workflow_name_invalid_too_long() {
     let mut engine = TrussEngine::new();
     // 300 characters should exceed typical GitHub Actions name limit (255)
     let yaml = format!(r#"

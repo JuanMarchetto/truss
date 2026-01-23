@@ -11,6 +11,11 @@ pub mod expression;
 pub mod permissions;
 pub mod environment;
 pub mod workflow_name;
+pub mod matrix;
+pub mod runs_on;
+pub mod secrets;
+pub mod timeout;
+pub mod workflow_inputs;
 
 // Re-export all rules for easy importing
 pub use non_empty::NonEmptyRule;
@@ -24,4 +29,9 @@ pub use expression::ExpressionValidationRule;
 pub use permissions::PermissionsRule;
 pub use environment::EnvironmentRule;
 pub use workflow_name::WorkflowNameRule;
+pub use matrix::MatrixStrategyRule;
+pub use runs_on::RunsOnRequiredRule;
+pub use secrets::SecretsValidationRule;
+pub use timeout::TimeoutRule;
+pub use workflow_inputs::WorkflowInputsRule;
 

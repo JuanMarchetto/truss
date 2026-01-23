@@ -13,6 +13,8 @@ use validation::{
     RuleSet, ValidationRule, NonEmptyRule, GitHubActionsSchemaRule, SyntaxRule,
     WorkflowTriggerRule, JobNameRule, JobNeedsRule, StepValidationRule,
     ExpressionValidationRule, PermissionsRule, EnvironmentRule, WorkflowNameRule,
+    MatrixStrategyRule, RunsOnRequiredRule, SecretsValidationRule, TimeoutRule,
+    WorkflowInputsRule,
 };
 
 /// Entry point for the Truss validation engine.
@@ -39,6 +41,11 @@ impl TrussEngine {
         rules.add_rule(PermissionsRule);
         rules.add_rule(EnvironmentRule);
         rules.add_rule(WorkflowNameRule);
+        rules.add_rule(MatrixStrategyRule);
+        rules.add_rule(RunsOnRequiredRule);
+        rules.add_rule(SecretsValidationRule);
+        rules.add_rule(TimeoutRule);
+        rules.add_rule(WorkflowInputsRule);
 
         Self {
             parser: YamlParser::new(),
