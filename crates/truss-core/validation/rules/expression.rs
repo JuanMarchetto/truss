@@ -97,7 +97,6 @@ impl ValidationRule for ExpressionValidationRule {
                         },
                     });
                 } else {
-                    // Validate expression syntax
                     if !is_valid_expression_syntax(inner) {
                         diagnostics.push(Diagnostic {
                             message: format!("Invalid expression syntax: '{}'", inner),

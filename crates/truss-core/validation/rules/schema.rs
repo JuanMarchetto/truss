@@ -14,14 +14,10 @@ impl ValidationRule for GitHubActionsSchemaRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        // Use strict workflow detection
         if !utils::is_github_actions_workflow(tree, source) {
-            // Not a GitHub Actions workflow, skip validation
             return diagnostics;
         }
 
-        // Check for required 'on' field for GitHub Actions
-        // We need to check if 'on' key exists in the top-level mapping
         let root = tree.root_node();
         
         fn find_key_in_tree(node: tree_sitter::Node, source: &str, target_key: &str) -> bool {

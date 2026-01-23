@@ -105,12 +105,9 @@ impl ValidationRule for JobNeedsRule {
                             .trim_end_matches(':');
                         if key_cleaned == "needs" {
                             let value_node = if node.kind() == "block_mapping_pair" {
-                                node.child(2)  // block_mapping_pair: child(0)=key, child(1)=colon, child(2)=value
-                            } else {
-                                node.child(1)  // flow_pair: child(0)=key, child(1)=value
-                            };
+                                node.child(2)                            } else {
+                                node.child(1)                            };
                             if let Some(mut value_node) = value_node {
-                                // Handle block_node wrapper
                                 if value_node.kind() == "block_node" {
                                     if let Some(inner) = value_node.child(0) {
                                         value_node = inner;
@@ -179,12 +176,9 @@ impl ValidationRule for JobNeedsRule {
                             .to_string();
                         if all_job_names.contains(&job_name_cleaned) {
                             let job_value = if node.kind() == "block_mapping_pair" {
-                                node.child(2)  // block_mapping_pair: child(0)=key, child(1)=colon, child(2)=value
-                            } else {
-                                node.child(1)  // flow_pair: child(0)=key, child(1)=value
-                            };
+                                node.child(2)                            } else {
+                                node.child(1)                            };
                             if let Some(mut job_value) = job_value {
-                                // Handle block_node wrapper
                                 if job_value.kind() == "block_node" {
                                     if let Some(inner) = job_value.child(0) {
                                         job_value = inner;
@@ -204,7 +198,6 @@ impl ValidationRule for JobNeedsRule {
                     }
                 }
                 "block_node" | "block_mapping" => {
-                    // Traverse into block_node or block_mapping
                     let mut cursor = node.walk();
                     for child in node.children(&mut cursor) {
                         process_job(child, source, all_job_names, diagnostics);
@@ -230,12 +223,9 @@ impl ValidationRule for JobNeedsRule {
                             .trim_end_matches(':');
                         if key_cleaned == "needs" {
                             let value_node = if node.kind() == "block_mapping_pair" {
-                                node.child(2)  // block_mapping_pair: child(0)=key, child(1)=colon, child(2)=value
-                            } else {
-                                node.child(1)  // flow_pair: child(0)=key, child(1)=value
-                            };
+                                node.child(2)                            } else {
+                                node.child(1)                            };
                             if let Some(mut value_node) = value_node {
-                                // Handle block_node wrapper
                                 if value_node.kind() == "block_node" {
                                     if let Some(inner) = value_node.child(0) {
                                         value_node = inner;
@@ -281,12 +271,9 @@ impl ValidationRule for JobNeedsRule {
                             .to_string();
                         if all_job_names.contains(&job_name_cleaned) {
                             let job_value = if node.kind() == "block_mapping_pair" {
-                                node.child(2)  // block_mapping_pair: child(0)=key, child(1)=colon, child(2)=value
-                            } else {
-                                node.child(1)  // flow_pair: child(0)=key, child(1)=value
-                            };
+                                node.child(2)                            } else {
+                                node.child(1)                            };
                             if let Some(mut job_value) = job_value {
-                                // Handle block_node wrapper
                                 if job_value.kind() == "block_node" {
                                     if let Some(inner) = job_value.child(0) {
                                         job_value = inner;

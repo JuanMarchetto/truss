@@ -263,7 +263,6 @@ impl LspServer {
 
     fn convert_diagnostics(&self, diagnostics: &[CoreDiagnostic], text: &str) -> Vec<Value> {
         diagnostics.iter().map(|d| {
-            // Convert byte offsets to line/character positions
             let (start_line, start_char) = byte_to_line_char(d.span.start, text);
             let (end_line, end_char) = byte_to_line_char(d.span.end, text);
             
@@ -290,7 +289,6 @@ impl LspServer {
     }
 }
 
-// Helper to convert byte offset to line/character
 fn byte_to_line_char(byte_offset: usize, text: &str) -> (u32, u32) {
     let bytes_before = &text[..byte_offset.min(text.len())];
     let line = bytes_before.matches('\n').count() as u32;
@@ -318,6 +316,7 @@ struct DidCloseTextDocumentParams {
 #[derive(Debug, Deserialize)]
 struct TextDocumentItem {
     uri: String,
+    #[allow(dead_code)] // Required by LSP spec but not used in our implementation
     language_id: String,
     version: i32,
     text: String,
@@ -339,6 +338,7 @@ struct TextDocumentContentChangeEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     range: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[allow(dead_code)] // Required by LSP spec but not used in our implementation
     range_length: Option<Value>,
     text: String,
 }
@@ -351,7 +351,6 @@ pub fn run() -> io::Result<()> {
     let mut server = LspServer::new();
 
     loop {
-        // Read headers
         let mut content_length = 0;
         loop {
             let mut line = String::new();

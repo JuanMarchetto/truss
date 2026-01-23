@@ -96,7 +96,7 @@ To use with your editor, configure it to use `truss-lsp` as the language server 
 Truss LSP provides real-time diagnostics in your editor:
 - Instant validation as you type
 - Precise error locations with helpful messages
-- Support for all 12 validation rules
+- Support for all 19 validation rules
 - Incremental parsing for optimal performance
 
 ### Performance Comparison
@@ -107,7 +107,7 @@ See the [Performance](#performance) section below for detailed benchmark results
 
 ### Validation Rules
 
-Truss implements **12 comprehensive validation rules**:
+Truss implements **19 comprehensive validation rules**:
 - ✅ Syntax validation
 - ✅ Workflow trigger validation
 - ✅ Job name and dependency validation
@@ -116,6 +116,13 @@ Truss implements **12 comprehensive validation rules**:
 - ✅ Permissions validation
 - ✅ Environment validation
 - ✅ Matrix strategy validation
+- ✅ Runs-on requirement validation
+- ✅ Secrets validation
+- ✅ Timeout validation
+- ✅ Workflow inputs validation
+- ✅ Job outputs validation
+- ✅ Concurrency validation
+- ✅ Action reference validation
 - And more...
 
 See [Validation Rules Documentation](docs/VALIDATION_RULES.md) for complete details.
@@ -273,7 +280,7 @@ For detailed architecture information, design principles, and development guidel
 
 **✅ MVP Complete:**
 - ✅ GitHub Actions workflow validation
-- ✅ **12 validation rules** implemented and tested (63+ tests)
+- ✅ **19 validation rules** implemented and tested (129+ tests)
 - ✅ LSP server with real-time diagnostics
 - ✅ CLI tool with parallel file processing
 - ✅ Incremental parsing support

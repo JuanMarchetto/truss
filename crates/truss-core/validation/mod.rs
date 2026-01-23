@@ -42,11 +42,6 @@ impl RuleSet {
         self.rules.push(Box::new(rule));
     }
 
-    /// Get all rules.
-    pub fn rules(&self) -> &[Box<dyn ValidationRule>] {
-        &self.rules
-    }
-
     /// Run all validation rules in parallel.
     ///
     /// Rules are independent and can run concurrently.
@@ -64,21 +59,6 @@ impl RuleSet {
         diagnostics.sort_by_key(|d| (d.span.start, d.severity));
 
         TrussResult { diagnostics }
-    }
-
-    /// Run all validation rules sequentially.
-    ///
-    /// Useful for debugging or when parallel overhead isn't worth it.
-    pub fn validate_sequential(&self, tree: &Tree, source: &str) -> TrussResult {
-        let mut all_diagnostics = Vec::new();
-
-        for rule in &self.rules {
-            all_diagnostics.extend(rule.validate(tree, source));
-        }
-
-        all_diagnostics.sort_by_key(|d| (d.span.start, d.severity));
-
-        TrussResult { diagnostics: all_diagnostics }
     }
 }
 

@@ -20,7 +20,6 @@ pub(crate) fn is_github_actions_workflow(tree: &Tree, source: &str) -> bool {
     }
     
     fn find_top_level_keys(node: Node, source: &str, keys: &mut Vec<String>, depth: usize) {
-        // Need depth 4 to process block_mapping_pair children of block_mapping at depth 3
         if depth > 4 {
             return;
         }

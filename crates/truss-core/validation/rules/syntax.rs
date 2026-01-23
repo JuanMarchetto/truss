@@ -13,18 +13,15 @@ impl ValidationRule for SyntaxRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let root_node = tree.root_node();
 
-        // Early exit: if no errors, return empty immediately
         if !root_node.has_error() {
             return Vec::new();
         }
 
-        // Only walk tree if there are errors
         let mut diagnostics = Vec::new();
         let mut cursor = root_node.walk();
 
         for child in root_node.children(&mut cursor) {
             if child.is_error() || child.is_missing() {
-                // Optimize: avoid string allocation for error message when possible
                 let start = child.start_byte();
                 let end = child.end_byte().min(source.len());
                 let error_snippet = if end > start && end <= source.len() {
@@ -44,7 +41,6 @@ impl ValidationRule for SyntaxRule {
             }
         }
 
-        // If we found errors but couldn't pinpoint them, add a general error
         if diagnostics.is_empty() {
             diagnostics.push(Diagnostic {
                 message: "YAML syntax error detected".to_string(),

@@ -14,7 +14,7 @@ use validation::{
     WorkflowTriggerRule, JobNameRule, JobNeedsRule, StepValidationRule,
     ExpressionValidationRule, PermissionsRule, EnvironmentRule, WorkflowNameRule,
     MatrixStrategyRule, RunsOnRequiredRule, SecretsValidationRule, TimeoutRule,
-    WorkflowInputsRule,
+    WorkflowInputsRule, JobOutputsRule, ConcurrencyRule, ActionReferenceRule,
 };
 
 /// Entry point for the Truss validation engine.
@@ -46,6 +46,9 @@ impl TrussEngine {
         rules.add_rule(SecretsValidationRule);
         rules.add_rule(TimeoutRule);
         rules.add_rule(WorkflowInputsRule);
+        rules.add_rule(JobOutputsRule);
+        rules.add_rule(ConcurrencyRule);
+        rules.add_rule(ActionReferenceRule);
 
         Self {
             parser: YamlParser::new(),
@@ -137,7 +140,6 @@ impl TrussEngine {
             }
         };
 
-        // Run validation rules in parallel
         let result = self.rules.validate_parallel(&tree, source);
         (result, tree)
     }
@@ -176,7 +178,6 @@ impl TrussEngine {
             }
         };
 
-        // Run validation rules in parallel
         let result = self.rules.validate_parallel(&tree, source);
         (result, tree)
     }

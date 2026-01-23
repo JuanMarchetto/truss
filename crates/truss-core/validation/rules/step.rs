@@ -40,9 +40,9 @@ impl ValidationRule for StepValidationRule {
                             .trim_end_matches(':');
                         if key_cleaned == "steps" {
                             let steps_value = if node.kind() == "block_mapping_pair" {
-                                node.child(2)  // block_mapping_pair: child(0)=key, child(1)=colon, child(2)=value
+                                node.child(2)
                             } else {
-                                node.child(1)  // flow_pair: child(0)=key, child(1)=value
+                                node.child(1)
                             };
                             if let Some(mut steps_value) = steps_value {
                                 if steps_value.kind() == "block_node" {

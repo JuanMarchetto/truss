@@ -19,8 +19,7 @@ impl ValidationRule for WorkflowTriggerRule {
         }
 
         let root = tree.root_node();
-        
-        // Check if 'on' field exists
+
         let on_value = match utils::find_value_for_key(root, source, "on") {
             Some(v) => v,
             None => {
@@ -36,7 +35,6 @@ impl ValidationRule for WorkflowTriggerRule {
             }
         };
 
-        // Handle block_node wrapper
         let mut on_to_check = on_value;
         if on_to_check.kind() == "block_node" {
             if let Some(inner) = on_to_check.child(0) {
@@ -44,7 +42,6 @@ impl ValidationRule for WorkflowTriggerRule {
             }
         }
 
-        // Check for invalid syntax (like empty array items)
         let on_text = utils::node_text(on_to_check, source);
         if on_text.contains(", ]") || on_text.contains(",]") {
             diagnostics.push(Diagnostic {
@@ -57,20 +54,16 @@ impl ValidationRule for WorkflowTriggerRule {
             });
         }
 
-        // Check for invalid event types (basic validation)
-        // Handle both scalar and block_node-wrapped scalar
         let mut event_node = on_to_check;
         if event_node.kind() == "block_node" {
             if let Some(inner) = event_node.child(0) {
                 event_node = inner;
             }
         }
-        
-        // Check for invalid event types - handle all node types that might contain event text
+
         let event_text = if event_node.kind() == "plain_scalar" || event_node.kind() == "double_quoted_scalar" || event_node.kind() == "single_quoted_scalar" {
             Some(utils::node_text(event_node, source).trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace()).to_lowercase())
         } else {
-            // Try to extract text from other node types
             let text = utils::node_text(event_node, source).trim().to_lowercase();
             if !text.is_empty() && !text.contains('\n') {
                 Some(text)

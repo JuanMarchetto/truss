@@ -16,6 +16,9 @@ pub mod runs_on;
 pub mod secrets;
 pub mod timeout;
 pub mod workflow_inputs;
+pub mod job_outputs;
+pub mod concurrency;
+pub mod action_reference;
 
 // Re-export all rules for easy importing
 pub use non_empty::NonEmptyRule;
@@ -34,4 +37,7 @@ pub use runs_on::RunsOnRequiredRule;
 pub use secrets::SecretsValidationRule;
 pub use timeout::TimeoutRule;
 pub use workflow_inputs::WorkflowInputsRule;
+pub use job_outputs::JobOutputsRule;
+pub use concurrency::ConcurrencyRule;
+pub use action_reference::ActionReferenceRule;
 

@@ -51,7 +51,13 @@ mod tests {
 ```
 crates/truss-core/
 ├── lib.rs                         (unit tests in #[cfg(test)] module)
-├── validation.rs                  (rules + unit tests)
+├── validation/                    (rules organized by module)
+│   ├── mod.rs
+│   └── rules/
+│       ├── syntax.rs
+│       ├── non_empty.rs
+│       ├── schema.rs
+│       └── ... (all 19 rules)
 └── tests/
     ├── validation_syntax.rs       (SyntaxRule tests)
     ├── validation_non_empty.rs    (NonEmptyRule tests)
@@ -63,7 +69,15 @@ crates/truss-core/
     ├── validation_expression.rs
     ├── validation_permissions.rs
     ├── validation_environment.rs
-    └── validation_workflow_name.rs
+    ├── validation_workflow_name.rs
+    ├── validation_matrix.rs
+    ├── validation_runs_on.rs
+    ├── validation_secrets.rs
+    ├── validation_timeout.rs
+    ├── validation_workflow_inputs.rs
+    ├── validation_job_outputs.rs
+    ├── validation_concurrency.rs
+    └── validation_action_reference.rs
 ```
 
 ## Test Structure for Each Rule
@@ -146,25 +160,32 @@ fn test_rule_deterministic() {
 
 ## Current Test Coverage
 
-### ✅ SyntaxRule
-- Valid YAML cases
-- Invalid YAML detection
-- Diagnostic spans
-- Determinism
+**All 19 validation rules are fully implemented and tested (129+ tests).**
 
-### ✅ NonEmptyRule
-- Empty string detection
-- Whitespace-only detection
-- Valid content
-- Determinism
+### ✅ All Rules Implemented
+- ✅ SyntaxRule (3 tests)
+- ✅ NonEmptyRule (4 tests)
+- ✅ GitHubActionsSchemaRule (5 tests)
+- ✅ WorkflowTriggerRule (6 tests)
+- ✅ JobNameRule (5 tests)
+- ✅ JobNeedsRule (5 tests)
+- ✅ StepValidationRule (5 tests)
+- ✅ ExpressionValidationRule (8 tests)
+- ✅ PermissionsRule (8 tests)
+- ✅ EnvironmentRule (7 tests)
+- ✅ WorkflowNameRule (7 tests)
+- ✅ MatrixStrategyRule (7 tests)
+- ✅ RunsOnRequiredRule (7 tests)
+- ✅ SecretsValidationRule (7 tests)
+- ✅ TimeoutRule (8 tests)
+- ✅ WorkflowInputsRule (8 tests)
+- ✅ JobOutputsRule (10 tests)
+- ✅ ConcurrencyRule (11 tests)
+- ✅ ActionReferenceRule (14 tests)
 
-### ✅ GitHubActionsSchemaRule
-- Valid workflows with `on:` field
-- Missing `on:` field detection
-- Non-GitHub Actions YAML (should skip)
-- Determinism
+See [VALIDATION_RULES.md](VALIDATION_RULES.md) for complete details on each rule.
 
-## Pending Rules (Tests Written, Marked #[ignore])
+## Historical: Previously Pending Rules (All Now Implemented)
 
 ### JobNameRule
 - Valid job names
