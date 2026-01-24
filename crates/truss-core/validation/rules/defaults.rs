@@ -1,0 +1,153 @@
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Tree, Node};
+use super::super::ValidationRule;
+use super::super::utils;
+
+/// Validates defaults configuration at workflow and job levels.
+pub struct DefaultsValidationRule;
+
+impl ValidationRule for DefaultsValidationRule {
+    fn name(&self) -> &str {
+        "defaults"
+    }
+
+    fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
+        let mut diagnostics = Vec::new();
+
+        if !utils::is_github_actions_workflow(tree, source) {
+            return diagnostics;
+        }
+
+        let root = tree.root_node();
+
+        // Check workflow-level defaults
+        let defaults_value = utils::find_value_for_key(root, source, "defaults");
+        if let Some(defaults_node) = defaults_value {
+            validate_defaults(defaults_node, source, "workflow", &mut diagnostics);
+        }
+
+        // Check job-level defaults
+        let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
+            Some(v) => v,
+            None => return diagnostics,
+        };
+
+        let mut jobs_to_process = jobs_value;
+        if jobs_to_process.kind() == "block_node" {
+            if let Some(inner) = jobs_to_process.child(0) {
+                jobs_to_process = inner;
+            }
+        }
+
+        fn check_job_defaults(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+            match node.kind() {
+                "block_mapping_pair" | "flow_pair" => {
+                    if let Some(key_node) = node.child(0) {
+                        let key_text = utils::node_text(key_node, source);
+                        let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                            .trim_end_matches(':')
+                            .to_string();
+                        
+                        let job_value = if node.kind() == "block_mapping_pair" {
+                            node.child(2)
+                        } else {
+                            node.child(1)
+                        };
+                        
+                        if let Some(mut job_value) = job_value {
+                            if job_value.kind() == "block_node" {
+                                if let Some(inner) = job_value.child(0) {
+                                    job_value = inner;
+                                }
+                            }
+                            
+                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
+                                let defaults_value = utils::find_value_for_key(job_value, source, "defaults");
+                                if let Some(defaults_node) = defaults_value {
+                                    validate_defaults(defaults_node, source, &format!("job '{}'", job_name), diagnostics);
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    let mut cursor = node.walk();
+                    for child in node.children(&mut cursor) {
+                        check_job_defaults(child, source, diagnostics);
+                    }
+                }
+            }
+        }
+
+        check_job_defaults(jobs_to_process, source, &mut diagnostics);
+
+        diagnostics
+    }
+}
+
+fn validate_defaults(defaults_node: Node, source: &str, context: &str, diagnostics: &mut Vec<Diagnostic>) {
+    let mut defaults_to_check = defaults_node;
+    if defaults_to_check.kind() == "block_node" {
+        if let Some(inner) = defaults_to_check.child(0) {
+            defaults_to_check = inner;
+        }
+    }
+    
+    // Check defaults.run.shell
+    let run_value = utils::find_value_for_key(defaults_to_check, source, "run");
+    if let Some(mut run_node) = run_value {
+        if run_node.kind() == "block_node" {
+            if let Some(inner) = run_node.child(0) {
+                run_node = inner;
+            }
+        }
+        
+        let shell_value = utils::find_value_for_key(run_node, source, "shell");
+        if let Some(shell_node) = shell_value {
+            let shell_text = utils::node_text(shell_node, source);
+            let shell_cleaned = shell_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+            
+            if !shell_cleaned.starts_with("${{") {
+                let known_shells = ["bash", "pwsh", "python", "sh", "cmd", "powershell"];
+                let is_known = known_shells.contains(&shell_cleaned.to_lowercase().as_str());
+                let is_custom = shell_cleaned.contains("{0}");
+                
+                if !is_known && !is_custom && !shell_cleaned.is_empty() {
+                    diagnostics.push(Diagnostic {
+                        message: format!(
+                            "{} defaults.run.shell has invalid value: '{}'. Valid shells are: bash, pwsh, python, sh, cmd, powershell, or a custom command with {{0}} placeholder.",
+                            context, shell_cleaned
+                        ),
+                        severity: Severity::Error,
+                        span: Span {
+                            start: shell_node.start_byte(),
+                            end: shell_node.end_byte(),
+                        },
+                    });
+                }
+            }
+        }
+        
+        // Check defaults.run.working-directory
+        let working_dir_value = utils::find_value_for_key(run_node, source, "working-directory");
+        if let Some(working_dir_node) = working_dir_value {
+            let working_dir_text = utils::node_text(working_dir_node, source);
+            let working_dir_cleaned = working_dir_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+            
+            if !working_dir_cleaned.starts_with("${{") && working_dir_cleaned.is_empty() {
+                diagnostics.push(Diagnostic {
+                    message: format!(
+                        "{} defaults.run.working-directory is empty. working-directory must be a valid path.",
+                        context
+                    ),
+                    severity: Severity::Error,
+                    span: Span {
+                        start: working_dir_node.start_byte(),
+                        end: working_dir_node.end_byte(),
+                    },
+                });
+            }
+        }
+    }
+}
+

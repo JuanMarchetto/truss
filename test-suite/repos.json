@@ -1,0 +1,45 @@
+[
+  {
+    "name": "rust-lang-rust",
+    "url": "https://github.com/rust-lang/rust.git",
+    "description": "Complex dynamic matrices, large workflows",
+    "priority": "high"
+  },
+  {
+    "name": "microsoft-typescript",
+    "url": "https://github.com/microsoft/TypeScript.git",
+    "description": "Multiple workflows, complex job dependencies",
+    "priority": "high"
+  },
+  {
+    "name": "actions-checkout",
+    "url": "https://github.com/actions/checkout.git",
+    "description": "Simple but diverse workflow patterns",
+    "priority": "medium"
+  },
+  {
+    "name": "facebook-react",
+    "url": "https://github.com/facebook/react.git",
+    "description": "Multiple workflow files, various triggers",
+    "priority": "medium"
+  },
+  {
+    "name": "pytorch-pytorch",
+    "url": "https://github.com/pytorch/pytorch.git",
+    "description": "Complex matrix strategies",
+    "priority": "medium"
+  },
+  {
+    "name": "tensorflow-tensorflow",
+    "url": "https://github.com/tensorflow/tensorflow.git",
+    "description": "Large number of workflow files",
+    "priority": "low"
+  },
+  {
+    "name": "kubernetes-kubernetes",
+    "url": "https://github.com/kubernetes/kubernetes.git",
+    "description": "Large-scale CI/CD patterns",
+    "priority": "low"
+  }
+]
+

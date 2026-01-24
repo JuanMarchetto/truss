@@ -120,6 +120,12 @@ impl ValidationRule for ExpressionValidationRule {
                     });
                 }
                 
+                // Validate operators
+                validate_expression_operators(inner, actual_start, end, &mut diagnostics);
+                
+                // Validate function calls
+                validate_expression_functions(inner, actual_start, end, &mut diagnostics);
+                
                 pos = end;
             } else {
                 diagnostics.push(Diagnostic {
@@ -135,6 +141,78 @@ impl ValidationRule for ExpressionValidationRule {
         }
 
         diagnostics
+    }
+}
+
+/// Validates expression operators
+fn validate_expression_operators(expr: &str, start: usize, end: usize, diagnostics: &mut Vec<Diagnostic>) {
+    // Check for invalid operator combinations
+    if expr.contains("===") || expr.contains("!==") {
+        diagnostics.push(Diagnostic {
+            message: format!(
+                "Invalid operator in expression: '{}'. GitHub Actions expressions use '==' and '!=' for equality, not '===' or '!=='.",
+                expr
+            ),
+            severity: Severity::Error,
+            span: Span {
+                start,
+                end,
+            },
+        });
+    }
+    
+    // Check for invalid assignment operators (expressions are read-only)
+    if expr.contains("=") && !expr.contains("==") && !expr.contains("!=") && !expr.contains("<=") && !expr.contains(">=") {
+        // Might be assignment - warn
+        if expr.matches('=').count() == 1 && !expr.contains("${{") {
+            diagnostics.push(Diagnostic {
+                message: format!(
+                    "Potentially invalid operator in expression: '{}'. Expressions are read-only and cannot use assignment operators.",
+                    expr
+                ),
+                severity: Severity::Warning,
+                span: Span {
+                    start,
+                    end,
+                },
+            });
+        }
+    }
+}
+
+/// Validates expression function calls
+fn validate_expression_functions(expr: &str, start: usize, _end: usize, diagnostics: &mut Vec<Diagnostic>) {
+    let valid_functions = [
+        "contains", "startsWith", "endsWith", "format", "join", "toJSON",
+        "hashFiles", "success", "failure", "cancelled", "always"
+    ];
+    
+    // Find function calls in expression
+    let mut search_pos = 0;
+    while let Some(pos) = expr[search_pos..].find('(') {
+        let actual_pos = search_pos + pos;
+        let before_paren = &expr[..actual_pos];
+        
+        // Find function name (backwards from '(')
+        if let Some(func_start) = before_paren.rfind(|c: char| c.is_whitespace() || c == '&' || c == '|' || c == '!' || c == '(' || c == '[' || c == '.') {
+            let func_name = &expr[func_start + 1..actual_pos].trim();
+            if !func_name.is_empty() && !valid_functions.iter().any(|&f| f == *func_name) {
+                diagnostics.push(Diagnostic {
+                    message: format!(
+                        "Unknown function in expression: '{}'. Valid functions are: {}.",
+                        func_name,
+                        valid_functions.join(", ")
+                    ),
+                    severity: Severity::Warning,
+                    span: Span {
+                        start: start + func_start + 1,
+                        end: start + actual_pos,
+                    },
+                });
+            }
+        }
+        
+        search_pos = actual_pos + 1;
     }
 }
 

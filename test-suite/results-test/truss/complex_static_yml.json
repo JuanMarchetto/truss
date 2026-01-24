@@ -1,0 +1,37 @@
+[
+  {
+    "file": "/home/marche/truss/scripts/../benchmarks/fixtures/complex-static.yml",
+    "valid": false,
+    "diagnostics": [
+      {
+        "message": "Matrix key 'config' has invalid value: '# Main builds'. Matrix values must be arrays, not scalars. Use '[# Main builds]' instead.",
+        "severity": "error",
+        "span": {
+          "start": 555,
+          "end": 568
+        }
+      },
+      {
+        "message": "Job 'coverage' uses unknown runner label: '- 'self-hosted'\n      - '1ES.Pool=TypeScript-1ES-GitHub-Large'\n      - '1ES.ImageOverride=azure-linux-3'. This may be a valid self-hosted runner or custom label.",
+        "severity": "warning",
+        "span": {
+          "start": 4690,
+          "end": 4794
+        }
+      },
+      {
+        "message": "Job 'package-size' 'if' condition must be wrapped in ${{ }} wrapper. Found: 'github.event_name == 'pull_request''",
+        "severity": "error",
+        "span": {
+          "start": 9049,
+          "end": 9084
+        }
+      }
+    ],
+    "duration_ms": 3.8160220000000002,
+    "metadata": {
+      "file_size": 13269,
+      "lines": 448
+    }
+  }
+]

@@ -67,17 +67,33 @@ impl ValidationRule for JobNameRule {
         for (name, span) in &job_names {
             let name_trimmed = name.trim();
             
-            if reserved_names.contains(&name_trimmed.to_lowercase().as_str()) {
+            // Validate job name length (GitHub Actions has practical limits)
+            if name_trimmed.len() > 100 {
                 diagnostics.push(Diagnostic {
-                    message: format!("Reserved name cannot be used as job name: '{}'", name_trimmed),
+                    message: format!(
+                        "Job name '{}' is too long ({} characters). Consider using a shorter name (recommended: < 50 characters).",
+                        name_trimmed, name_trimmed.len()
+                    ),
+                    severity: Severity::Warning,
+                    span: *span,
+                });
+            }
+            
+            // Validate job name character set (alphanumeric, hyphens, underscores)
+            if !is_valid_job_name_format(name_trimmed) {
+                diagnostics.push(Diagnostic {
+                    message: format!(
+                        "Invalid job name: '{}'. Job names must contain only alphanumeric characters, hyphens, and underscores.",
+                        name_trimmed
+                    ),
                     severity: Severity::Error,
                     span: *span,
                 });
             }
             
-            if name_trimmed.contains(' ') {
+            if reserved_names.contains(&name_trimmed.to_lowercase().as_str()) {
                 diagnostics.push(Diagnostic {
-                    message: format!("Invalid job name: '{}' (contains invalid characters)", name_trimmed),
+                    message: format!("Reserved name cannot be used as job name: '{}'", name_trimmed),
                     severity: Severity::Error,
                     span: *span,
                 });
@@ -86,5 +102,17 @@ impl ValidationRule for JobNameRule {
 
         diagnostics
     }
+}
+
+/// Validates that a job name follows the correct format.
+/// Job names must contain only alphanumeric characters, hyphens, and underscores.
+fn is_valid_job_name_format(job_name: &str) -> bool {
+    if job_name.is_empty() {
+        return false;
+    }
+    
+    job_name.chars().all(|c| {
+        c.is_alphanumeric() || c == '-' || c == '_'
+    })
 }
 

@@ -67,3 +67,26 @@ compare:
 compare-smoke:
 	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Quick smoke test comparison{{RESET}}"'
 	@bash scripts/compare-competitors.sh benchmarks/fixtures/simple.yml 3 benchmarks/hyperfine/compare-smoke.md
+
+# -------------------------
+# Multifile Testing Framework
+# -------------------------
+test-multifile:
+	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Running multifile test suite{{RESET}}"'
+	@bash scripts/run-full-suite.sh
+
+test-repo REPO:
+	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Testing repository: {{REPO}}{{RESET}}"'
+	@bash scripts/run-validation.sh test-suite/repos/{{REPO}}
+
+setup-test-repos:
+	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Setting up test repositories{{RESET}}"'
+	@bash scripts/setup-test-repos.sh
+
+compare-results:
+	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Comparing validation results{{RESET}}"'
+	@python3 scripts/compare-results.py test-suite/results test-suite/comparison/coverage.json
+
+generate-report:
+	@bash -eu -o pipefail -c 'echo -e "{{GREEN}}==> Generating comparison reports{{RESET}}"'
+	@python3 scripts/generate-report.py test-suite/comparison/coverage.json test-suite/comparison/reports

@@ -4,12 +4,13 @@ This directory contains wrapper scripts for benchmarking Truss against other YAM
 
 ## Structure
 
-Each competitor should have its own directory with a `run.sh` script:
+Each competitor should have its own directory with two scripts:
 
 ```
 competitors/
 ├── competitor-name/
-│   └── run.sh          # Wrapper script that validates a YAML file
+│   ├── run.sh          # Wrapper script for performance benchmarking
+│   └── capture.sh      # Script that outputs JSON results for comparison
 └── README.md           # This file
 ```
 
@@ -23,7 +24,13 @@ competitors/
    - Suppresses output (redirect to `/dev/null`) for benchmarking
    - Handles cases where the tool is not installed
 
-3. Make the script executable: `chmod +x competitors/your-competitor/run.sh`
+3. Create a `capture.sh` script that:
+   - Accepts a YAML file path as the first argument
+   - Outputs JSON results in the format expected by the comparison engine
+   - Includes timing information and error diagnostics
+   - See existing `capture.sh` scripts for examples
+
+4. Make the scripts executable: `chmod +x competitors/your-competitor/*.sh`
 
 ## Example Wrapper Script
 
@@ -71,7 +78,43 @@ scripts/compare-competitors.sh [fixture-file] [warmup-runs] [output-file]
 ## Current Competitors
 
 - **actionlint**: Static checker for GitHub Actions workflow files
+  - `run.sh`: Performance benchmarking wrapper
+  - `capture.sh`: JSON result capture for comparison
 - **yamllint**: YAML linter that checks syntax and style
+  - `run.sh`: Performance benchmarking wrapper
+  - `capture.sh`: JSON result capture for comparison
 - **yaml-language-server**: LSP server for YAML validation
+  - `run.sh`: Performance benchmarking wrapper
+  - `capture.sh`: JSON result capture for comparison
+
+## Result Capture Format
+
+The `capture.sh` scripts output JSON in the following format:
+
+```json
+{
+  "file": "path/to/workflow.yml",
+  "valid": false,
+  "diagnostics": [
+    {
+      "message": "Error message",
+      "severity": "error",
+      "location": {
+        "file": "path/to/workflow.yml",
+        "line": 10,
+        "column": 5,
+        "column_end": 10
+      }
+    }
+  ],
+  "duration_ms": 12.5,
+  "metadata": {
+    "file_size": 1024,
+    "lines": 45
+  }
+}
+```
+
+This format is used by the comparison engine in `scripts/compare-results.py` to analyze results across tools.
 
 

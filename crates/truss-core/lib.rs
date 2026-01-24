@@ -8,6 +8,7 @@ mod parser;
 mod validation;
 
 use std::fmt;
+use serde::{Deserialize, Serialize};
 use parser::YamlParser;
 use validation::{
     RuleSet, ValidationRule, NonEmptyRule, GitHubActionsSchemaRule, SyntaxRule,
@@ -15,6 +16,12 @@ use validation::{
     ExpressionValidationRule, PermissionsRule, EnvironmentRule, WorkflowNameRule,
     MatrixStrategyRule, RunsOnRequiredRule, SecretsValidationRule, TimeoutRule,
     WorkflowInputsRule, JobOutputsRule, ConcurrencyRule, ActionReferenceRule,
+    StepIdUniquenessRule, StepOutputReferenceRule, JobStrategyValidationRule,
+    StepIfExpressionRule, JobIfExpressionRule, WorkflowCallInputsRule,
+    WorkflowCallSecretsRule, ReusableWorkflowCallRule, WorkflowCallOutputsRule,
+    StepContinueOnErrorRule, StepTimeoutRule, StepShellRule, StepWorkingDirectoryRule,
+    ArtifactValidationRule, EventPayloadValidationRule, RunnerLabelRule,
+    StepEnvValidationRule, JobContainerRule, StepNameRule, DefaultsValidationRule,
 };
 
 /// Entry point for the Truss validation engine.
@@ -49,6 +56,26 @@ impl TrussEngine {
         rules.add_rule(JobOutputsRule);
         rules.add_rule(ConcurrencyRule);
         rules.add_rule(ActionReferenceRule);
+        rules.add_rule(StepIdUniquenessRule);
+        rules.add_rule(StepOutputReferenceRule);
+        rules.add_rule(JobStrategyValidationRule);
+        rules.add_rule(StepIfExpressionRule);
+        rules.add_rule(JobIfExpressionRule);
+        rules.add_rule(WorkflowCallInputsRule);
+        rules.add_rule(WorkflowCallSecretsRule);
+        rules.add_rule(ReusableWorkflowCallRule);
+        rules.add_rule(WorkflowCallOutputsRule);
+        rules.add_rule(StepContinueOnErrorRule);
+        rules.add_rule(StepTimeoutRule);
+        rules.add_rule(StepShellRule);
+        rules.add_rule(StepWorkingDirectoryRule);
+        rules.add_rule(ArtifactValidationRule);
+        rules.add_rule(EventPayloadValidationRule);
+        rules.add_rule(RunnerLabelRule);
+        rules.add_rule(StepEnvValidationRule);
+        rules.add_rule(JobContainerRule);
+        rules.add_rule(StepNameRule);
+        rules.add_rule(DefaultsValidationRule);
 
         Self {
             parser: YamlParser::new(),
@@ -195,7 +222,7 @@ impl Default for TrussEngine {
 }
 
 /// Result of a Truss analysis pass.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TrussResult {
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -211,7 +238,7 @@ impl TrussResult {
 }
 
 /// A diagnostic produced by the engine.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Diagnostic {
     pub message: String,
     pub severity: Severity,
@@ -219,7 +246,8 @@ pub struct Diagnostic {
 }
 
 /// Severity level of a diagnostic.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Severity {
     Error,
     Warning,
@@ -227,7 +255,7 @@ pub enum Severity {
 }
 
 /// Text span associated with a diagnostic.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Span {
     pub start: usize,
     pub end: usize,

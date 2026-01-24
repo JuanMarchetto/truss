@@ -72,6 +72,56 @@ impl ValidationRule for WorkflowTriggerRule {
             }
         };
         
+        // Validate event types - check all possible event types in the on: mapping
+        fn validate_event_types(node: tree_sitter::Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+            match node.kind() {
+                "block_mapping_pair" | "flow_pair" => {
+                    if let Some(key_node) = node.child(0) {
+                        let key_text = utils::node_text(key_node, source);
+                        let event_type = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                            .trim_end_matches(':')
+                            .to_lowercase();
+                        
+                        // Comprehensive list of valid GitHub Actions event types
+                        let valid_events = [
+                            "push", "pull_request", "pull_request_target", "pull_request_review",
+                            "pull_request_review_comment", "issues", "issue_comment", "label",
+                            "milestone", "project", "project_card", "project_column", "repository_dispatch",
+                            "workflow_dispatch", "workflow_call", "workflow_run", "schedule",
+                            "watch", "fork", "create", "delete", "deployment", "deployment_status",
+                            "page_build", "public", "registry_package", "release", "status", "check_run",
+                            "check_suite", "discussion", "discussion_comment", "gollum", "merge_group",
+                            "pull_request_target", "workflow_call", "workflow_dispatch"
+                        ];
+                        
+                        if !valid_events.iter().any(|&e| e == event_type) && !event_type.is_empty() {
+                            diagnostics.push(Diagnostic {
+                                message: format!(
+                                    "Invalid event type: '{}'. Valid event types include: push, pull_request, workflow_dispatch, schedule, workflow_call, and others.",
+                                    event_type
+                                ),
+                                severity: Severity::Error,
+                                span: Span {
+                                    start: key_node.start_byte(),
+                                    end: key_node.end_byte(),
+                                },
+                            });
+                        }
+                    }
+                }
+                _ => {
+                    let mut cursor = node.walk();
+                    for child in node.children(&mut cursor) {
+                        validate_event_types(child, source, diagnostics);
+                    }
+                }
+            }
+        }
+        
+        // Validate event types in the on: mapping
+        validate_event_types(on_to_check, source, &mut diagnostics);
+        
+        // Also validate simple event text if present (for backward compatibility)
         if let Some(event_text) = event_text {
             let valid_events = ["push", "pull_request", "workflow_dispatch", "schedule", "repository_dispatch", "workflow_run", "workflow_call"];
             if !valid_events.contains(&event_text.as_str()) && !event_text.is_empty() {

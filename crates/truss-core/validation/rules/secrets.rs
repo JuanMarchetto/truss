@@ -128,9 +128,11 @@ impl SecretsValidationRule {
             else if remaining.starts_with("secrets") && remaining.len() > 7 {
                 let after_secrets = &remaining[7..];
                 // Check if next character is not a dot and not whitespace/operator
-                if !after_secrets.starts_with('.') 
-                    && !after_secrets.starts_with(|c: char| c.is_whitespace() || c == '}' || c == ')' || c == ']' || 
-                        c == '&' || c == '|' || c == '=' || c == '!' || c == '<' || c == '>') {
+                let first_char = after_secrets.chars().next();
+                let is_whitespace_or_op = first_char.map(|c| c.is_whitespace() || c == '}' || c == ')' || c == ']' || 
+                    c == '&' || c == '|' || c == '=' || c == '!' || c == '<' || c == '>').unwrap_or(false);
+                
+                if !after_secrets.starts_with('.') && !is_whitespace_or_op {
                     // Missing dot after "secrets"
                     // Find where the identifier ends
                     let identifier_end = after_secrets
@@ -154,7 +156,7 @@ impl SecretsValidationRule {
                     
                     search_pos = actual_pos + 7 + identifier_end;
                 } else {
-                    // Valid "secrets." reference, skip past it
+                    // Valid "secrets." reference, validate secret name format
                     search_pos = actual_pos + 7;
                     if after_secrets.starts_with('.') {
                         // Find end of secret name
@@ -163,6 +165,24 @@ impl SecretsValidationRule {
                             .find(|c: char| c.is_whitespace() || c == '}' || c == ')' || c == ']' || 
                                   c == '&' || c == '|' || c == '=' || c == '!' || c == '<' || c == '>' || c == '.')
                             .unwrap_or(after_dot.len());
+                        
+                        let secret_name = &after_dot[..name_end.min(after_dot.len())];
+                        
+                        // Validate secret name format
+                        if !is_valid_secret_name_format(secret_name) {
+                            diagnostics.push(Diagnostic {
+                                message: format!(
+                                    "Invalid secret name format: '{}'. Secret names should contain only alphanumeric characters, hyphens, and underscores, and start with a letter or underscore.",
+                                    secret_name
+                                ),
+                                severity: Severity::Warning,
+                                span: Span {
+                                    start: expr_start + 3 + actual_pos + 7 + 1,
+                                    end: expr_start + 3 + actual_pos + 7 + 1 + name_end,
+                                },
+                            });
+                        }
+                        
                         search_pos += 1 + name_end;
                     }
                 }
@@ -171,5 +191,26 @@ impl SecretsValidationRule {
             }
         }
     }
+}
+
+/// Validates that a secret name follows a reasonable format.
+/// Secret names should contain only alphanumeric characters, hyphens, and underscores,
+/// and should start with a letter or underscore.
+fn is_valid_secret_name_format(secret_name: &str) -> bool {
+    if secret_name.is_empty() {
+        return false;
+    }
+    
+    // First character must be letter or underscore
+    if let Some(first_char) = secret_name.chars().next() {
+        if !first_char.is_alphabetic() && first_char != '_' {
+            return false;
+        }
+    }
+    
+    // All characters must be alphanumeric, hyphen, or underscore
+    secret_name.chars().all(|c| {
+        c.is_alphanumeric() || c == '-' || c == '_'
+    })
 }
 

@@ -1,0 +1,12 @@
+[
+  {
+    "file": "/home/marche/truss/scripts/../benchmarks/fixtures/simple.yml",
+    "valid": true,
+    "diagnostics": [],
+    "duration_ms": 0.796545,
+    "metadata": {
+      "file_size": 245,
+      "lines": 14
+    }
+  }
+]

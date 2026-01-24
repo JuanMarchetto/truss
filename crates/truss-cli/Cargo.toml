@@ -14,4 +14,6 @@ path = "src/main.rs"
 truss-core = { path = "../truss-core" }
 clap = { version = "4", features = ["derive"] }
 rayon = "1.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 

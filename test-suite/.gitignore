@@ -1,0 +1,13 @@
+# Test repositories (cloned repos)
+repos/
+
+# Validation results
+results/
+
+# Comparison data and reports
+comparison/
+
+# Temporary files
+*.tmp
+*.log
+
