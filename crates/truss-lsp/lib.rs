@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Read, Write};
-use truss_core::{TrussEngine, Diagnostic as CoreDiagnostic, Severity as CoreSeverity};
+use truss_core::{Diagnostic as CoreDiagnostic, Severity as CoreSeverity, TrussEngine};
 
 /// LSP message types
 #[derive(Debug, Serialize, Deserialize)]
@@ -169,7 +169,9 @@ impl LspServer {
                     return notifications;
                 }
                 if let Some(params) = notif.params {
-                    if let Ok(did_open) = serde_json::from_value::<DidOpenTextDocumentParams>(params) {
+                    if let Ok(did_open) =
+                        serde_json::from_value::<DidOpenTextDocumentParams>(params)
+                    {
                         self.handle_did_open(did_open, &mut notifications);
                     }
                 }
@@ -179,7 +181,9 @@ impl LspServer {
                     return notifications;
                 }
                 if let Some(params) = notif.params {
-                    if let Ok(did_change) = serde_json::from_value::<DidChangeTextDocumentParams>(params) {
+                    if let Ok(did_change) =
+                        serde_json::from_value::<DidChangeTextDocumentParams>(params)
+                    {
                         self.handle_did_change(did_change, &mut notifications);
                     }
                 }
@@ -189,7 +193,9 @@ impl LspServer {
                     return notifications;
                 }
                 if let Some(params) = notif.params {
-                    if let Ok(did_close) = serde_json::from_value::<DidCloseTextDocumentParams>(params) {
+                    if let Ok(did_close) =
+                        serde_json::from_value::<DidCloseTextDocumentParams>(params)
+                    {
                         self.handle_did_close(did_close, &mut notifications);
                     }
                 }
@@ -203,7 +209,11 @@ impl LspServer {
         notifications
     }
 
-    fn handle_did_open(&mut self, params: DidOpenTextDocumentParams, notifications: &mut Vec<LspNotification>) {
+    fn handle_did_open(
+        &mut self,
+        params: DidOpenTextDocumentParams,
+        notifications: &mut Vec<LspNotification>,
+    ) {
         let uri = params.text_document.uri;
         let text = params.text_document.text;
         let version = params.text_document.version;
@@ -211,11 +221,14 @@ impl LspServer {
         let text_for_diagnostics = text.clone();
         let (result, tree) = self.engine.analyze_with_tree(&text);
 
-        self.documents.insert(uri.clone(), DocumentState {
-            text,
-            version,
-            tree: Some(tree),
-        });
+        self.documents.insert(
+            uri.clone(),
+            DocumentState {
+                text,
+                version,
+                tree: Some(tree),
+            },
+        );
 
         let diagnostics = self.convert_diagnostics(&result.diagnostics, &text_for_diagnostics);
         notifications.push(LspNotification {
@@ -228,7 +241,11 @@ impl LspServer {
         });
     }
 
-    fn handle_did_change(&mut self, params: DidChangeTextDocumentParams, notifications: &mut Vec<LspNotification>) {
+    fn handle_did_change(
+        &mut self,
+        params: DidChangeTextDocumentParams,
+        notifications: &mut Vec<LspNotification>,
+    ) {
         let uri = params.text_document.uri;
 
         // We advertise TextDocumentSyncKind.Full (1), so the client always
@@ -240,11 +257,11 @@ impl LspServer {
 
         let version = params.text_document.version;
 
-        let old_tree = self.documents.get(&uri)
-            .and_then(|doc| doc.tree.as_ref());
+        let old_tree = self.documents.get(&uri).and_then(|doc| doc.tree.as_ref());
 
         let (result, tree) = if let Some(old) = old_tree {
-            self.engine.analyze_incremental_with_tree(&new_text, Some(old))
+            self.engine
+                .analyze_incremental_with_tree(&new_text, Some(old))
         } else {
             self.engine.analyze_with_tree(&new_text)
         };
@@ -255,11 +272,14 @@ impl LspServer {
             doc.version = version;
             doc.tree = Some(tree);
         } else {
-            self.documents.insert(uri.clone(), DocumentState {
-                text: new_text,
-                version,
-                tree: Some(tree),
-            });
+            self.documents.insert(
+                uri.clone(),
+                DocumentState {
+                    text: new_text,
+                    version,
+                    tree: Some(tree),
+                },
+            );
         }
 
         let diagnostics = self.convert_diagnostics(&result.diagnostics, &text_for_diagnostics);
@@ -273,7 +293,11 @@ impl LspServer {
         });
     }
 
-    fn handle_did_close(&mut self, params: DidCloseTextDocumentParams, notifications: &mut Vec<LspNotification>) {
+    fn handle_did_close(
+        &mut self,
+        params: DidCloseTextDocumentParams,
+        notifications: &mut Vec<LspNotification>,
+    ) {
         let uri = params.text_document.uri;
         self.documents.remove(&uri);
 
@@ -289,30 +313,33 @@ impl LspServer {
     }
 
     fn convert_diagnostics(&self, diagnostics: &[CoreDiagnostic], text: &str) -> Vec<Value> {
-        diagnostics.iter().map(|d| {
-            let (start_line, start_char) = byte_to_lsp_position(d.span.start, text);
-            let (end_line, end_char) = byte_to_lsp_position(d.span.end, text);
+        diagnostics
+            .iter()
+            .map(|d| {
+                let (start_line, start_char) = byte_to_lsp_position(d.span.start, text);
+                let (end_line, end_char) = byte_to_lsp_position(d.span.end, text);
 
-            serde_json::json!({
-                "range": {
-                    "start": {
-                        "line": start_line,
-                        "character": start_char
+                serde_json::json!({
+                    "range": {
+                        "start": {
+                            "line": start_line,
+                            "character": start_char
+                        },
+                        "end": {
+                            "line": end_line,
+                            "character": end_char
+                        }
                     },
-                    "end": {
-                        "line": end_line,
-                        "character": end_char
-                    }
-                },
-                "severity": match d.severity {
-                    CoreSeverity::Error => 1,
-                    CoreSeverity::Warning => 2,
-                    CoreSeverity::Info => 3,
-                },
-                "message": d.message,
-                "source": "truss"
+                    "severity": match d.severity {
+                        CoreSeverity::Error => 1,
+                        CoreSeverity::Warning => 2,
+                        CoreSeverity::Info => 3,
+                    },
+                    "message": d.message,
+                    "source": "truss"
+                })
             })
-        }).collect()
+            .collect()
     }
 }
 
@@ -329,7 +356,8 @@ fn byte_to_lsp_position(byte_offset: usize, text: &str) -> (u32, u32) {
 
     // Count UTF-16 code units from last_newline to byte_offset
     let line_bytes = &text[last_newline..clamped];
-    let character = line_bytes.chars()
+    let character = line_bytes
+        .chars()
         .map(|c| c.len_utf16() as u32)
         .sum::<u32>();
 

@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates continue-on-error is a boolean.
 pub struct StepContinueOnErrorRule;
@@ -31,7 +31,8 @@ impl ValidationRule for StepContinueOnErrorRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "steps" {
                             if let Some(steps_value_raw) = utils::get_pair_value(node) {
@@ -48,26 +49,48 @@ impl ValidationRule for StepContinueOnErrorRule {
                                     let mut cursor = steps_value.walk();
                                     for step_node in steps_value.children(&mut cursor) {
                                         // Each step in a block_sequence can be block_node or block_sequence_item
-                                        if step_node.kind() == "block_node" || step_node.kind() == "block_sequence_item" {
-                                            validate_step_continue_on_error(step_node, source, diagnostics);
+                                        if step_node.kind() == "block_node"
+                                            || step_node.kind() == "block_sequence_item"
+                                        {
+                                            validate_step_continue_on_error(
+                                                step_node,
+                                                source,
+                                                diagnostics,
+                                            );
                                         } else if step_node.kind() == "block_mapping" {
                                             // Direct block_mapping (unlikely but possible)
-                                            validate_step_continue_on_error(step_node, source, diagnostics);
+                                            validate_step_continue_on_error(
+                                                step_node,
+                                                source,
+                                                diagnostics,
+                                            );
                                         }
                                     }
                                 } else if steps_value.kind() == "flow_sequence" {
                                     // Handle flow_sequence
                                     let mut cursor = steps_value.walk();
                                     for step_node in steps_value.children(&mut cursor) {
-                                        if step_node.kind() == "flow_node" || step_node.kind() == "block_node" {
-                                            validate_step_continue_on_error(step_node, source, diagnostics);
+                                        if step_node.kind() == "flow_node"
+                                            || step_node.kind() == "block_node"
+                                        {
+                                            validate_step_continue_on_error(
+                                                step_node,
+                                                source,
+                                                diagnostics,
+                                            );
                                         }
                                     }
                                 } else {
                                     let mut cursor = steps_value.walk();
                                     for step_node in steps_value.children(&mut cursor) {
-                                        if step_node.kind() == "block_node" || step_node.kind() == "flow_node" {
-                                            validate_step_continue_on_error(step_node, source, diagnostics);
+                                        if step_node.kind() == "block_node"
+                                            || step_node.kind() == "flow_node"
+                                        {
+                                            validate_step_continue_on_error(
+                                                step_node,
+                                                source,
+                                                diagnostics,
+                                            );
                                         }
                                     }
                                 }
@@ -87,7 +110,11 @@ impl ValidationRule for StepContinueOnErrorRule {
             }
         }
 
-        fn validate_step_continue_on_error(step_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+        fn validate_step_continue_on_error(
+            step_node: Node,
+            source: &str,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             let mut step_to_check = step_node;
 
             // Handle different node types that can represent a step
@@ -101,23 +128,27 @@ impl ValidationRule for StepContinueOnErrorRule {
                 }
             }
             let step_to_check = utils::unwrap_node(step_to_check);
-            
+
             if step_to_check.kind() == "block_mapping" || step_to_check.kind() == "flow_mapping" {
-                let continue_on_error_value = utils::find_value_for_key(step_to_check, source, "continue-on-error");
-                
+                let continue_on_error_value =
+                    utils::find_value_for_key(step_to_check, source, "continue-on-error");
+
                 if let Some(continue_node) = continue_on_error_value {
                     let continue_text = utils::node_text(continue_node, source);
-                    let continue_cleaned = continue_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                    
+                    let continue_cleaned = continue_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
                     // Check if it's an expression
                     if continue_cleaned.starts_with("${{") {
                         // Expressions are valid
                         return;
                     }
-                    
+
                     // Check if it's a string (quoted) - match the exact pattern from job_strategy.rs and timeout.rs
                     // Check the original text before any processing
-                    if continue_text.trim().starts_with('"') || continue_text.trim().starts_with('\'') {
+                    if continue_text.trim().starts_with('"')
+                        || continue_text.trim().starts_with('\'')
+                    {
                         diagnostics.push(Diagnostic {
                             message: format!(
                                 "Step has invalid continue-on-error: '{}'. continue-on-error must be a boolean (true or false), not a string.",
@@ -170,5 +201,3 @@ impl ValidationRule for StepContinueOnErrorRule {
         diagnostics
     }
 }
-
-

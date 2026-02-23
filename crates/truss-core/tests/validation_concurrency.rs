@@ -4,8 +4,8 @@
 //!
 //! Validates concurrency syntax in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_concurrency_valid_workflow_level() {
@@ -21,13 +21,14 @@ jobs:
     steps:
       - run: echo "Building"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("concurrency") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         concurrency_errors.is_empty(),
         "Valid workflow-level concurrency should not produce errors"
@@ -48,13 +49,14 @@ jobs:
     steps:
       - run: echo "Building"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("concurrency") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         concurrency_errors.is_empty(),
         "Valid job-level concurrency should not produce errors"
@@ -73,13 +75,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("concurrency") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         concurrency_errors.is_empty(),
         "Valid concurrency with string group should not produce errors"
@@ -98,13 +101,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("concurrency") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         concurrency_errors.is_empty(),
         "Valid concurrency with expression group should not produce errors"
@@ -123,16 +127,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
     // cancel-in-progress should be boolean, not string
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("concurrency") || d.message.contains("cancel-in-progress")) && 
-                (d.message.contains("invalid") || d.message.contains("boolean")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("concurrency") || d.message.contains("cancel-in-progress"))
+                && (d.message.contains("invalid") || d.message.contains("boolean"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: ConcurrencyRule is not yet implemented
     // When implemented, this should produce an error
     assert!(
@@ -152,16 +159,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
     // 'group' is required for concurrency
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("concurrency") || d.message.contains("group")) && 
-                (d.message.contains("required") || d.message.contains("missing")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("concurrency") || d.message.contains("group"))
+                && (d.message.contains("required") || d.message.contains("missing"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: ConcurrencyRule is not yet implemented
     // When implemented, this should produce an error
     assert!(
@@ -181,13 +191,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("concurrency") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         concurrency_errors.is_empty(),
         "Concurrency with only 'group' (cancel-in-progress is optional) should be valid"
@@ -206,20 +217,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
     // Group should be string or expression, not number
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("concurrency") || d.message.contains("group")) && 
-                (d.message.contains("invalid") || d.message.contains("string")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("concurrency") || d.message.contains("group"))
+                && (d.message.contains("invalid") || d.message.contains("string"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: ConcurrencyRule is not yet implemented
     // When implemented, this should produce an error
     assert!(
-        !concurrency_errors.is_empty() || result.diagnostics.iter().any(|d| d.message.contains("expression")),
+        !concurrency_errors.is_empty()
+            || result
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("expression")),
         "Invalid group type (number instead of string/expression) should produce error"
     );
 }
@@ -238,16 +256,19 @@ jobs:
     steps:
       - run: echo "Building"
 "#;
-    
+
     let result = engine.analyze(yaml);
     // cancel-in-progress should be boolean, not string
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("concurrency") || d.message.contains("cancel-in-progress")) && 
-                (d.message.contains("invalid") || d.message.contains("boolean")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("concurrency") || d.message.contains("cancel-in-progress"))
+                && (d.message.contains("invalid") || d.message.contains("boolean"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: ConcurrencyRule is not yet implemented
     // When implemented, this should produce an error
     assert!(
@@ -270,13 +291,14 @@ jobs:
     steps:
       - run: echo "Building"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("concurrency") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         concurrency_errors.is_empty(),
         "Workflow-level concurrency with cancel-in-progress: false should be valid"
@@ -296,16 +318,19 @@ jobs:
     steps:
       - run: echo "Building"
 "#;
-    
+
     let result = engine.analyze(yaml);
     // 'group' is required for concurrency at job level too
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("concurrency") || d.message.contains("group")) && 
-                (d.message.contains("required") || d.message.contains("missing")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("concurrency") || d.message.contains("group"))
+                && (d.message.contains("required") || d.message.contains("missing"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: ConcurrencyRule is not yet implemented
     // When implemented, this should produce an error
     assert!(
@@ -313,4 +338,3 @@ jobs:
         "Job-level concurrency missing required 'group' field should produce error"
     );
 }
-

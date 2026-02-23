@@ -4,8 +4,8 @@
 //!
 //! Validates job dependencies (`needs:`) in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_job_needs_valid_single() {
@@ -19,13 +19,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let needs_errors: Vec<_> = result.diagnostics
+    let needs_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("needs") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         needs_errors.is_empty(),
         "Valid 'needs: build' should not produce errors"
@@ -46,13 +47,14 @@ jobs:
     needs: [build, test]
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let needs_errors: Vec<_> = result.diagnostics
+    let needs_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("needs") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         needs_errors.is_empty(),
         "Valid 'needs: [build, test]' should not produce errors"
@@ -69,20 +71,25 @@ jobs:
     needs: nonexistent
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let needs_errors: Vec<_> = result.diagnostics
+    let needs_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("needs") || 
-                (d.message.contains("job") && d.message.contains("nonexistent")))
+        .filter(|d| {
+            d.message.contains("needs")
+                || (d.message.contains("job") && d.message.contains("nonexistent"))
+        })
         .collect();
-    
+
     assert!(
         !needs_errors.is_empty(),
         "Reference to non-existent job should produce error"
     );
     assert!(
-        needs_errors.iter().any(|d| d.message.contains("nonexistent")),
+        needs_errors
+            .iter()
+            .any(|d| d.message.contains("nonexistent")),
         "Error message should mention 'nonexistent' job"
     );
 }
@@ -100,20 +107,22 @@ jobs:
     needs: job1
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let circular_errors: Vec<_> = result.diagnostics
+    let circular_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("circular") || 
-                d.message.contains("dependency"))
+        .filter(|d| d.message.contains("circular") || d.message.contains("dependency"))
         .collect();
-    
+
     assert!(
         !circular_errors.is_empty(),
         "Circular dependency should produce error"
     );
     assert!(
-        circular_errors.iter().any(|d| d.message.contains("circular")),
+        circular_errors
+            .iter()
+            .any(|d| d.message.contains("circular")),
         "Error message should mention 'circular'"
     );
 }
@@ -128,14 +137,17 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let self_ref_errors: Vec<_> = result.diagnostics
+    let self_ref_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("self") || 
-                (d.message.contains("needs") && d.message.contains("build")))
+        .filter(|d| {
+            d.message.contains("self")
+                || (d.message.contains("needs") && d.message.contains("build"))
+        })
         .collect();
-    
+
     assert!(
         !self_ref_errors.is_empty(),
         "Self-reference should produce error"
@@ -145,4 +157,3 @@ jobs:
         "Error message should mention 'self'"
     );
 }
-

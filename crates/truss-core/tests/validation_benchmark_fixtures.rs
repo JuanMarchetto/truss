@@ -10,7 +10,7 @@
 //! - complex-static.yml: microsoft/TypeScript (CI with matrix strategies)
 //! - complex-dynamic.yml: rust-lang/rust (CI with dynamic matrices)
 
-use truss_core::{TrussEngine, Severity};
+use truss_core::{Severity, TrussEngine};
 
 /// Load fixture content at compile time so tests fail fast if fixtures are missing.
 const SIMPLE_YML: &str = include_str!("../../../benchmarks/fixtures/simple.yml");
@@ -28,7 +28,8 @@ fn fixture_simple_no_errors() {
     let mut engine = TrussEngine::new();
     let result = engine.analyze(SIMPLE_YML);
 
-    let errors: Vec<_> = result.diagnostics
+    let errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.severity == Severity::Error)
         .collect();
@@ -37,7 +38,8 @@ fn fixture_simple_no_errors() {
         errors.is_empty(),
         "simple.yml should produce zero errors. Got {} error(s):\n{}",
         errors.len(),
-        errors.iter()
+        errors
+            .iter()
             .map(|d| format!("  - [ERROR] {}", d.message))
             .collect::<Vec<_>>()
             .join("\n")
@@ -48,7 +50,10 @@ fn fixture_simple_no_errors() {
 fn fixture_simple_is_valid() {
     let mut engine = TrussEngine::new();
     let result = engine.analyze(SIMPLE_YML);
-    assert!(result.is_ok(), "simple.yml should be valid (is_ok() == true)");
+    assert!(
+        result.is_ok(),
+        "simple.yml should be valid (is_ok() == true)"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -62,7 +67,8 @@ fn fixture_medium_no_errors() {
     let mut engine = TrussEngine::new();
     let result = engine.analyze(MEDIUM_YML);
 
-    let errors: Vec<_> = result.diagnostics
+    let errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.severity == Severity::Error)
         .collect();
@@ -71,8 +77,12 @@ fn fixture_medium_no_errors() {
         errors.is_empty(),
         "medium.yml should produce zero errors after Phase 1 fixes. Got {} error(s):\n{}",
         errors.len(),
-        errors.iter()
-            .map(|d| format!("  - [ERROR] {} ({}..{})", d.message, d.span.start, d.span.end))
+        errors
+            .iter()
+            .map(|d| format!(
+                "  - [ERROR] {} ({}..{})",
+                d.message, d.span.start, d.span.end
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -82,7 +92,10 @@ fn fixture_medium_no_errors() {
 fn fixture_medium_is_valid() {
     let mut engine = TrussEngine::new();
     let result = engine.analyze(MEDIUM_YML);
-    assert!(result.is_ok(), "medium.yml should be valid (is_ok() == true)");
+    assert!(
+        result.is_ok(),
+        "medium.yml should be valid (is_ok() == true)"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +112,8 @@ fn fixture_complex_static_no_errors() {
     let mut engine = TrussEngine::new();
     let result = engine.analyze(COMPLEX_STATIC_YML);
 
-    let errors: Vec<_> = result.diagnostics
+    let errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.severity == Severity::Error)
         .collect();
@@ -108,8 +122,12 @@ fn fixture_complex_static_no_errors() {
         errors.is_empty(),
         "complex-static.yml should produce zero errors after Phase 1 fixes. Got {} error(s):\n{}",
         errors.len(),
-        errors.iter()
-            .map(|d| format!("  - [ERROR] {} ({}..{})", d.message, d.span.start, d.span.end))
+        errors
+            .iter()
+            .map(|d| format!(
+                "  - [ERROR] {} ({}..{})",
+                d.message, d.span.start, d.span.end
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -122,7 +140,9 @@ fn fixture_complex_static_is_valid() {
     assert!(
         result.is_ok(),
         "complex-static.yml should be valid (is_ok() == true). Errors: {:?}",
-        result.diagnostics.iter()
+        result
+            .diagnostics
+            .iter()
             .filter(|d| d.severity == Severity::Error)
             .map(|d| &d.message)
             .collect::<Vec<_>>()
@@ -143,7 +163,8 @@ fn fixture_complex_dynamic_no_errors() {
     let mut engine = TrussEngine::new();
     let result = engine.analyze(COMPLEX_DYNAMIC_YML);
 
-    let errors: Vec<_> = result.diagnostics
+    let errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.severity == Severity::Error)
         .collect();
@@ -152,8 +173,12 @@ fn fixture_complex_dynamic_no_errors() {
         errors.is_empty(),
         "complex-dynamic.yml should produce zero errors after Phase 1 fixes. Got {} error(s):\n{}",
         errors.len(),
-        errors.iter()
-            .map(|d| format!("  - [ERROR] {} ({}..{})", d.message, d.span.start, d.span.end))
+        errors
+            .iter()
+            .map(|d| format!(
+                "  - [ERROR] {} ({}..{})",
+                d.message, d.span.start, d.span.end
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -166,7 +191,9 @@ fn fixture_complex_dynamic_is_valid() {
     assert!(
         result.is_ok(),
         "complex-dynamic.yml should be valid (is_ok() == true). Errors: {:?}",
-        result.diagnostics.iter()
+        result
+            .diagnostics
+            .iter()
             .filter(|d| d.severity == Severity::Error)
             .map(|d| &d.message)
             .collect::<Vec<_>>()
@@ -202,7 +229,12 @@ fn fixture_analysis_is_deterministic() {
             result_b.diagnostics.len()
         );
 
-        for (i, (a, b)) in result_a.diagnostics.iter().zip(result_b.diagnostics.iter()).enumerate() {
+        for (i, (a, b)) in result_a
+            .diagnostics
+            .iter()
+            .zip(result_b.diagnostics.iter())
+            .enumerate()
+        {
             assert_eq!(
                 a.message, b.message,
                 "Diagnostic #{} for {} differs between runs: '{}' vs '{}'",
@@ -239,8 +271,16 @@ fn fixture_all_diagnostic_summary() {
 
     for (name, content) in &fixtures {
         let result = engine.analyze(content);
-        let errors = result.diagnostics.iter().filter(|d| d.severity == Severity::Error).count();
-        let warnings = result.diagnostics.iter().filter(|d| d.severity == Severity::Warning).count();
+        let errors = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.severity == Severity::Error)
+            .count();
+        let warnings = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.severity == Severity::Warning)
+            .count();
         total_errors += errors;
         total_warnings += warnings;
 
@@ -253,7 +293,10 @@ fn fixture_all_diagnostic_summary() {
             warnings
         );
         for d in &result.diagnostics {
-            eprintln!("  [{:?}] {} ({}..{})", d.severity, d.message, d.span.start, d.span.end);
+            eprintln!(
+                "  [{:?}] {} ({}..{})",
+                d.severity, d.message, d.span.start, d.span.end
+            );
         }
     }
 

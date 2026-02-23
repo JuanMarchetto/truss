@@ -4,8 +4,8 @@
 //!
 //! Validates continue-on-error is a boolean in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_step_continue_on_error_valid_true() {
@@ -19,14 +19,17 @@ jobs:
       - continue-on-error: true
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let continue_errors: Vec<_> = result.diagnostics
+    let continue_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("continue-on-error") || d.message.contains("continue")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("continue-on-error") || d.message.contains("continue"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         continue_errors.is_empty(),
         "Valid continue-on-error: true should not produce errors"
@@ -45,14 +48,17 @@ jobs:
       - continue-on-error: false
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let continue_errors: Vec<_> = result.diagnostics
+    let continue_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("continue-on-error") || d.message.contains("continue")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("continue-on-error") || d.message.contains("continue"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         continue_errors.is_empty(),
         "Valid continue-on-error: false should not produce errors"
@@ -71,15 +77,20 @@ jobs:
       - continue-on-error: "true"
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let continue_errors: Vec<_> = result.diagnostics
+    let continue_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("continue-on-error") || d.message.contains("continue")) && 
-                (d.message.contains("string") || d.message.contains("boolean") || d.message.contains("type")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("continue-on-error") || d.message.contains("continue"))
+                && (d.message.contains("string")
+                    || d.message.contains("boolean")
+                    || d.message.contains("type"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !continue_errors.is_empty(),
         "String continue-on-error value should produce error"
@@ -98,18 +109,22 @@ jobs:
       - continue-on-error: 1
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let continue_errors: Vec<_> = result.diagnostics
+    let continue_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("continue-on-error") || d.message.contains("continue")) && 
-                (d.message.contains("number") || d.message.contains("boolean") || d.message.contains("type")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("continue-on-error") || d.message.contains("continue"))
+                && (d.message.contains("number")
+                    || d.message.contains("boolean")
+                    || d.message.contains("type"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !continue_errors.is_empty(),
         "Number continue-on-error value should produce error"
     );
 }
-

@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates shell field values.
 pub struct StepShellRule;
@@ -29,13 +29,16 @@ impl ValidationRule for StepShellRule {
         fn process_jobs(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
-                    if let Some(key_node) = node.child(0) {
+                    if let Some(_key_node) = node.child(0) {
                         if let Some(job_value_raw) = utils::get_pair_value(node) {
                             let job_value = utils::unwrap_node(job_value_raw);
 
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
                                 // Find steps in this job
-                                let steps_value = utils::find_value_for_key(job_value, source, "steps");
+                                let steps_value =
+                                    utils::find_value_for_key(job_value, source, "steps");
                                 if let Some(steps_node_raw) = steps_value {
                                     let steps_node = utils::unwrap_node(steps_node_raw);
                                     validate_steps_in_node(steps_node, source, diagnostics);
@@ -52,7 +55,7 @@ impl ValidationRule for StepShellRule {
                 }
             }
         }
-        
+
         fn validate_steps_in_node(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_sequence" | "flow_sequence" => {
@@ -78,18 +81,25 @@ impl ValidationRule for StepShellRule {
             // Step can be block_mapping, flow_mapping, or we need to search for it
             if step_to_check.kind() == "block_mapping" || step_to_check.kind() == "flow_mapping" {
                 let shell_value = utils::find_value_for_key(step_to_check, source, "shell");
-                
+
                 if let Some(shell_node) = shell_value {
                     validate_shell_value(shell_node, source, diagnostics);
                 }
             } else {
                 // Try to find shell field by searching recursively
-                fn find_shell_recursive(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+                fn find_shell_recursive(
+                    node: Node,
+                    source: &str,
+                    diagnostics: &mut Vec<Diagnostic>,
+                ) {
                     match node.kind() {
                         "block_mapping_pair" | "flow_pair" => {
                             if let Some(key_node) = node.child(0) {
                                 let key_text = utils::node_text(key_node, source);
-                                let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                                let key_cleaned = key_text
+                                    .trim_matches(|c: char| {
+                                        c == '"' || c == '\'' || c.is_whitespace()
+                                    })
                                     .trim_end_matches(':');
                                 if key_cleaned == "shell" {
                                     if let Some(shell_node) = utils::get_pair_value(node) {
@@ -109,21 +119,22 @@ impl ValidationRule for StepShellRule {
                 find_shell_recursive(step_to_check, source, diagnostics);
             }
         }
-        
+
         fn validate_shell_value(shell_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             let shell_text = utils::node_text(shell_node, source);
-            
+
             // Check if it's an expression first
             let shell_trimmed = shell_text.trim();
             if shell_trimmed.starts_with("${{") {
                 // Expressions are valid
                 return;
             }
-            
+
             // Check if empty - handle various empty string representations
             // Empty can be: "", '', or whitespace-only after trimming quotes
-            let shell_cleaned = shell_trimmed.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-            
+            let shell_cleaned =
+                shell_trimmed.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
             // Check if empty: either cleaned is empty, or it's just quotes
             if shell_cleaned.is_empty() {
                 diagnostics.push(Diagnostic {
@@ -136,14 +147,14 @@ impl ValidationRule for StepShellRule {
                 });
                 return;
             }
-            
+
             // Known valid shells
             let known_shells = ["bash", "pwsh", "python", "sh", "cmd", "powershell"];
             let is_known = known_shells.contains(&shell_cleaned.to_lowercase().as_str());
-            
+
             // Check for custom shell format (should contain {0} placeholder)
             let is_custom = shell_cleaned.contains("{0}");
-            
+
             if !is_known && !is_custom {
                 diagnostics.push(Diagnostic {
                     message: format!(
@@ -164,4 +175,3 @@ impl ValidationRule for StepShellRule {
         diagnostics
     }
 }
-

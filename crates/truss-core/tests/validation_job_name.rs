@@ -4,8 +4,8 @@
 //!
 //! Validates job names in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_job_name_valid_simple() {
@@ -16,13 +16,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let job_errors: Vec<_> = result.diagnostics
+    let job_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("job") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         job_errors.is_empty(),
         "Valid job name 'build' should not produce errors"
@@ -38,13 +39,14 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let job_errors: Vec<_> = result.diagnostics
+    let job_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("job") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         job_errors.is_empty(),
         "Valid job name with hyphen should not produce errors"
@@ -62,20 +64,25 @@ jobs:
   build:
     runs-on: windows-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let duplicate_errors: Vec<_> = result.diagnostics
+    let duplicate_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("duplicate") || 
-                (d.message.contains("job") && d.message.contains("build")))
+        .filter(|d| {
+            d.message.contains("duplicate")
+                || (d.message.contains("job") && d.message.contains("build"))
+        })
         .collect();
-    
+
     assert!(
         !duplicate_errors.is_empty(),
         "Duplicate job names should produce error"
     );
     assert!(
-        duplicate_errors.iter().any(|d| d.message.contains("duplicate")),
+        duplicate_errors
+            .iter()
+            .any(|d| d.message.contains("duplicate")),
         "Error message should mention 'duplicate'"
     );
 }
@@ -89,14 +96,17 @@ jobs:
   "build test":
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let invalid_errors: Vec<_> = result.diagnostics
+    let invalid_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("job") && 
-                (d.message.contains("invalid") || d.message.contains("character")))
+        .filter(|d| {
+            d.message.contains("job")
+                && (d.message.contains("invalid") || d.message.contains("character"))
+        })
         .collect();
-    
+
     assert!(
         !invalid_errors.is_empty(),
         "Invalid job name characters should produce error"
@@ -112,17 +122,19 @@ jobs:
   if:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let reserved_errors: Vec<_> = result.diagnostics
+    let reserved_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("job") && 
-                (d.message.contains("reserved") || d.message.contains("if")))
+        .filter(|d| {
+            d.message.contains("job")
+                && (d.message.contains("reserved") || d.message.contains("if"))
+        })
         .collect();
-    
+
     assert!(
         !reserved_errors.is_empty(),
         "Reserved job names should produce error"
     );
 }
-

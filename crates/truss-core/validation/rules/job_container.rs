@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates container and services configurations.
 pub struct JobContainerRule;
@@ -31,26 +31,41 @@ impl ValidationRule for JobContainerRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let job_name = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
-                        
+
                         let job_value = utils::get_pair_value(node);
 
                         if let Some(job_value_raw) = job_value {
                             let job_value = utils::unwrap_node(job_value_raw);
 
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
                                 // Check container
-                                let container_value = utils::find_value_for_key(job_value, source, "container");
+                                let container_value =
+                                    utils::find_value_for_key(job_value, source, "container");
                                 if let Some(container_node) = container_value {
-                                    validate_container(container_node, source, &job_name, diagnostics);
+                                    validate_container(
+                                        container_node,
+                                        source,
+                                        &job_name,
+                                        diagnostics,
+                                    );
                                 }
-                                
+
                                 // Check services
-                                let services_value = utils::find_value_for_key(job_value, source, "services");
+                                let services_value =
+                                    utils::find_value_for_key(job_value, source, "services");
                                 if let Some(services_node) = services_value {
-                                    validate_services(services_node, source, &job_name, diagnostics);
+                                    validate_services(
+                                        services_node,
+                                        source,
+                                        &job_name,
+                                        diagnostics,
+                                    );
                                 }
                             }
                         }
@@ -65,9 +80,14 @@ impl ValidationRule for JobContainerRule {
             }
         }
 
-        fn validate_container(container_node: Node, source: &str, job_name: &str, diagnostics: &mut Vec<Diagnostic>) {
+        fn validate_container(
+            container_node: Node,
+            source: &str,
+            job_name: &str,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             let container_to_check = utils::unwrap_node(container_node);
-            
+
             // Check image field (required)
             let image_value = utils::find_value_for_key(container_to_check, source, "image");
             if image_value.is_none() {
@@ -84,8 +104,9 @@ impl ValidationRule for JobContainerRule {
                 });
             } else if let Some(image_node) = image_value {
                 let image_text = utils::node_text(image_node, source);
-                let image_cleaned = image_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                
+                let image_cleaned =
+                    image_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
                 if image_cleaned.is_empty() {
                     diagnostics.push(Diagnostic {
                         message: format!(
@@ -101,7 +122,10 @@ impl ValidationRule for JobContainerRule {
                 } else if !image_cleaned.starts_with("${{") {
                     // Basic image reference format validation
                     // Docker images should be in format: [registry/]repository[:tag] or [registry/]repository@digest
-                    if !image_cleaned.contains('/') && !image_cleaned.contains(':') && !image_cleaned.contains('@') {
+                    if !image_cleaned.contains('/')
+                        && !image_cleaned.contains(':')
+                        && !image_cleaned.contains('@')
+                    {
                         // Might be invalid - warn
                         diagnostics.push(Diagnostic {
                             message: format!(
@@ -117,7 +141,7 @@ impl ValidationRule for JobContainerRule {
                     }
                 }
             }
-            
+
             // Check ports format
             let ports_value = utils::find_value_for_key(container_to_check, source, "ports");
             if let Some(ports_node) = ports_value {
@@ -125,15 +149,25 @@ impl ValidationRule for JobContainerRule {
             }
         }
 
-        fn validate_services(services_node: Node, source: &str, job_name: &str, diagnostics: &mut Vec<Diagnostic>) {
+        fn validate_services(
+            services_node: Node,
+            source: &str,
+            job_name: &str,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             // Services is a mapping of service names to container configs
             // Validate each service container
-            fn check_service(node: Node, source: &str, job_name: &str, diagnostics: &mut Vec<Diagnostic>) {
+            fn check_service(
+                node: Node,
+                source: &str,
+                job_name: &str,
+                diagnostics: &mut Vec<Diagnostic>,
+            ) {
                 match node.kind() {
                     "block_mapping_pair" | "flow_pair" => {
                         if let Some(key_node) = node.child(0) {
                             let _service_name = utils::node_text(key_node, source);
-                            
+
                             let service_value = utils::get_pair_value(node);
 
                             if let Some(service_value_raw) = service_value {
@@ -151,21 +185,32 @@ impl ValidationRule for JobContainerRule {
                     }
                 }
             }
-            
+
             check_service(services_node, source, job_name, diagnostics);
         }
 
-        fn validate_ports(ports_node: Node, source: &str, job_name: &str, diagnostics: &mut Vec<Diagnostic>) {
+        fn validate_ports(
+            ports_node: Node,
+            source: &str,
+            job_name: &str,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             let _ports_text = utils::node_text(ports_node, source);
-            
+
             // Ports can be an array of strings in format "host:container"
             // Basic validation: check if format looks correct
-            fn check_port_format(node: Node, source: &str, job_name: &str, diagnostics: &mut Vec<Diagnostic>) {
+            fn check_port_format(
+                node: Node,
+                source: &str,
+                job_name: &str,
+                diagnostics: &mut Vec<Diagnostic>,
+            ) {
                 match node.kind() {
                     "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
                         let port_text = utils::node_text(node, source);
-                        let port_cleaned = port_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                        
+                        let port_cleaned = port_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
                         // Check if it's in format "host:container"
                         if !port_cleaned.contains(':') && !port_cleaned.is_empty() {
                             diagnostics.push(Diagnostic {
@@ -189,7 +234,7 @@ impl ValidationRule for JobContainerRule {
                     }
                 }
             }
-            
+
             check_port_format(ports_node, source, job_name, diagnostics);
         }
 
@@ -198,4 +243,3 @@ impl ValidationRule for JobContainerRule {
         diagnostics
     }
 }
-

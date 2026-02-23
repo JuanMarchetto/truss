@@ -4,8 +4,8 @@
 //!
 //! Validates GitHub Actions expressions (${{ }}).
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_expression_valid_context_variable() {
@@ -18,13 +18,14 @@ jobs:
     steps:
       - run: echo "${{ github.event.pull_request.number }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let expr_errors: Vec<_> = result.diagnostics
+    let expr_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("expression") || d.message.contains("${{"))
         .collect();
-    
+
     assert!(
         expr_errors.is_empty(),
         "Valid expression with context variable should not produce errors"
@@ -45,13 +46,14 @@ jobs:
     steps:
       - run: echo "${{ matrix.os }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let expr_errors: Vec<_> = result.diagnostics
+    let expr_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("expression") || d.message.contains("matrix"))
         .collect();
-    
+
     assert!(
         expr_errors.is_empty(),
         "Valid expression with matrix variable should not produce errors"
@@ -73,13 +75,14 @@ jobs:
     steps:
       - run: echo "${{ inputs.environment }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let expr_errors: Vec<_> = result.diagnostics
+    let expr_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("expression") || d.message.contains("inputs"))
         .collect();
-    
+
     assert!(
         expr_errors.is_empty(),
         "Valid expression with workflow_dispatch input should not produce errors"
@@ -98,13 +101,14 @@ jobs:
       - if: ${{ github.ref == 'refs/heads/main' }}
         run: echo "On main branch"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let expr_errors: Vec<_> = result.diagnostics
+    let expr_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("expression") || d.message.contains("if"))
         .collect();
-    
+
     assert!(
         expr_errors.is_empty(),
         "Valid conditional expression should not produce errors"
@@ -122,15 +126,18 @@ jobs:
     steps:
       - run: echo "${{ github.event"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let expr_errors: Vec<_> = result.diagnostics
+    let expr_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("expression") || 
-                d.message.contains("unclosed") ||
-                d.message.contains("${{"))
+        .filter(|d| {
+            d.message.contains("expression")
+                || d.message.contains("unclosed")
+                || d.message.contains("${{")
+        })
         .collect();
-    
+
     assert!(
         !expr_errors.is_empty(),
         "Unclosed expression should produce error"
@@ -152,15 +159,18 @@ jobs:
     steps:
       - run: echo "${{ github.nonexistent.property }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let expr_errors: Vec<_> = result.diagnostics
+    let expr_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("expression") || 
-                d.message.contains("undefined") ||
-                d.message.contains("nonexistent"))
+        .filter(|d| {
+            d.message.contains("expression")
+                || d.message.contains("undefined")
+                || d.message.contains("nonexistent")
+        })
         .collect();
-    
+
     assert!(
         !expr_errors.is_empty(),
         "Undefined context should produce error/warning"
@@ -178,15 +188,18 @@ jobs:
     steps:
       - run: echo "${{ invalid syntax here }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let expr_errors: Vec<_> = result.diagnostics
+    let expr_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("expression") || 
-                d.message.contains("syntax") ||
-                d.message.contains("invalid"))
+        .filter(|d| {
+            d.message.contains("expression")
+                || d.message.contains("syntax")
+                || d.message.contains("invalid")
+        })
         .collect();
-    
+
     assert!(
         !expr_errors.is_empty(),
         "Invalid expression syntax should produce error"
@@ -204,16 +217,16 @@ jobs:
     steps:
       - run: echo "${{ github.event.pull_request.head.ref }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let expr_errors: Vec<_> = result.diagnostics
+    let expr_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("expression") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         expr_errors.is_empty(),
         "Valid nested expression should not produce errors"
     );
 }
-

@@ -3,7 +3,7 @@
 //! These tests cover patterns found in real-world workflows that previously
 //! caused false positives in expression validation rules.
 
-use truss_core::{TrussEngine, Severity};
+use truss_core::{Severity, TrussEngine};
 
 // ---------------------------------------------------------------------------
 // fromJSON() function
@@ -34,7 +34,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let fromjson_errors: Vec<_> = result.diagnostics
+    let fromjson_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("fromJSON") || d.message.contains("Unknown function"))
         .collect();
@@ -42,7 +43,10 @@ jobs:
     assert!(
         fromjson_errors.is_empty(),
         "fromJSON() should be recognized as a valid function. Got: {:?}",
-        fromjson_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        fromjson_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -61,9 +65,14 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let tojson_errors: Vec<_> = result.diagnostics
+    let tojson_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("toJson") || d.message.contains("toJSON") || d.message.contains("Unknown function"))
+        .filter(|d| {
+            d.message.contains("toJson")
+                || d.message.contains("toJSON")
+                || d.message.contains("Unknown function")
+        })
         .collect();
 
     assert!(
@@ -92,7 +101,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("if") && d.message.contains("${{"))
         .collect();
@@ -119,7 +129,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("if") && d.message.contains("${{"))
         .collect();
@@ -151,11 +162,14 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("expression")) &&
-                d.message.contains("${{") &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("expression"))
+                && d.message.contains("${{")
+                && d.severity == Severity::Error
+        })
         .collect();
 
     assert!(
@@ -181,9 +195,12 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("if") && d.message.contains("${{") && d.severity == Severity::Error)
+        .filter(|d| {
+            d.message.contains("if") && d.message.contains("${{") && d.severity == Severity::Error
+        })
         .collect();
 
     assert!(
@@ -220,16 +237,22 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let expression_errors: Vec<_> = result.diagnostics
+    let expression_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("fromJSON") || d.message.contains("Unknown function")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("fromJSON") || d.message.contains("Unknown function"))
+                && d.severity == Severity::Error
+        })
         .collect();
 
     assert!(
         expression_errors.is_empty(),
         "Nested fromJSON in contains() should be valid. Got: {:?}",
-        expression_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        expression_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -248,7 +271,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let expression_errors: Vec<_> = result.diagnostics
+    let expression_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("expression") && d.severity == Severity::Error)
         .collect();
@@ -256,7 +280,10 @@ jobs:
     assert!(
         expression_errors.is_empty(),
         "Ternary-style expression should be valid. Got: {:?}",
-        expression_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        expression_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -281,7 +308,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let runner_errors: Vec<_> = result.diagnostics
+    let runner_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("runner") && d.severity == Severity::Error)
         .collect();
@@ -319,7 +347,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let runner_warnings: Vec<_> = result.diagnostics
+    let runner_warnings: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("unknown runner"))
         .collect();
@@ -327,7 +356,10 @@ jobs:
     assert!(
         runner_warnings.is_empty(),
         "Modern ARM and xlarge runners should be recognized. Got: {:?}",
-        runner_warnings.iter().map(|d| &d.message).collect::<Vec<_>>()
+        runner_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -348,7 +380,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let runner_errors: Vec<_> = result.diagnostics
+    let runner_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("runner") && d.severity == Severity::Error)
         .collect();

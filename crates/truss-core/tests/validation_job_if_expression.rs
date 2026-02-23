@@ -4,8 +4,8 @@
 //!
 //! Validates if condition expressions in jobs in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_job_if_expression_valid_github_ref() {
@@ -19,15 +19,18 @@ jobs:
     steps:
       - run: echo "Deploy"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("job")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("job"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         if_errors.is_empty(),
         "Valid job if expression with github.ref should not produce errors"
@@ -46,15 +49,18 @@ jobs:
     steps:
       - run: echo "Build"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("job")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("job"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         if_errors.is_empty(),
         "Valid job if expression with event_name should not produce errors"
@@ -78,15 +84,18 @@ jobs:
     steps:
       - run: echo "Deploy"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("job")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("job"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         if_errors.is_empty(),
         "Valid job if expression with job result should not produce errors"
@@ -108,11 +117,17 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("job")) &&
-                (d.message.contains("expression") || d.message.contains("${{") || d.message.contains("wrapper") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("job"))
+                && (d.message.contains("expression")
+                    || d.message.contains("${{")
+                    || d.message.contains("wrapper")
+                    || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
 
     assert!(
@@ -134,15 +149,18 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("job")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("job"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !if_errors.is_empty(),
         "Invalid job if expression should produce error"
@@ -161,18 +179,22 @@ jobs:
     steps:
       - run: echo "Deploy"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("job")) && 
-                (d.message.contains("expression") || d.message.contains("nonexistent") || d.message.contains("not found")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("job"))
+                && (d.message.contains("expression")
+                    || d.message.contains("nonexistent")
+                    || d.message.contains("not found"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !if_errors.is_empty(),
         "Job if expression referencing non-existent job should produce error"
     );
 }
-

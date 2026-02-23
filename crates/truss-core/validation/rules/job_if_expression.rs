@@ -1,8 +1,8 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
 use std::collections::HashSet;
+use tree_sitter::{Node, Tree};
 
 /// Validates if condition expressions in jobs.
 pub struct JobIfExpressionRule;
@@ -30,37 +30,46 @@ impl ValidationRule for JobIfExpressionRule {
 
         let jobs_to_process = utils::unwrap_node(jobs_value);
 
-        fn check_job_if(node: Node, source: &str, job_names: &HashSet<String>, diagnostics: &mut Vec<Diagnostic>) {
+        fn check_job_if(
+            node: Node,
+            source: &str,
+            job_names: &HashSet<String>,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let job_name = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
-                        
+
                         if let Some(job_value_raw) = utils::get_pair_value(node) {
                             let job_value = utils::unwrap_node(job_value_raw);
-                            
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
+
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
                                 let if_value = utils::find_value_for_key(job_value, source, "if");
-                                
+
                                 if let Some(if_node) = if_value {
                                     let if_text = utils::node_text(if_node, source);
                                     let if_cleaned = if_text.trim();
 
                                     // GitHub Actions auto-wraps if: conditions in ${{ }}.
                                     // Both bare expressions and explicitly wrapped ones are valid.
-                                    let inner = if if_cleaned.starts_with("${{") && if_cleaned.ends_with("}}") {
+                                    let inner = if if_cleaned.starts_with("${{")
+                                        && if_cleaned.ends_with("}}")
+                                    {
                                         // Explicitly wrapped: extract inner expression
-                                        if_cleaned[3..if_cleaned.len()-2].trim()
+                                        if_cleaned[3..if_cleaned.len() - 2].trim()
                                     } else {
                                         // Bare expression: GitHub Actions auto-wraps this
                                         if_cleaned
                                     };
 
                                     {
-                                        
                                         // Validate expression syntax
                                         if !is_valid_expression_syntax(inner) {
                                             diagnostics.push(Diagnostic {
@@ -75,13 +84,17 @@ impl ValidationRule for JobIfExpressionRule {
                                                 },
                                             });
                                         }
-                                        
+
                                         // Check for undefined context variables
-                                        if inner.contains("github.nonexistent") 
+                                        if inner.contains("github.nonexistent")
                                             || inner.contains("nonexistent.property")
-                                            || (inner.contains("github.") && !is_valid_github_context(inner))
-                                            || (inner.contains("matrix.") && !is_valid_matrix_context(inner))
-                                            || (inner.contains("secrets.") && !is_valid_secrets_context(inner)) {
+                                            || (inner.contains("github.")
+                                                && !is_valid_github_context(inner))
+                                            || (inner.contains("matrix.")
+                                                && !is_valid_matrix_context(inner))
+                                            || (inner.contains("secrets.")
+                                                && !is_valid_secrets_context(inner))
+                                        {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
                                                     "Job '{}' 'if' expression may reference undefined context variable: '{}'",
@@ -94,7 +107,7 @@ impl ValidationRule for JobIfExpressionRule {
                                                 },
                                             });
                                         }
-                                        
+
                                         // Check for potentially always-true/false conditions
                                         if is_potentially_always_true(inner) {
                                             diagnostics.push(Diagnostic {
@@ -121,27 +134,48 @@ impl ValidationRule for JobIfExpressionRule {
                                                 },
                                             });
                                         }
-                                        
+
                                         // Check for references to non-existent jobs
                                         if inner.contains("jobs.") {
                                             let jobs_prefix = "jobs.";
                                             let mut search_pos = 0;
-                                            while let Some(pos) = inner[search_pos..].find(jobs_prefix) {
-                                                let actual_pos = search_pos + pos + jobs_prefix.len();
+                                            while let Some(pos) =
+                                                inner[search_pos..].find(jobs_prefix)
+                                            {
+                                                let actual_pos =
+                                                    search_pos + pos + jobs_prefix.len();
                                                 let after_jobs = &inner[actual_pos..];
-                                                
+
                                                 // Find where the job name ends
                                                 let job_name_end = after_jobs
-                                                    .find(|c: char| c.is_whitespace() || c == '.' || c == '}' || c == ')' || c == ']' || 
-                                                          c == '&' || c == '|' || c == '=' || c == '!' || c == '<' || c == '>')
+                                                    .find(|c: char| {
+                                                        c.is_whitespace()
+                                                            || c == '.'
+                                                            || c == '}'
+                                                            || c == ')'
+                                                            || c == ']'
+                                                            || c == '&'
+                                                            || c == '|'
+                                                            || c == '='
+                                                            || c == '!'
+                                                            || c == '<'
+                                                            || c == '>'
+                                                    })
                                                     .unwrap_or(after_jobs.len());
-                                                
-                                                let referenced_job = &after_jobs[..job_name_end.min(after_jobs.len())];
-                                                
-                                                if !referenced_job.is_empty() && !job_names.contains(referenced_job) {
-                                                    let expr_start = if_node.start_byte() + 3 + actual_pos - jobs_prefix.len();
-                                                    let expr_end = expr_start + jobs_prefix.len() + referenced_job.len();
-                                                    
+
+                                                let referenced_job = &after_jobs
+                                                    [..job_name_end.min(after_jobs.len())];
+
+                                                if !referenced_job.is_empty()
+                                                    && !job_names.contains(referenced_job)
+                                                {
+                                                    let expr_start =
+                                                        if_node.start_byte() + 3 + actual_pos
+                                                            - jobs_prefix.len();
+                                                    let expr_end = expr_start
+                                                        + jobs_prefix.len()
+                                                        + referenced_job.len();
+
                                                     diagnostics.push(Diagnostic {
                                                         message: format!(
                                                             "Job '{}' 'if' expression references non-existent job: 'jobs.{}'",
@@ -154,7 +188,7 @@ impl ValidationRule for JobIfExpressionRule {
                                                         },
                                                     });
                                                 }
-                                                
+
                                                 search_pos = actual_pos + job_name_end;
                                             }
                                         }
@@ -181,13 +215,14 @@ impl ValidationRule for JobIfExpressionRule {
 
 fn collect_job_names(jobs_node: Node, source: &str) -> HashSet<String> {
     let mut job_names = HashSet::new();
-    
+
     fn collect(node: Node, source: &str, names: &mut HashSet<String>) {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
                     let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    let key_cleaned = key_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
                     names.insert(key_cleaned.to_string());
                 }
@@ -200,7 +235,7 @@ fn collect_job_names(jobs_node: Node, source: &str) -> HashSet<String> {
             }
         }
     }
-    
+
     collect(jobs_node, source, &mut job_names);
     job_names
 }
@@ -208,11 +243,11 @@ fn collect_job_names(jobs_node: Node, source: &str) -> HashSet<String> {
 /// Check if an expression has valid syntax (similar to ExpressionValidationRule)
 fn is_valid_expression_syntax(expr: &str) -> bool {
     let expr = expr.trim();
-    
+
     if expr.is_empty() {
         return false;
     }
-    
+
     let has_context = expr.starts_with("github.")
         || expr.starts_with("matrix.")
         || expr.starts_with("secrets.")
@@ -225,7 +260,7 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         || expr.starts_with("steps.")
         || expr.starts_with("runner.")
         || expr.starts_with("strategy.");
-    
+
     let expr_lower = expr.to_lowercase();
     let has_function = expr.contains("contains(")
         || expr.contains("startsWith(")
@@ -253,29 +288,69 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
     let is_literal = (expr.starts_with("'") && expr.ends_with("'"))
         || (expr.starts_with("\"") && expr.ends_with("\""))
         || expr.parse::<f64>().is_ok()
-        || expr == "true" || expr == "false";
+        || expr == "true"
+        || expr == "false";
 
     // Bare context names (e.g., "github", "matrix") are valid expressions
-    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy");
+    let is_bare_context = matches!(
+        expr,
+        "github"
+            | "matrix"
+            | "secrets"
+            | "vars"
+            | "needs"
+            | "inputs"
+            | "env"
+            | "job"
+            | "jobs"
+            | "steps"
+            | "runner"
+            | "strategy"
+    );
 
     // If expression contains a dot but doesn't start with a known context, check if it's invalid
     // (e.g., "invalid.expression" should be rejected)
     if expr.contains('.') && !has_context {
         // Extract the first part before any operator, whitespace, or parenthesis
-        let first_token = expr.split(|c: char| c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')).next().unwrap_or("");
+        let first_token = expr
+            .split(|c: char| {
+                c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')
+            })
+            .next()
+            .unwrap_or("");
         if first_token.contains('.') {
             let context_name = first_token.split('.').next().unwrap_or("");
-            if !matches!(context_name, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy") {
+            if !matches!(
+                context_name,
+                "github"
+                    | "matrix"
+                    | "secrets"
+                    | "vars"
+                    | "needs"
+                    | "inputs"
+                    | "env"
+                    | "job"
+                    | "jobs"
+                    | "steps"
+                    | "runner"
+                    | "strategy"
+            ) {
                 // Unknown context reference - reject it
                 return false;
             }
         }
     }
 
-    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context {
-        if !expr.contains('.') && !expr.contains('(') && !expr.contains('[') {
-            return false;
-        }
+    if !has_context
+        && !has_function
+        && !has_operator
+        && !is_literal
+        && !is_bare_context
+        && !expr.contains('.')
+        && !expr.contains('(')
+        && !expr.contains('[')
+    {
+        return false;
     }
 
     true
@@ -302,7 +377,7 @@ fn is_valid_secrets_context(expr: &str) -> bool {
 /// Check if expression may always evaluate to true
 fn is_potentially_always_true(expr: &str) -> bool {
     let expr_lower = expr.to_lowercase();
-    expr_lower == "true" 
+    expr_lower == "true"
         || expr_lower == "!false"
         || expr_lower.contains("|| true")
         || expr_lower.contains("true ||")
@@ -311,9 +386,8 @@ fn is_potentially_always_true(expr: &str) -> bool {
 /// Check if expression may always evaluate to false
 fn is_potentially_always_false(expr: &str) -> bool {
     let expr_lower = expr.to_lowercase();
-    expr_lower == "false" 
+    expr_lower == "false"
         || expr_lower == "!true"
         || expr_lower.contains("&& false")
         || expr_lower.contains("false &&")
 }
-

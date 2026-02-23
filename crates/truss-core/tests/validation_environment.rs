@@ -4,8 +4,8 @@
 //!
 //! Validates environment references in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_environment_valid_string() {
@@ -17,13 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("environment") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         env_errors.is_empty(),
         "Valid environment string should not produce errors"
@@ -41,13 +42,14 @@ jobs:
     environment:
       name: production
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("environment") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         env_errors.is_empty(),
         "Valid environment object should not produce errors"
@@ -66,13 +68,14 @@ jobs:
       name: production
       url: https://example.com
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("environment") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         env_errors.is_empty(),
         "Valid environment with URL should not produce errors"
@@ -90,15 +93,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
     // This is workflow-level env (environment variables), not environment protection
     // Should not produce errors
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("environment") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         env_errors.is_empty(),
         "Workflow-level env variables should not produce environment errors"
@@ -116,14 +120,17 @@ jobs:
     environment:
       name: "invalid name with spaces"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("environment") && 
-                (d.message.contains("name") || d.message.contains("format")))
+        .filter(|d| {
+            d.message.contains("environment")
+                && (d.message.contains("name") || d.message.contains("format"))
+        })
         .collect();
-    
+
     assert!(
         !env_errors.is_empty(),
         "Invalid environment name format should produce error"
@@ -143,15 +150,16 @@ jobs:
         env:
           DEPLOY_ENV: production
 "#;
-    
+
     let result = engine.analyze(yaml);
     // Step-level env is environment variables, not environment protection
     // Should not produce errors
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("environment") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         env_errors.is_empty(),
         "Step-level env variables should not produce environment errors"
@@ -171,17 +179,17 @@ jobs:
       protection_rules:
         - type: required_reviewers
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("environment") && d.severity == Severity::Error)
         .collect();
-    
+
     // If protection_rules is considered invalid in workflow YAML, we expect an error
     assert!(
         !env_errors.is_empty(),
         "Environment protection rules should be validated"
     );
 }
-

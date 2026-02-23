@@ -4,8 +4,8 @@
 //!
 //! Validates uses: workflow calls reference valid reusable workflows in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_reusable_workflow_call_valid_format() {
@@ -16,15 +16,18 @@ jobs:
   call-workflow:
     uses: owner/repo/.github/workflows/reusable.yml@main
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let workflow_errors: Vec<_> = result.diagnostics
+    let workflow_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("workflow") || d.message.contains("uses")) && 
-                (d.message.contains("invalid") || d.message.contains("format")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("workflow") || d.message.contains("uses"))
+                && (d.message.contains("invalid") || d.message.contains("format"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         workflow_errors.is_empty(),
         "Valid reusable workflow call format should not produce errors"
@@ -43,15 +46,18 @@ jobs:
       environment: production
       version: 1.0.0
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let workflow_errors: Vec<_> = result.diagnostics
+    let workflow_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("workflow") || d.message.contains("uses")) && 
-                (d.message.contains("invalid") || d.message.contains("format")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("workflow") || d.message.contains("uses"))
+                && (d.message.contains("invalid") || d.message.contains("format"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         workflow_errors.is_empty(),
         "Valid reusable workflow call with inputs should not produce errors"
@@ -69,15 +75,18 @@ jobs:
     secrets:
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let workflow_errors: Vec<_> = result.diagnostics
+    let workflow_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("workflow") || d.message.contains("uses")) && 
-                (d.message.contains("invalid") || d.message.contains("format")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("workflow") || d.message.contains("uses"))
+                && (d.message.contains("invalid") || d.message.contains("format"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         workflow_errors.is_empty(),
         "Valid reusable workflow call with secrets should not produce errors"
@@ -96,15 +105,18 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let workflow_errors: Vec<_> = result.diagnostics
+    let workflow_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("workflow") || d.message.contains("uses")) && 
-                (d.message.contains("invalid") || d.message.contains("format")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("workflow") || d.message.contains("uses"))
+                && (d.message.contains("invalid") || d.message.contains("format"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         workflow_errors.is_empty(),
         "Valid reusable workflow call with strategy should not produce errors"
@@ -120,15 +132,20 @@ jobs:
   call-workflow:
     uses: owner/repo@main
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let workflow_errors: Vec<_> = result.diagnostics
+    let workflow_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("workflow") || d.message.contains("uses")) && 
-                (d.message.contains("invalid") || d.message.contains("format") || d.message.contains("path")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("workflow") || d.message.contains("uses"))
+                && (d.message.contains("invalid")
+                    || d.message.contains("format")
+                    || d.message.contains("path"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !workflow_errors.is_empty(),
         "Reusable workflow call with invalid format (missing path) should produce error"
@@ -144,15 +161,20 @@ jobs:
   call-workflow:
     uses: owner/repo/.github/workflows/reusable.yml
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let workflow_errors: Vec<_> = result.diagnostics
+    let workflow_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("workflow") || d.message.contains("uses")) && 
-                (d.message.contains("invalid") || d.message.contains("format") || d.message.contains("@")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("workflow") || d.message.contains("uses"))
+                && (d.message.contains("invalid")
+                    || d.message.contains("format")
+                    || d.message.contains("@"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !workflow_errors.is_empty(),
         "Reusable workflow call with invalid format (missing @ref) should produce error"
@@ -168,18 +190,20 @@ jobs:
   call-workflow:
     uses: ./.github/workflows/reusable.yml@main
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let workflow_errors: Vec<_> = result.diagnostics
+    let workflow_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("workflow") || d.message.contains("uses")) && 
-                (d.message.contains("invalid") || d.message.contains("format")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("workflow") || d.message.contains("uses"))
+                && (d.message.contains("invalid") || d.message.contains("format"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         workflow_errors.is_empty(),
         "Valid local reusable workflow call should not produce errors"
     );
 }
-

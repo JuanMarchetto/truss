@@ -4,8 +4,8 @@
 //!
 //! Validates secrets.* references in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_secrets_valid_github_token() {
@@ -18,13 +18,14 @@ jobs:
     steps:
       - run: echo "${{ secrets.GITHUB_TOKEN }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("secret") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "Valid secrets.GITHUB_TOKEN reference should not produce errors"
@@ -42,13 +43,14 @@ jobs:
     steps:
       - run: echo "${{ secrets.MY_SECRET }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("secret") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "Valid custom secret reference should not produce errors"
@@ -68,13 +70,14 @@ jobs:
     steps:
       - run: echo "Building"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("secret") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "Valid secret reference in env should not produce errors"
@@ -94,13 +97,14 @@ jobs:
           echo "${{ secrets.USERNAME }}"
           echo "${{ secrets.PASSWORD }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("secret") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "Valid multiple secret references should not produce errors"
@@ -118,14 +122,17 @@ jobs:
     steps:
       - run: echo "${{ secret.MY_SECRET }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("secret") || d.message.contains("syntax")) && 
-                (d.severity == Severity::Error || d.severity == Severity::Warning))
+        .filter(|d| {
+            (d.message.contains("secret") || d.message.contains("syntax"))
+                && (d.severity == Severity::Error || d.severity == Severity::Warning)
+        })
         .collect();
-    
+
     // Should be 'secrets' (plural), not 'secret' (singular)
     assert!(
         !secret_errors.is_empty() || result.diagnostics.iter().any(|d| d.message.contains("expression")),
@@ -144,17 +151,24 @@ jobs:
     steps:
       - run: echo "${{ secretsMY_SECRET }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("secret") || d.message.contains("syntax")) && 
-                (d.severity == Severity::Error || d.severity == Severity::Warning))
+        .filter(|d| {
+            (d.message.contains("secret") || d.message.contains("syntax"))
+                && (d.severity == Severity::Error || d.severity == Severity::Warning)
+        })
         .collect();
-    
+
     // Missing dot between 'secrets' and secret name
     assert!(
-        !secret_errors.is_empty() || result.diagnostics.iter().any(|d| d.message.contains("expression")),
+        !secret_errors.is_empty()
+            || result
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("expression")),
         "Invalid secret syntax (missing dot) should produce error or expression error"
     );
 }
@@ -171,17 +185,16 @@ jobs:
       - if: ${{ secrets.DEPLOY_ENABLED == 'true' }}
         run: echo "Deploying"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("secret") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "Valid secret reference in conditional should not produce errors"
     );
 }
-
-

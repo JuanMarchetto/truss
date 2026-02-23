@@ -4,8 +4,8 @@
 //!
 //! Validates that `runs-on` is required for all jobs in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_runs_on_valid_string() {
@@ -16,14 +16,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let runs_on_errors: Vec<_> = result.diagnostics
+    let runs_on_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("runs-on") || d.message.contains("runs_on")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("runs-on") || d.message.contains("runs_on"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         runs_on_errors.is_empty(),
         "Valid job with 'runs-on' should not produce errors"
@@ -42,14 +45,17 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let runs_on_errors: Vec<_> = result.diagnostics
+    let runs_on_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("runs-on") || d.message.contains("runs_on")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("runs-on") || d.message.contains("runs_on"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         runs_on_errors.is_empty(),
         "Valid job with 'runs-on' expression should not produce errors"
@@ -69,14 +75,17 @@ jobs:
   deploy:
     runs-on: macos-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let runs_on_errors: Vec<_> = result.diagnostics
+    let runs_on_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("runs-on") || d.message.contains("runs_on")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("runs-on") || d.message.contains("runs_on"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         runs_on_errors.is_empty(),
         "All jobs with 'runs-on' should not produce errors"
@@ -93,20 +102,25 @@ jobs:
     steps:
       - run: echo "Hello"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let runs_on_errors: Vec<_> = result.diagnostics
+    let runs_on_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("runs-on") || d.message.contains("runs_on")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("runs-on") || d.message.contains("runs_on"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !runs_on_errors.is_empty(),
         "Job missing 'runs-on' should produce error"
     );
     assert!(
-        runs_on_errors.iter().any(|d| d.message.contains("runs-on") || d.message.contains("required")),
+        runs_on_errors
+            .iter()
+            .any(|d| d.message.contains("runs-on") || d.message.contains("required")),
         "Error message should mention 'runs-on' or 'required'"
     );
 }
@@ -122,15 +136,18 @@ jobs:
     steps:
       - run: echo "Hello"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let runs_on_errors: Vec<_> = result.diagnostics
+    let runs_on_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("runs-on") || d.message.contains("runs_on")) && 
-                (d.message.contains("empty") || d.message.contains("required")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("runs-on") || d.message.contains("runs_on"))
+                && (d.message.contains("empty") || d.message.contains("required"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !runs_on_errors.is_empty(),
         "Job with empty 'runs-on' should produce error"
@@ -151,20 +168,25 @@ jobs:
   deploy:
     runs-on: macos-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let runs_on_errors: Vec<_> = result.diagnostics
+    let runs_on_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("runs-on") || d.message.contains("runs_on")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("runs-on") || d.message.contains("runs_on"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !runs_on_errors.is_empty(),
         "Job 'test' missing 'runs-on' should produce error"
     );
     assert!(
-        runs_on_errors.iter().any(|d| d.message.contains("test") || d.message.contains("runs-on")),
+        runs_on_errors
+            .iter()
+            .any(|d| d.message.contains("test") || d.message.contains("runs-on")),
         "Error should identify the job missing 'runs-on'"
     );
 }
@@ -182,18 +204,19 @@ jobs:
     steps:
       - run: echo "Build"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let runs_on_errors: Vec<_> = result.diagnostics
+    let runs_on_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("runs-on") || d.message.contains("runs_on")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("runs-on") || d.message.contains("runs_on"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         runs_on_errors.is_empty(),
         "Job with 'runs-on' and other fields should be valid"
     );
 }
-
-

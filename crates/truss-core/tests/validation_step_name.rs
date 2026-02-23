@@ -4,8 +4,8 @@
 //!
 //! Validates step name field format in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_step_name_valid_descriptive() {
@@ -19,14 +19,17 @@ jobs:
       - name: Build application
         run: echo "Building"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("name") || d.message.contains("step")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("name") || d.message.contains("step"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         name_errors.is_empty(),
         "Valid descriptive step name should not produce errors"
@@ -45,14 +48,17 @@ jobs:
       - name: "Build & Test (v1.0)"
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("name") || d.message.contains("step")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("name") || d.message.contains("step"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         name_errors.is_empty(),
         "Valid step name with special characters should not produce errors"
@@ -71,14 +77,17 @@ jobs:
       - name: Build ${{ github.ref }}
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("name") || d.message.contains("step")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("name") || d.message.contains("step"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         name_errors.is_empty(),
         "Valid step name with expression should not produce errors"
@@ -97,14 +106,17 @@ jobs:
       - name: ""
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_warnings: Vec<_> = result.diagnostics
+    let name_warnings: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("name") || d.message.contains("step")) && 
-                (d.severity == Severity::Warning || d.severity == Severity::Error))
+        .filter(|d| {
+            (d.message.contains("name") || d.message.contains("step"))
+                && (d.severity == Severity::Warning || d.severity == Severity::Error)
+        })
         .collect();
-    
+
     assert!(
         !name_warnings.is_empty(),
         "Empty step name should produce warning"
@@ -123,19 +135,19 @@ jobs:
       - name: "This is a very long step name that exceeds reasonable length and should probably be shortened for better readability in the GitHub Actions UI"
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let _name_warnings: Vec<_> = result.diagnostics
+    let _name_warnings: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("name") || d.message.contains("step")) && 
-                (d.severity == Severity::Warning || d.severity == Severity::Error))
+        .filter(|d| {
+            (d.message.contains("name") || d.message.contains("step"))
+                && (d.severity == Severity::Warning || d.severity == Severity::Error)
+        })
         .collect();
-    
+
     // Note: This may produce a warning or be valid depending on implementation
-    assert!(
-        true,
-        "Very long step name may produce warning"
-    );
+    assert!(true, "Very long step name may produce warning");
 }
 
 #[test]
@@ -150,17 +162,19 @@ jobs:
       - name: "Build 🚀"
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("name") || d.message.contains("step")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("name") || d.message.contains("step"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         name_errors.is_empty(),
         "Valid step name with Unicode characters should not produce errors"
     );
 }
-

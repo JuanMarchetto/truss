@@ -1,8 +1,8 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
 use std::collections::HashSet;
+use tree_sitter::{Node, Tree};
 
 /// Validates that step IDs are unique within a job.
 pub struct StepIdUniquenessRule;
@@ -32,19 +32,22 @@ impl ValidationRule for StepIdUniquenessRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let job_name = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
-                        
+
                         let job_value = utils::get_pair_value(node);
 
                         if let Some(job_value_raw) = job_value {
                             let job_value = utils::unwrap_node(job_value_raw);
 
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
                                 // Collect step IDs from this job
                                 let step_ids = collect_step_ids(job_value, source);
-                                
+
                                 // Check for duplicates and validate format
                                 let mut seen = HashSet::new();
                                 for (step_id, span) in &step_ids {
@@ -59,7 +62,7 @@ impl ValidationRule for StepIdUniquenessRule {
                                             span: *span,
                                         });
                                     }
-                                    
+
                                     // Check for duplicates
                                     if seen.contains(step_id) {
                                         diagnostics.push(Diagnostic {
@@ -95,10 +98,10 @@ impl ValidationRule for StepIdUniquenessRule {
 
 fn collect_step_ids(job_node: Node, source: &str) -> Vec<(String, Span)> {
     let mut step_ids = Vec::new();
-    
+
     // Find steps in this job
     let steps_value = utils::find_value_for_key(job_node, source, "steps");
-    
+
     if let Some(steps_node_raw) = steps_value {
         let steps_node = utils::unwrap_node(steps_node_raw);
 
@@ -116,7 +119,8 @@ fn collect_step_ids(job_node: Node, source: &str) -> Vec<(String, Span)> {
                     let id_value = utils::find_value_for_key(node, source, "id");
                     if let Some(id_node) = id_value {
                         let id_text = utils::node_text(id_node, source);
-                        let id_cleaned = id_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+                        let id_cleaned = id_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
                         if !id_cleaned.is_empty() {
                             step_ids.push((
                                 id_cleaned.to_string(),
@@ -136,10 +140,10 @@ fn collect_step_ids(job_node: Node, source: &str) -> Vec<(String, Span)> {
                 }
             }
         }
-        
+
         collect_from_steps(steps_node, source, &mut step_ids);
     }
-    
+
     step_ids
 }
 
@@ -149,9 +153,8 @@ fn is_valid_step_id_format(step_id: &str) -> bool {
     if step_id.is_empty() {
         return false;
     }
-    
-    step_id.chars().all(|c| {
-        c.is_alphanumeric() || c == '-' || c == '_'
-    })
-}
 
+    step_id
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+}

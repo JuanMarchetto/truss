@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates action reference format (owner/repo@ref).
 pub struct ActionReferenceRule;
@@ -24,41 +24,41 @@ impl ValidationRule for ActionReferenceRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn find_steps_with_uses(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
 
                         if key_cleaned == "steps" {
-                            let steps_value = if node.kind() == "block_mapping_pair" {
-                                node.child(2)
-                            } else {
-                                node.child(1)
-                            };
+                            let steps_value = utils::get_pair_value(node);
 
-                            if let Some(mut steps_value) = steps_value {
-                                if steps_value.kind() == "block_node" {
-                                    if let Some(inner) = steps_value.child(0) {
-                                        steps_value = inner;
-                                    }
-                                }
-                                fn process_steps_sequence(seq_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+                            if let Some(steps_value_raw) = steps_value {
+                                let steps_value = utils::unwrap_node(steps_value_raw);
+                                fn process_steps_sequence(
+                                    seq_node: Node,
+                                    source: &str,
+                                    diagnostics: &mut Vec<Diagnostic>,
+                                ) {
                                     let mut cursor = seq_node.walk();
                                     for step_item in seq_node.children(&mut cursor) {
-                                        if step_item.kind() == "block_mapping" || step_item.kind() == "flow_mapping" {
-                                            let uses_value = utils::find_value_for_key(step_item, source, "uses");
+                                        if step_item.kind() == "block_mapping"
+                                            || step_item.kind() == "flow_mapping"
+                                        {
+                                            let uses_value = utils::find_value_for_key(
+                                                step_item, source, "uses",
+                                            );
                                             if let Some(uses_node) = uses_value {
-                                                validate_action_reference(uses_node, source, diagnostics);
+                                                validate_action_reference(
+                                                    uses_node,
+                                                    source,
+                                                    diagnostics,
+                                                );
                                             }
                                         } else {
                                             process_steps_sequence(step_item, source, diagnostics);
@@ -66,16 +66,14 @@ impl ValidationRule for ActionReferenceRule {
                                     }
                                 }
 
-                                if steps_value.kind() == "block_sequence" || steps_value.kind() == "flow_sequence" {
+                                if steps_value.kind() == "block_sequence"
+                                    || steps_value.kind() == "flow_sequence"
+                                {
                                     process_steps_sequence(steps_value, source, diagnostics);
                                 }
                             }
                         } else {
-                            let value_node = if node.kind() == "block_mapping_pair" {
-                                node.child(2)
-                            } else {
-                                node.child(1)
-                            };
+                            let value_node = utils::get_pair_value(node);
 
                             if let Some(value_node) = value_node {
                                 find_steps_with_uses(value_node, source, diagnostics);
@@ -103,7 +101,10 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
     let uses_cleaned = uses_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
 
     // Exceptions: local paths and docker actions don't need @ref
-    if uses_cleaned.starts_with("./") || uses_cleaned.starts_with("../") || uses_cleaned.starts_with("/") {
+    if uses_cleaned.starts_with("./")
+        || uses_cleaned.starts_with("../")
+        || uses_cleaned.starts_with("/")
+    {
         return;
     }
 
@@ -207,4 +208,3 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
         });
     }
 }
-

@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates if condition expressions in steps.
 pub struct StepIfExpressionRule;
@@ -31,12 +31,15 @@ impl ValidationRule for StepIfExpressionRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "steps" {
                             if let Some(steps_value_raw) = utils::get_pair_value(node) {
                                 let steps_value = utils::unwrap_node(steps_value_raw);
-                                if steps_value.kind() == "block_sequence" || steps_value.kind() == "flow_sequence" {
+                                if steps_value.kind() == "block_sequence"
+                                    || steps_value.kind() == "flow_sequence"
+                                {
                                     let mut cursor = steps_value.walk();
                                     for step_node in steps_value.children(&mut cursor) {
                                         validate_step_if(step_node, source, diagnostics);
@@ -89,7 +92,7 @@ impl ValidationRule for StepIfExpressionRule {
                     // Both bare expressions and explicitly wrapped ones are valid.
                     let inner = if if_cleaned.starts_with("${{") && if_cleaned.ends_with("}}") {
                         // Explicitly wrapped: extract inner expression
-                        if_cleaned[3..if_cleaned.len()-2].trim()
+                        if_cleaned[3..if_cleaned.len() - 2].trim()
                     } else {
                         // Bare expression: GitHub Actions auto-wraps this
                         if_cleaned
@@ -98,10 +101,7 @@ impl ValidationRule for StepIfExpressionRule {
                     // Validate expression syntax
                     if !is_valid_expression_syntax(inner) {
                         diagnostics.push(Diagnostic {
-                            message: format!(
-                                "Invalid step 'if' expression syntax: '{}'",
-                                inner
-                            ),
+                            message: format!("Invalid step 'if' expression syntax: '{}'", inner),
                             severity: Severity::Error,
                             span: Span {
                                 start: if_node.start_byte(),
@@ -115,7 +115,8 @@ impl ValidationRule for StepIfExpressionRule {
                         || inner.contains("nonexistent.property")
                         || (inner.contains("github.") && !is_valid_github_context(inner))
                         || (inner.contains("matrix.") && !is_valid_matrix_context(inner))
-                        || (inner.contains("secrets.") && !is_valid_secrets_context(inner)) {
+                        || (inner.contains("secrets.") && !is_valid_secrets_context(inner))
+                    {
                         diagnostics.push(Diagnostic {
                             message: format!(
                                 "Step 'if' expression may reference undefined context variable: '{}'",
@@ -213,29 +214,69 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
     let is_literal = (expr.starts_with("'") && expr.ends_with("'"))
         || (expr.starts_with("\"") && expr.ends_with("\""))
         || expr.parse::<f64>().is_ok()
-        || expr == "true" || expr == "false";
+        || expr == "true"
+        || expr == "false";
 
     // Bare context names (e.g., "github", "matrix") are valid expressions
-    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy");
+    let is_bare_context = matches!(
+        expr,
+        "github"
+            | "matrix"
+            | "secrets"
+            | "vars"
+            | "needs"
+            | "inputs"
+            | "env"
+            | "job"
+            | "jobs"
+            | "steps"
+            | "runner"
+            | "strategy"
+    );
 
     // Check if expression contains a dot but doesn't start with a known context
     // (e.g., "invalid.expression" should be rejected)
     if expr.contains('.') && !has_context {
         // Extract the first part before any operator, whitespace, or parenthesis
-        let first_token = expr.split(|c: char| c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')).next().unwrap_or("");
+        let first_token = expr
+            .split(|c: char| {
+                c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')
+            })
+            .next()
+            .unwrap_or("");
         if first_token.contains('.') {
             let context_name = first_token.split('.').next().unwrap_or("");
-            if !matches!(context_name, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy") {
+            if !matches!(
+                context_name,
+                "github"
+                    | "matrix"
+                    | "secrets"
+                    | "vars"
+                    | "needs"
+                    | "inputs"
+                    | "env"
+                    | "job"
+                    | "jobs"
+                    | "steps"
+                    | "runner"
+                    | "strategy"
+            ) {
                 // Unknown context reference - reject it
                 return false;
             }
         }
     }
 
-    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context {
-        if !expr.contains('.') && !expr.contains('(') && !expr.contains('[') {
-            return false;
-        }
+    if !has_context
+        && !has_function
+        && !has_operator
+        && !is_literal
+        && !is_bare_context
+        && !expr.contains('.')
+        && !expr.contains('(')
+        && !expr.contains('[')
+    {
+        return false;
     }
 
     true

@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates timeout-minutes at step level.
 pub struct StepTimeoutRule;
@@ -29,13 +29,16 @@ impl ValidationRule for StepTimeoutRule {
         fn process_jobs(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
-                    if let Some(key_node) = node.child(0) {
+                    if let Some(_key_node) = node.child(0) {
                         if let Some(job_value_raw) = utils::get_pair_value(node) {
                             let job_value = utils::unwrap_node(job_value_raw);
 
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
                                 // Find steps in this job
-                                let steps_value = utils::find_value_for_key(job_value, source, "steps");
+                                let steps_value =
+                                    utils::find_value_for_key(job_value, source, "steps");
                                 if let Some(steps_node_raw) = steps_value {
                                     let steps_node = utils::unwrap_node(steps_node_raw);
                                     validate_steps_in_node(steps_node, source, diagnostics);
@@ -52,7 +55,7 @@ impl ValidationRule for StepTimeoutRule {
                 }
             }
         }
-        
+
         fn validate_steps_in_node(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_sequence" | "flow_sequence" => {
@@ -77,19 +80,27 @@ impl ValidationRule for StepTimeoutRule {
 
             // Step can be block_mapping, flow_mapping, or we need to search for it
             if step_to_check.kind() == "block_mapping" || step_to_check.kind() == "flow_mapping" {
-                let timeout_value = utils::find_value_for_key(step_to_check, source, "timeout-minutes");
-                
+                let timeout_value =
+                    utils::find_value_for_key(step_to_check, source, "timeout-minutes");
+
                 if let Some(timeout_node) = timeout_value {
                     validate_timeout_value(timeout_node, source, diagnostics);
                 }
             } else {
                 // Try to find timeout-minutes field by searching recursively
-                fn find_timeout_recursive(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+                fn find_timeout_recursive(
+                    node: Node,
+                    source: &str,
+                    diagnostics: &mut Vec<Diagnostic>,
+                ) {
                     match node.kind() {
                         "block_mapping_pair" | "flow_pair" => {
                             if let Some(key_node) = node.child(0) {
                                 let key_text = utils::node_text(key_node, source);
-                                let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                                let key_cleaned = key_text
+                                    .trim_matches(|c: char| {
+                                        c == '"' || c == '\'' || c.is_whitespace()
+                                    })
                                     .trim_end_matches(':');
                                 if key_cleaned == "timeout-minutes" {
                                     if let Some(timeout_node) = utils::get_pair_value(node) {
@@ -109,22 +120,31 @@ impl ValidationRule for StepTimeoutRule {
                 find_timeout_recursive(step_to_check, source, diagnostics);
             }
         }
-        
-        fn validate_timeout_value(timeout_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+
+        fn validate_timeout_value(
+            timeout_node: Node,
+            source: &str,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             let timeout_text = utils::node_text(timeout_node, source);
-            let timeout_cleaned = timeout_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-            
+            let timeout_cleaned =
+                timeout_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
             // Check if it's an expression
             if timeout_cleaned.starts_with("${{") {
                 // Expressions are valid
                 return;
             }
-            
+
             // Check if it's a string (quoted) - check both the original text and cleaned text
             let timeout_trimmed = timeout_text.trim();
-            let is_string = timeout_trimmed.starts_with('"') && timeout_trimmed.ends_with('"') && timeout_trimmed.len() >= 2
-                || timeout_trimmed.starts_with('\'') && timeout_trimmed.ends_with('\'') && timeout_trimmed.len() >= 2;
-            
+            let is_string = timeout_trimmed.starts_with('"')
+                && timeout_trimmed.ends_with('"')
+                && timeout_trimmed.len() >= 2
+                || timeout_trimmed.starts_with('\'')
+                    && timeout_trimmed.ends_with('\'')
+                    && timeout_trimmed.len() >= 2;
+
             if is_string {
                 diagnostics.push(Diagnostic {
                     message: format!(
@@ -139,7 +159,7 @@ impl ValidationRule for StepTimeoutRule {
                 });
                 return;
             }
-            
+
             // Try to parse as number
             match timeout_cleaned.parse::<f64>() {
                 Ok(value) => {
@@ -190,4 +210,3 @@ impl ValidationRule for StepTimeoutRule {
         diagnostics
     }
 }
-

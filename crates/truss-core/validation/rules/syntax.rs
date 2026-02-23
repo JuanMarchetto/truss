@@ -1,6 +1,6 @@
+use super::super::ValidationRule;
 use crate::{Diagnostic, Severity, Span};
 use tree_sitter::Tree;
-use super::super::ValidationRule;
 
 /// Validates YAML syntax using tree-sitter parse errors.
 pub struct SyntaxRule;
@@ -29,14 +29,11 @@ impl ValidationRule for SyntaxRule {
                 } else {
                     String::new()
                 };
-                
+
                 diagnostics.push(Diagnostic {
                     message: format!("Syntax error: {}", error_snippet),
                     severity: Severity::Error,
-                    span: Span {
-                        start,
-                        end,
-                    },
+                    span: Span { start, end },
                 });
             }
         }
@@ -55,4 +52,3 @@ impl ValidationRule for SyntaxRule {
         diagnostics
     }
 }
-

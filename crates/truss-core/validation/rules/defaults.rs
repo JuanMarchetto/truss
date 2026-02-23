@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates defaults configuration at workflow and job levels.
 pub struct DefaultsValidationRule;
@@ -39,17 +39,26 @@ impl ValidationRule for DefaultsValidationRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let job_name = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
 
                         if let Some(job_value_raw) = utils::get_pair_value(node) {
                             let job_value = utils::unwrap_node(job_value_raw);
 
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
-                                let defaults_value = utils::find_value_for_key(job_value, source, "defaults");
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
+                                let defaults_value =
+                                    utils::find_value_for_key(job_value, source, "defaults");
                                 if let Some(defaults_node) = defaults_value {
-                                    validate_defaults(defaults_node, source, &format!("job '{}'", job_name), diagnostics);
+                                    validate_defaults(
+                                        defaults_node,
+                                        source,
+                                        &format!("job '{}'", job_name),
+                                        diagnostics,
+                                    );
                                 }
                             }
                         }
@@ -70,7 +79,12 @@ impl ValidationRule for DefaultsValidationRule {
     }
 }
 
-fn validate_defaults(defaults_node: Node, source: &str, context: &str, diagnostics: &mut Vec<Diagnostic>) {
+fn validate_defaults(
+    defaults_node: Node,
+    source: &str,
+    context: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     let defaults_to_check = utils::unwrap_node(defaults_node);
 
     // Check defaults.run.shell
@@ -81,7 +95,8 @@ fn validate_defaults(defaults_node: Node, source: &str, context: &str, diagnosti
         let shell_value = utils::find_value_for_key(run_node, source, "shell");
         if let Some(shell_node) = shell_value {
             let shell_text = utils::node_text(shell_node, source);
-            let shell_cleaned = shell_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+            let shell_cleaned =
+                shell_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
 
             if !shell_cleaned.starts_with("${{") {
                 let known_shells = ["bash", "pwsh", "python", "sh", "cmd", "powershell"];
@@ -108,7 +123,8 @@ fn validate_defaults(defaults_node: Node, source: &str, context: &str, diagnosti
         let working_dir_value = utils::find_value_for_key(run_node, source, "working-directory");
         if let Some(working_dir_node) = working_dir_value {
             let working_dir_text = utils::node_text(working_dir_node, source);
-            let working_dir_cleaned = working_dir_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+            let working_dir_cleaned =
+                working_dir_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
 
             if !working_dir_cleaned.starts_with("${{") && working_dir_cleaned.is_empty() {
                 diagnostics.push(Diagnostic {

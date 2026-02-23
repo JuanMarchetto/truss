@@ -2,8 +2,8 @@
 //!
 //! These tests verify syntax validation through the public TrussEngine API.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_syntax_rule_valid_yaml() {
@@ -18,7 +18,8 @@ fn test_syntax_rule_valid_yaml() {
     for yaml in valid_yamls {
         let result = engine.analyze(yaml);
         // Check that there are no syntax errors (Error severity)
-        let syntax_errors: Vec<_> = result.diagnostics
+        let syntax_errors: Vec<_> = result
+            .diagnostics
             .iter()
             .filter(|d| d.severity == Severity::Error && d.message.contains("syntax"))
             .collect();
@@ -34,9 +35,9 @@ fn test_syntax_rule_valid_yaml() {
 fn test_syntax_rule_diagnostics_have_spans() {
     let mut engine = TrussEngine::new();
     let invalid_yaml = "invalid: [unclosed";
-    
+
     let result = engine.analyze(invalid_yaml);
-    
+
     // If there are syntax errors, they should have valid spans
     for diagnostic in &result.diagnostics {
         if diagnostic.message.contains("syntax") || diagnostic.message.contains("parse") {
@@ -58,22 +59,25 @@ fn test_syntax_rule_diagnostics_have_spans() {
 fn test_syntax_rule_deterministic() {
     let mut engine = TrussEngine::new();
     let yaml = "name: test\non: push";
-    
+
     let result1 = engine.analyze(yaml);
     let result2 = engine.analyze(yaml);
-    
+
     // Count syntax-related diagnostics
-    let syntax1: Vec<_> = result1.diagnostics.iter()
+    let syntax1: Vec<_> = result1
+        .diagnostics
+        .iter()
         .filter(|d| d.message.contains("syntax") || d.message.contains("parse"))
         .collect();
-    let syntax2: Vec<_> = result2.diagnostics.iter()
+    let syntax2: Vec<_> = result2
+        .diagnostics
+        .iter()
         .filter(|d| d.message.contains("syntax") || d.message.contains("parse"))
         .collect();
-    
+
     assert_eq!(
         syntax1.len(),
         syntax2.len(),
         "Syntax rule should be deterministic"
     );
 }
-

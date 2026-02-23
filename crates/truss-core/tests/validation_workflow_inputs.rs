@@ -4,8 +4,8 @@
 //!
 //! Validates workflow_dispatch inputs in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_workflow_inputs_valid_string() {
@@ -23,13 +23,14 @@ jobs:
     steps:
       - run: echo "Deploying to ${{ inputs.environment }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("input") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_dispatch with string input should not produce errors"
@@ -55,13 +56,14 @@ jobs:
     steps:
       - run: echo "Deploying to ${{ inputs.environment }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("input") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_dispatch with choice input should not produce errors"
@@ -85,13 +87,14 @@ jobs:
       - if: ${{ inputs.dry_run }}
         run: echo "Dry run mode"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("input") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_dispatch with boolean input should not produce errors"
@@ -114,13 +117,14 @@ jobs:
     steps:
       - run: echo "Deploying"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("input") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_dispatch with environment input should not produce errors"
@@ -142,20 +146,25 @@ jobs:
     steps:
       - run: echo "Deploying to ${{ inputs.undefined_input }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("undefined")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input") || d.message.contains("undefined"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !input_errors.is_empty(),
         "Reference to undefined input should produce error"
     );
     assert!(
-        input_errors.iter().any(|d| d.message.contains("undefined_input") || d.message.contains("undefined")),
+        input_errors
+            .iter()
+            .any(|d| d.message.contains("undefined_input") || d.message.contains("undefined")),
         "Error message should mention undefined input"
     );
 }
@@ -176,15 +185,18 @@ jobs:
     steps:
       - run: echo "Deploying"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("type")) && 
-                (d.message.contains("invalid") || d.message.contains("invalid_type")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input") || d.message.contains("type"))
+                && (d.message.contains("invalid") || d.message.contains("invalid_type"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !input_errors.is_empty(),
         "Invalid input type should produce error"
@@ -203,13 +215,14 @@ jobs:
     steps:
       - run: echo "Deploying"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("input") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "workflow_dispatch without inputs should be valid"
@@ -238,17 +251,16 @@ jobs:
     steps:
       - run: echo "Deploying ${{ inputs.version }} to ${{ inputs.environment }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("input") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_dispatch with multiple inputs should not produce errors"
     );
 }
-
-

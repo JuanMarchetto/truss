@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates job dependencies (needs).
 pub struct JobNeedsRule;
@@ -26,12 +26,17 @@ impl ValidationRule for JobNeedsRule {
 
         let mut job_names = std::collections::HashSet::new();
 
-        fn collect_job_names_set(node: Node, source: &str, names: &mut std::collections::HashSet<String>) {
+        fn collect_job_names_set(
+            node: Node,
+            source: &str,
+            names: &mut std::collections::HashSet<String>,
+        ) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         names.insert(key_cleaned.to_string());
                     }
@@ -57,11 +62,22 @@ impl ValidationRule for JobNeedsRule {
                 "flow_sequence" | "block_sequence" => {
                     let mut cursor = node.walk();
                     for child in node.children(&mut cursor) {
-                        if child.kind() == "flow_node" || child.kind() == "block_node" ||
-                           child.kind() == "plain_scalar" || child.kind() == "double_quoted_scalar" ||
-                           child.kind() == "single_quoted_scalar" {
+                        if child.kind() == "flow_node"
+                            || child.kind() == "block_node"
+                            || child.kind() == "plain_scalar"
+                            || child.kind() == "double_quoted_scalar"
+                            || child.kind() == "single_quoted_scalar"
+                        {
                             let text = utils::node_text(child, source);
-                            let cleaned = text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace() || c == '[' || c == ']' || c == ',' || c == '-');
+                            let cleaned = text.trim_matches(|c: char| {
+                                c == '"'
+                                    || c == '\''
+                                    || c.is_whitespace()
+                                    || c == '['
+                                    || c == ']'
+                                    || c == ','
+                                    || c == '-'
+                            });
                             if !cleaned.is_empty() {
                                 values.push(cleaned.to_string());
                             }
@@ -70,14 +86,16 @@ impl ValidationRule for JobNeedsRule {
                 }
                 "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
                     let text = utils::node_text(node, source);
-                    let cleaned = text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+                    let cleaned =
+                        text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
                     if !cleaned.is_empty() {
                         values.push(cleaned.to_string());
                     }
                 }
                 _ => {
                     let text = utils::node_text(node, source);
-                    let cleaned = text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+                    let cleaned =
+                        text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
                     if !cleaned.is_empty() && !cleaned.contains('\n') {
                         values.push(cleaned.to_string());
                     }
@@ -86,12 +104,19 @@ impl ValidationRule for JobNeedsRule {
             values
         }
 
-        fn find_needs_references(node: Node, source: &str, job_name: &str, all_job_names: &std::collections::HashSet<String>, diagnostics: &mut Vec<Diagnostic>) {
+        fn find_needs_references(
+            node: Node,
+            source: &str,
+            job_name: &str,
+            all_job_names: &std::collections::HashSet<String>,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "needs" {
                             if let Some(value_node_raw) = utils::get_pair_value(node) {
@@ -100,7 +125,10 @@ impl ValidationRule for JobNeedsRule {
                                 for need in needs_values {
                                     if !all_job_names.contains(&need) {
                                         diagnostics.push(Diagnostic {
-                                            message: format!("Job '{}' references nonexistent job: '{}'", job_name, need),
+                                            message: format!(
+                                                "Job '{}' references nonexistent job: '{}'",
+                                                job_name, need
+                                            ),
                                             severity: Severity::Error,
                                             span: Span {
                                                 start: value_node.start_byte(),
@@ -111,7 +139,10 @@ impl ValidationRule for JobNeedsRule {
 
                                     if need == job_name {
                                         diagnostics.push(Diagnostic {
-                                            message: format!("Job '{}' cannot reference self in 'needs'", job_name),
+                                            message: format!(
+                                                "Job '{}' cannot reference self in 'needs'",
+                                                job_name
+                                            ),
                                             severity: Severity::Error,
                                             span: Span {
                                                 start: value_node.start_byte(),
@@ -121,10 +152,14 @@ impl ValidationRule for JobNeedsRule {
                                     }
                                 }
                             }
-                        } else {
-                            if let Some(value_node) = utils::get_pair_value(node) {
-                                find_needs_references(value_node, source, job_name, all_job_names, diagnostics);
-                            }
+                        } else if let Some(value_node) = utils::get_pair_value(node) {
+                            find_needs_references(
+                                value_node,
+                                source,
+                                job_name,
+                                all_job_names,
+                                diagnostics,
+                            );
                         }
                     }
                 }
@@ -144,18 +179,30 @@ impl ValidationRule for JobNeedsRule {
             }
         }
 
-        fn process_job(node: Node, source: &str, all_job_names: &std::collections::HashSet<String>, diagnostics: &mut Vec<Diagnostic>) {
+        fn process_job(
+            node: Node,
+            source: &str,
+            all_job_names: &std::collections::HashSet<String>,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let job_name = utils::node_text(key_node, source);
-                        let job_name_cleaned = job_name.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let job_name_cleaned = job_name
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
                         if all_job_names.contains(&job_name_cleaned) {
                             if let Some(job_value_raw) = utils::get_pair_value(node) {
                                 let job_value = utils::unwrap_node(job_value_raw);
-                                find_needs_references(job_value, source, &job_name_cleaned, all_job_names, diagnostics);
+                                find_needs_references(
+                                    job_value,
+                                    source,
+                                    &job_name_cleaned,
+                                    all_job_names,
+                                    diagnostics,
+                                );
                             }
                         }
                         if let Some(value_node) = utils::get_pair_value(node) {
@@ -178,14 +225,21 @@ impl ValidationRule for JobNeedsRule {
             }
         }
 
-        let mut dependencies: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+        let mut dependencies: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
 
-        fn collect_dependencies(node: Node, source: &str, job_name: &str, deps: &mut std::collections::HashMap<String, Vec<String>>) {
+        fn collect_dependencies(
+            node: Node,
+            source: &str,
+            job_name: &str,
+            deps: &mut std::collections::HashMap<String, Vec<String>>,
+        ) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "needs" {
                             if let Some(value_node_raw) = utils::get_pair_value(node) {
@@ -193,10 +247,8 @@ impl ValidationRule for JobNeedsRule {
                                 let needs_values = extract_needs_values(value_node, source);
                                 deps.insert(job_name.to_string(), needs_values);
                             }
-                        } else {
-                            if let Some(value_node) = utils::get_pair_value(node) {
-                                collect_dependencies(value_node, source, job_name, deps);
-                            }
+                        } else if let Some(value_node) = utils::get_pair_value(node) {
+                            collect_dependencies(value_node, source, job_name, deps);
                         }
                     }
                 }
@@ -215,12 +267,18 @@ impl ValidationRule for JobNeedsRule {
             }
         }
 
-        fn collect_all_dependencies(node: Node, source: &str, all_job_names: &std::collections::HashSet<String>, deps: &mut std::collections::HashMap<String, Vec<String>>) {
+        fn collect_all_dependencies(
+            node: Node,
+            source: &str,
+            all_job_names: &std::collections::HashSet<String>,
+            deps: &mut std::collections::HashMap<String, Vec<String>>,
+        ) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let job_name = utils::node_text(key_node, source);
-                        let job_name_cleaned = job_name.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let job_name_cleaned = job_name
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
                         if all_job_names.contains(&job_name_cleaned) {
@@ -242,7 +300,12 @@ impl ValidationRule for JobNeedsRule {
 
         collect_all_dependencies(jobs_to_process, source, &job_names, &mut dependencies);
 
-        fn has_cycle(job: &str, deps: &std::collections::HashMap<String, Vec<String>>, visited: &mut std::collections::HashSet<String>, rec_stack: &mut std::collections::HashSet<String>) -> bool {
+        fn has_cycle(
+            job: &str,
+            deps: &std::collections::HashMap<String, Vec<String>>,
+            visited: &mut std::collections::HashSet<String>,
+            rec_stack: &mut std::collections::HashSet<String>,
+        ) -> bool {
             visited.insert(job.to_string());
             rec_stack.insert(job.to_string());
 

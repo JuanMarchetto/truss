@@ -4,8 +4,8 @@
 //!
 //! Validates workflow_call secrets and their usage in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_workflow_call_secrets_valid_with_usage() {
@@ -22,14 +22,17 @@ jobs:
     steps:
       - run: echo "${{ secrets.DEPLOY_KEY }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("secret") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("secret") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "Valid workflow_call with secret and usage should not produce errors"
@@ -54,14 +57,17 @@ jobs:
       - run: echo "${{ secrets.DEPLOY_KEY }}"
       - run: echo "${{ secrets.API_TOKEN }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("secret") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("secret") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "Valid workflow_call with required and optional secrets should not produce errors"
@@ -85,14 +91,17 @@ jobs:
           KEY: ${{ secrets.DEPLOY_KEY }}
         run: echo "$KEY"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("secret") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("secret") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "Valid workflow_call secret reference in step env should not produce errors"
@@ -114,14 +123,19 @@ jobs:
     steps:
       - run: echo "${{ secrets.UNDEFINED }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("secret") || d.message.contains("undefined") || d.message.contains("UNDEFINED")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("secret")
+                || d.message.contains("undefined")
+                || d.message.contains("UNDEFINED"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !secret_errors.is_empty(),
         "Reference to undefined workflow_call secret should produce error"
@@ -140,14 +154,17 @@ jobs:
     steps:
       - run: echo "${{ secrets.DEPLOY_KEY }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("secret") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("secret") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !secret_errors.is_empty(),
         "Secret reference without workflow_call secrets definition should produce error"
@@ -166,17 +183,19 @@ jobs:
     steps:
       - run: echo "Deploy"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let secret_errors: Vec<_> = result.diagnostics
+    let secret_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("secret") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("secret") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         secret_errors.is_empty(),
         "workflow_call without secrets should be valid"
     );
 }
-

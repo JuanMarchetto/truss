@@ -4,8 +4,8 @@
 //!
 //! Validates if condition expressions in steps in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_step_if_expression_valid_github_ref() {
@@ -19,15 +19,18 @@ jobs:
       - if: ${{ github.ref == 'refs/heads/main' }}
         run: echo "On main branch"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("step")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("step"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         if_errors.is_empty(),
         "Valid step if expression with github.ref should not produce errors"
@@ -48,15 +51,18 @@ jobs:
       - if: ${{ steps.build.outputs.result == 'success' }}
         run: echo "Build succeeded"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("step")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("step"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         if_errors.is_empty(),
         "Valid step if expression with step outputs should not produce errors"
@@ -78,15 +84,18 @@ jobs:
       - if: ${{ matrix.os == 'ubuntu-latest' }}
         run: echo "Ubuntu"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("step")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("step"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         if_errors.is_empty(),
         "Valid step if expression with matrix should not produce errors"
@@ -108,11 +117,17 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("step")) &&
-                (d.message.contains("expression") || d.message.contains("${{") || d.message.contains("wrapper") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("step"))
+                && (d.message.contains("expression")
+                    || d.message.contains("${{")
+                    || d.message.contains("wrapper")
+                    || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
 
     assert!(
@@ -134,15 +149,18 @@ jobs:
       - if: ${{ invalid.expression }}
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("step")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("step"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !if_errors.is_empty(),
         "Invalid step if expression should produce error"
@@ -161,15 +179,20 @@ jobs:
       - if: ${{ github.nonexistent.property }}
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("step")) && 
-                (d.message.contains("expression") || d.message.contains("undefined") || d.message.contains("nonexistent")) &&
-                (d.severity == Severity::Error || d.severity == Severity::Warning))
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("step"))
+                && (d.message.contains("expression")
+                    || d.message.contains("undefined")
+                    || d.message.contains("nonexistent"))
+                && (d.severity == Severity::Error || d.severity == Severity::Warning)
+        })
         .collect();
-    
+
     assert!(
         !if_errors.is_empty(),
         "Step if expression with undefined context should produce error/warning"
@@ -188,18 +211,20 @@ jobs:
       - if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
         run: echo "Main branch push"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let if_errors: Vec<_> = result.diagnostics
+    let if_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("step")) && 
-                (d.message.contains("expression") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("if") || d.message.contains("step"))
+                && (d.message.contains("expression") || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         if_errors.is_empty(),
         "Valid nested step if conditional should not produce errors"
     );
 }
-
