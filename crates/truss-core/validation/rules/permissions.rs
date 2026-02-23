@@ -19,15 +19,16 @@ impl ValidationRule for PermissionsRule {
         }
 
         let root = tree.root_node();
-        
+
         let valid_scopes = [
-            "actions", "checks", "contents", "deployments", "id-token", "issues",
-            "discussions", "packages", "pages", "pull-requests", "repository-projects",
-            "security-events", "statuses", "write-all", "read-all", "none"
+            "actions", "attestations", "checks", "contents", "deployments", "id-token",
+            "issues", "discussions", "packages", "pages", "pull-requests",
+            "repository-projects", "security-events", "statuses", "workflows",
+            "write-all", "read-all", "none"
         ];
-        
+
         let valid_values = ["read", "write", "none"];
-        
+
         fn validate_permissions_node(node: Node, source: &str, valid_scopes: &[&str], valid_values: &[&str], diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
@@ -45,13 +46,8 @@ impl ValidationRule for PermissionsRule {
                     }
                 }
                 "block_mapping" | "flow_mapping" | "block_node" => {
-                    let mut node_to_process = node;
-                    if node.kind() == "block_node" {
-                        if let Some(inner) = node.child(0) {
-                            node_to_process = inner;
-                        }
-                    }
-                    
+                    let node_to_process = utils::unwrap_node(node);
+
                     let mut cursor = node_to_process.walk();
                     for child in node_to_process.children(&mut cursor) {
                         if child.kind() == "block_mapping_pair" || child.kind() == "flow_pair" {
@@ -69,18 +65,9 @@ impl ValidationRule for PermissionsRule {
                                         },
                                     });
                                 }
-                                
-                                let value_node = if child.kind() == "block_mapping_pair" {
-                                    child.child(2)  // block_mapping_pair: child(0)=key, child(1)=colon, child(2)=value
-                                } else {
-                                    child.child(1)  // flow_pair: child(0)=key, child(1)=value
-                                };
-                                if let Some(mut value_node) = value_node {
-                                    if value_node.kind() == "block_node" {
-                                        if let Some(inner) = value_node.child(0) {
-                                            value_node = inner;
-                                        }
-                                    }
+
+                                if let Some(value_node_raw) = utils::get_pair_value(child) {
+                                    let value_node = utils::unwrap_node(value_node_raw);
                                     let value_text = utils::node_text(value_node, source);
                                     let value_cleaned = value_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
                                     if !valid_values.iter().any(|&v| v == value_cleaned) {
@@ -101,11 +88,11 @@ impl ValidationRule for PermissionsRule {
                 _ => {}
             }
         }
-        
+
         if let Some(permissions_value) = utils::find_value_for_key(root, source, "permissions") {
             validate_permissions_node(permissions_value, source, &valid_scopes, &valid_values, &mut diagnostics);
         }
-        
+
         if let Some(jobs_value) = utils::find_value_for_key(root, source, "jobs") {
             fn find_job_permissions(node: Node, source: &str, valid_scopes: &[&str], valid_values: &[&str], diagnostics: &mut Vec<Diagnostic>) {
                 match node.kind() {
@@ -115,7 +102,7 @@ impl ValidationRule for PermissionsRule {
                             let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                                 .trim_end_matches(':');
                             if key_cleaned == "permissions" {
-                                if let Some(perm_value) = node.child(1) {
+                                if let Some(perm_value) = utils::get_pair_value(node) {
                                     validate_permissions_node(perm_value, source, valid_scopes, valid_values, diagnostics);
                                 }
                             }
@@ -129,11 +116,10 @@ impl ValidationRule for PermissionsRule {
                     }
                 }
             }
-            
+
             find_job_permissions(jobs_value, source, &valid_scopes, &valid_values, &mut diagnostics);
         }
 
         diagnostics
     }
 }
-

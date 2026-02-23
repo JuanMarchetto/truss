@@ -28,12 +28,7 @@ impl ValidationRule for JobIfExpressionRule {
         // Collect all job names for reference validation
         let job_names: HashSet<String> = collect_job_names(jobs_value, source);
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn check_job_if(node: Node, source: &str, job_names: &HashSet<String>, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
@@ -44,18 +39,8 @@ impl ValidationRule for JobIfExpressionRule {
                             .trim_end_matches(':')
                             .to_string();
                         
-                        let job_value = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        
-                        if let Some(mut job_value) = job_value {
-                            if job_value.kind() == "block_node" {
-                                if let Some(inner) = job_value.child(0) {
-                                    job_value = inner;
-                                }
-                            }
+                        if let Some(job_value_raw) = utils::get_pair_value(node) {
+                            let job_value = utils::unwrap_node(job_value_raw);
                             
                             if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                                 let if_value = utils::find_value_for_key(job_value, source, "if");
@@ -228,23 +213,27 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         return false;
     }
     
-    let has_context = expr.starts_with("github.") 
+    let has_context = expr.starts_with("github.")
         || expr.starts_with("matrix.")
         || expr.starts_with("secrets.")
         || expr.starts_with("vars.")
         || expr.starts_with("needs.")
         || expr.starts_with("inputs.")
         || expr.starts_with("env.")
+        || expr.starts_with("job.")
         || expr.starts_with("jobs.")
-        || expr.starts_with("steps.");
+        || expr.starts_with("steps.")
+        || expr.starts_with("runner.")
+        || expr.starts_with("strategy.");
     
+    let expr_lower = expr.to_lowercase();
     let has_function = expr.contains("contains(")
         || expr.contains("startsWith(")
         || expr.contains("endsWith(")
         || expr.contains("format(")
         || expr.contains("join(")
-        || expr.contains("toJSON(")
-        || expr.contains("fromJSON(")
+        || expr_lower.contains("tojson(")
+        || expr_lower.contains("fromjson(")
         || expr.contains("hashFiles(")
         || expr.contains("success()")
         || expr.contains("failure()")
@@ -267,7 +256,7 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         || expr == "true" || expr == "false";
 
     // Bare context names (e.g., "github", "matrix") are valid expressions
-    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps" | "runner" | "strategy");
+    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy");
 
     // If expression contains a dot but doesn't start with a known context, check if it's invalid
     // (e.g., "invalid.expression" should be rejected)
@@ -276,7 +265,7 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         let first_token = expr.split(|c: char| c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')).next().unwrap_or("");
         if first_token.contains('.') {
             let context_name = first_token.split('.').next().unwrap_or("");
-            if !matches!(context_name, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps" | "runner" | "strategy") {
+            if !matches!(context_name, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy") {
                 // Unknown context reference - reject it
                 return false;
             }

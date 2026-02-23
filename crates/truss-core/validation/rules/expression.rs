@@ -29,17 +29,19 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         || expr.starts_with("inputs.")
         || expr.starts_with("env.")
         || expr.starts_with("steps.")
+        || expr.starts_with("job.")
         || expr.starts_with("jobs.")
         || expr.starts_with("runner.")
         || expr.starts_with("strategy.");
 
+    let expr_lower = expr.to_lowercase();
     let has_function = expr.contains("contains(")
         || expr.contains("startsWith(")
         || expr.contains("endsWith(")
         || expr.contains("format(")
         || expr.contains("join(")
-        || expr.contains("toJSON(")
-        || expr.contains("fromJSON(")
+        || expr_lower.contains("tojson(")
+        || expr_lower.contains("fromjson(")
         || expr.contains("hashFiles(")
         || expr.contains("success()")
         || expr.contains("failure()")
@@ -62,7 +64,7 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         || expr == "true" || expr == "false";
 
     // Bare context names (e.g., "github", "matrix") are valid expressions
-    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps" | "runner" | "strategy");
+    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy");
 
     if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context {
         if !expr.contains('.') && !expr.contains('(') && !expr.contains('[') {
@@ -102,7 +104,7 @@ impl ValidationRule for ExpressionValidationRule {
                 let end = after_start + end_offset + 2;
                 let expr = &source[actual_start..end];
                 
-                let inner = &expr[3..expr.len()-2].trim();
+                let inner = expr[3..expr.len()-2].trim();
                 if inner.is_empty() {
                     diagnostics.push(Diagnostic {
                         message: "Empty expression".to_string(),
@@ -203,32 +205,39 @@ fn validate_expression_functions(expr: &str, start: usize, _end: usize, diagnost
         "toJSON", "fromJSON", "hashFiles",
         "success", "failure", "cancelled", "always"
     ];
-    
+
+    // Case-insensitive variants that GitHub Actions accepts
+    let case_insensitive_functions = ["tojson", "fromjson"];
+
     // Find function calls in expression
     let mut search_pos = 0;
     while let Some(pos) = expr[search_pos..].find('(') {
         let actual_pos = search_pos + pos;
         let before_paren = &expr[..actual_pos];
-        
+
         // Find function name (backwards from '(')
         if let Some(func_start) = before_paren.rfind(|c: char| c.is_whitespace() || c == '&' || c == '|' || c == '!' || c == '(' || c == '[' || c == '.') {
-            let func_name = &expr[func_start + 1..actual_pos].trim();
-            if !func_name.is_empty() && !valid_functions.iter().any(|&f| f == *func_name) {
-                diagnostics.push(Diagnostic {
-                    message: format!(
-                        "Unknown function in expression: '{}'. Valid functions are: {}.",
-                        func_name,
-                        valid_functions.join(", ")
-                    ),
-                    severity: Severity::Warning,
-                    span: Span {
-                        start: start + func_start + 1,
-                        end: start + actual_pos,
-                    },
-                });
+            let func_name = expr[func_start + 1..actual_pos].trim();
+            if !func_name.is_empty() {
+                let is_valid = valid_functions.iter().any(|&f| f == func_name)
+                    || case_insensitive_functions.iter().any(|&f| func_name.to_lowercase() == f);
+                if !is_valid {
+                    diagnostics.push(Diagnostic {
+                        message: format!(
+                            "Unknown function in expression: '{}'. Valid functions are: {}.",
+                            func_name,
+                            valid_functions.join(", ")
+                        ),
+                        severity: Severity::Warning,
+                        span: Span {
+                            start: start + func_start + 1,
+                            end: start + actual_pos,
+                        },
+                    });
+                }
             }
         }
-        
+
         search_pos = actual_pos + 1;
     }
 }

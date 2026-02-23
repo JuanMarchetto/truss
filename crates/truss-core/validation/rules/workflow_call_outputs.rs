@@ -25,12 +25,7 @@ impl ValidationRule for WorkflowCallOutputsRule {
             None => return diagnostics,
         };
 
-        let mut on_to_check = on_value;
-        if on_to_check.kind() == "block_node" {
-            if let Some(inner) = on_to_check.child(0) {
-                on_to_check = inner;
-            }
-        }
+        let on_to_check = utils::unwrap_node(on_value);
 
         // Find workflow_call
         let workflow_call_value = utils::find_value_for_key(on_to_check, source, "workflow_call");
@@ -40,12 +35,7 @@ impl ValidationRule for WorkflowCallOutputsRule {
         }
 
         let workflow_call = workflow_call_value.unwrap();
-        let mut call_to_check = workflow_call;
-        if call_to_check.kind() == "block_node" {
-            if let Some(inner) = call_to_check.child(0) {
-                call_to_check = inner;
-            }
-        }
+        let call_to_check = utils::unwrap_node(workflow_call);
 
         // Collect all job names and their outputs for reference validation
         let jobs_value = utils::find_value_for_key(root, source, "jobs");
@@ -59,13 +49,8 @@ impl ValidationRule for WorkflowCallOutputsRule {
         let outputs_value = utils::find_value_for_key(call_to_check, source, "outputs");
         
         if let Some(outputs_node) = outputs_value {
-            let mut outputs_to_check = outputs_node;
-            if outputs_to_check.kind() == "block_node" {
-                if let Some(inner) = outputs_to_check.child(0) {
-                    outputs_to_check = inner;
-                }
-            }
-            
+            let outputs_to_check = utils::unwrap_node(outputs_node);
+
             // Find all job output references in output value expressions
             let output_refs = find_job_output_references(outputs_to_check, source);
             
@@ -177,28 +162,16 @@ fn collect_job_outputs(jobs_node: Node, source: &str) -> HashMap<String, HashSet
                         .trim_end_matches(':')
                         .to_string();
                     
-                    let job_value = if node.kind() == "block_mapping_pair" {
-                        node.child(2)
-                    } else {
-                        node.child(1)
-                    };
-                    
-                    if let Some(mut job_value) = job_value {
-                        if job_value.kind() == "block_node" {
-                            if let Some(inner) = job_value.child(0) {
-                                job_value = inner;
-                            }
-                        }
-                        
+                    let job_value = utils::get_pair_value(node);
+
+                    if let Some(job_value_raw) = job_value {
+                        let job_value = utils::unwrap_node(job_value_raw);
+
                         if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                             // Find outputs in this job
                             let outputs_value = utils::find_value_for_key(job_value, source, "outputs");
-                            if let Some(mut outputs_node) = outputs_value {
-                                if outputs_node.kind() == "block_node" {
-                                    if let Some(inner) = outputs_node.child(0) {
-                                        outputs_node = inner;
-                                    }
-                                }
+                            if let Some(outputs_node_raw) = outputs_value {
+                                let outputs_node = utils::unwrap_node(outputs_node_raw);
                                 
                                 let mut output_names = HashSet::new();
                                 collect_output_names(outputs_node, source, &mut output_names);

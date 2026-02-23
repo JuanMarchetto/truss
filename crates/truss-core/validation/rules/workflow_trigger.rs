@@ -35,12 +35,7 @@ impl ValidationRule for WorkflowTriggerRule {
             }
         };
 
-        let mut on_to_check = on_value;
-        if on_to_check.kind() == "block_node" {
-            if let Some(inner) = on_to_check.child(0) {
-                on_to_check = inner;
-            }
-        }
+        let on_to_check = utils::unwrap_node(on_value);
 
         let on_text = utils::node_text(on_to_check, source);
         if on_text.contains(", ]") || on_text.contains(",]") {
@@ -54,12 +49,7 @@ impl ValidationRule for WorkflowTriggerRule {
             });
         }
 
-        let mut event_node = on_to_check;
-        if event_node.kind() == "block_node" {
-            if let Some(inner) = event_node.child(0) {
-                event_node = inner;
-            }
-        }
+        let event_node = utils::unwrap_node(on_to_check);
 
         let event_text = if event_node.kind() == "plain_scalar" || event_node.kind() == "double_quoted_scalar" || event_node.kind() == "single_quoted_scalar" {
             Some(utils::node_text(event_node, source).trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace()).to_lowercase())

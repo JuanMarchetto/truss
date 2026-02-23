@@ -25,12 +25,7 @@ impl ValidationRule for WorkflowCallSecretsRule {
             None => return diagnostics,
         };
 
-        let mut on_to_check = on_value;
-        if on_to_check.kind() == "block_node" {
-            if let Some(inner) = on_to_check.child(0) {
-                on_to_check = inner;
-            }
-        }
+        let on_to_check = utils::unwrap_node(on_value);
 
         // Find workflow_call
         let workflow_call_value = utils::find_value_for_key(on_to_check, source, "workflow_call");
@@ -42,12 +37,7 @@ impl ValidationRule for WorkflowCallSecretsRule {
         }
 
         let workflow_call = workflow_call_value.unwrap();
-        let mut call_to_check = workflow_call;
-        if call_to_check.kind() == "block_node" {
-            if let Some(inner) = call_to_check.child(0) {
-                call_to_check = inner;
-            }
-        }
+        let call_to_check = utils::unwrap_node(workflow_call);
 
         // Extract defined secrets
         let secrets_value = utils::find_value_for_key(call_to_check, source, "secrets");
@@ -55,24 +45,14 @@ impl ValidationRule for WorkflowCallSecretsRule {
         let mut defined_secrets: HashSet<String> = HashSet::new();
         
         if let Some(secrets_node) = secrets_value {
-            let mut secrets_to_check = secrets_node;
-            if secrets_to_check.kind() == "block_node" {
-                if let Some(inner) = secrets_to_check.child(0) {
-                    secrets_to_check = inner;
-                }
-            }
+            let secrets_to_check = utils::unwrap_node(secrets_node);
 
             self.collect_secret_definitions(secrets_to_check, source, &mut defined_secrets);
         }
 
         // Validate secret properties (required, description)
         if let Some(secrets_node) = secrets_value {
-            let mut secrets_to_check = secrets_node;
-            if secrets_to_check.kind() == "block_node" {
-                if let Some(inner) = secrets_to_check.child(0) {
-                    secrets_to_check = inner;
-                }
-            }
+            let secrets_to_check = utils::unwrap_node(secrets_node);
             self.validate_secret_properties(secrets_to_check, source, &mut diagnostics);
         }
         
@@ -138,19 +118,11 @@ impl WorkflowCallSecretsRule {
                         .trim_end_matches(':')
                         .to_string();
                     
-                    let secret_value = if node.kind() == "block_mapping_pair" {
-                        node.child(2)
-                    } else {
-                        node.child(1)
-                    };
-                    
-                    if let Some(mut secret_value) = secret_value {
-                        if secret_value.kind() == "block_node" {
-                            if let Some(inner) = secret_value.child(0) {
-                                secret_value = inner;
-                            }
-                        }
-                        
+                    let secret_value = utils::get_pair_value(node);
+
+                    if let Some(secret_value_raw) = secret_value {
+                        let secret_value = utils::unwrap_node(secret_value_raw);
+
                         // Validate required field (must be boolean)
                         let required_value = utils::find_value_for_key(secret_value, source, "required");
                         if let Some(required_node) = required_value {

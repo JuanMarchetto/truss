@@ -25,12 +25,7 @@ impl ValidationRule for StepOutputReferenceRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         let mut processed_jobs = HashSet::new();
         
@@ -45,20 +40,12 @@ impl ValidationRule for StepOutputReferenceRule {
                         let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
-                        
-                        let job_value = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        
-                        if let Some(mut job_value) = job_value {
-                            if job_value.kind() == "block_node" {
-                                if let Some(inner) = job_value.child(0) {
-                                    job_value = inner;
-                                }
-                            }
-                            
+
+                        let job_value = utils::get_pair_value(node);
+
+                        if let Some(job_value_raw) = job_value {
+                            let job_value = utils::unwrap_node(job_value_raw);
+
                             if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                                 let step_ids_vec = collect_step_ids(job_value, source);
                                 let step_ids_set: HashSet<String> = step_ids_vec
@@ -98,19 +85,11 @@ impl ValidationRule for StepOutputReferenceRule {
                         }
                         processed_jobs.insert(job_name.clone());
                         
-                        let job_value = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        
-                        if let Some(mut job_value) = job_value {
-                            if job_value.kind() == "block_node" {
-                                if let Some(inner) = job_value.child(0) {
-                                    job_value = inner;
-                                }
-                            }
-                            
+                        let job_value = utils::get_pair_value(node);
+
+                        if let Some(job_value_raw) = job_value {
+                            let job_value = utils::unwrap_node(job_value_raw);
+
                             if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                                 // Collect step IDs from this job (with their step indices for better error messages)
                                 let step_ids_vec = collect_step_ids(job_value, source);
@@ -275,13 +254,9 @@ fn collect_step_ids(job_node: Node, source: &str) -> Vec<(String, Span)> {
     
     let steps_value = utils::find_value_for_key(job_node, source, "steps");
     
-    if let Some(mut steps_node) = steps_value {
-        if steps_node.kind() == "block_node" {
-            if let Some(inner) = steps_node.child(0) {
-                steps_node = inner;
-            }
-        }
-        
+    if let Some(steps_node_raw) = steps_value {
+        let steps_node = utils::unwrap_node(steps_node_raw);
+
         fn collect_from_steps(node: Node, source: &str, step_ids: &mut Vec<(String, Span)>) {
             match node.kind() {
                 "block_sequence" | "flow_sequence" => {
@@ -328,13 +303,9 @@ fn collect_steps_without_ids(job_node: Node, source: &str) -> HashSet<String> {
     
     let steps_value = utils::find_value_for_key(job_node, source, "steps");
     
-    if let Some(mut steps_node) = steps_value {
-        if steps_node.kind() == "block_node" {
-            if let Some(inner) = steps_node.child(0) {
-                steps_node = inner;
-            }
-        }
-        
+    if let Some(steps_node_raw) = steps_value {
+        let steps_node = utils::unwrap_node(steps_node_raw);
+
         fn collect_from_steps(node: Node, source: &str, steps_without_ids: &mut HashSet<String>, step_index: &mut usize) {
             match node.kind() {
                 "block_sequence" | "flow_sequence" => {
@@ -577,13 +548,9 @@ fn collect_step_outputs(job_node: Node, source: &str) -> HashMap<String, HashSet
     
     let steps_value = utils::find_value_for_key(job_node, source, "steps");
     
-    if let Some(mut steps_node) = steps_value {
-        if steps_node.kind() == "block_node" {
-            if let Some(inner) = steps_node.child(0) {
-                steps_node = inner;
-            }
-        }
-        
+    if let Some(steps_node_raw) = steps_value {
+        let steps_node = utils::unwrap_node(steps_node_raw);
+
         fn collect_from_steps(node: Node, source: &str, step_outputs: &mut HashMap<String, HashSet<String>>) {
             match node.kind() {
                 "block_sequence" | "flow_sequence" => {
