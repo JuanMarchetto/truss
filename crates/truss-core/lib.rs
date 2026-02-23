@@ -160,9 +160,10 @@ impl TrussEngine {
                         },
                     }],
                 };
-                let dummy_tree = self.parser.parse("").unwrap_or_else(|_| {
-                    panic!("Failed to create dummy tree");
-                });
+                // Parsing empty string should never fail with a valid parser
+                let dummy_tree = self.parser.parse("").expect(
+                    "BUG: tree-sitter failed to parse empty string; parser may be misconfigured"
+                );
                 return (result, dummy_tree);
             }
         };
@@ -198,9 +199,10 @@ impl TrussEngine {
                         },
                     }],
                 };
-                let dummy_tree = self.parser.parse("").unwrap_or_else(|_| {
-                    panic!("Failed to create dummy tree");
-                });
+                // Parsing empty string should never fail with a valid parser
+                let dummy_tree = self.parser.parse("").expect(
+                    "BUG: tree-sitter failed to parse empty string; parser may be misconfigured"
+                );
                 return (result, dummy_tree);
             }
         };
