@@ -24,12 +24,7 @@ impl ValidationRule for StepIfExpressionRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn find_steps(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
@@ -39,17 +34,8 @@ impl ValidationRule for StepIfExpressionRule {
                         let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "steps" {
-                            let steps_value = if node.kind() == "block_mapping_pair" {
-                                node.child(2)
-                            } else {
-                                node.child(1)
-                            };
-                            if let Some(mut steps_value) = steps_value {
-                                if steps_value.kind() == "block_node" {
-                                    if let Some(inner) = steps_value.child(0) {
-                                        steps_value = inner;
-                                    }
-                                }
+                            if let Some(steps_value_raw) = utils::get_pair_value(node) {
+                                let steps_value = utils::unwrap_node(steps_value_raw);
                                 if steps_value.kind() == "block_sequence" || steps_value.kind() == "flow_sequence" {
                                     let mut cursor = steps_value.walk();
                                     for step_node in steps_value.children(&mut cursor) {
@@ -58,12 +44,7 @@ impl ValidationRule for StepIfExpressionRule {
                                 }
                             }
                         }
-                        let value_node = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        if let Some(value_node) = value_node {
+                        if let Some(value_node) = utils::get_pair_value(node) {
                             find_steps(value_node, source, diagnostics);
                         }
                     }
@@ -78,29 +59,28 @@ impl ValidationRule for StepIfExpressionRule {
         }
 
         fn validate_step_if(step_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-            let mut step_to_check = step_node;
-            
-            if step_to_check.kind() == "block_node" {
-                if let Some(inner) = step_to_check.child(0) {
-                    step_to_check = inner;
-                }
-            }
-            
-            // Handle block_sequence_item - child(0) is the dash, child(1) is the value
+            let mut step_to_check = utils::unwrap_node(step_node);
+
+            // Handle block_sequence_item - find the value child (skip dash and comments)
             if step_to_check.kind() == "block_sequence_item" {
-                if let Some(inner) = step_to_check.child(1) {
-                    step_to_check = inner;
-                    if step_to_check.kind() == "block_node" {
-                        if let Some(inner2) = step_to_check.child(0) {
-                            step_to_check = inner2;
+                let mut found = false;
+                for i in 1..step_to_check.child_count() {
+                    if let Some(child) = step_to_check.child(i) {
+                        if child.kind() != "comment" {
+                            step_to_check = utils::unwrap_node(child);
+                            found = true;
+                            break;
                         }
                     }
                 }
+                if !found {
+                    return;
+                }
             }
-            
+
             if step_to_check.kind() == "block_mapping" || step_to_check.kind() == "flow_mapping" {
                 let if_value = utils::find_value_for_key(step_to_check, source, "if");
-                
+
                 if let Some(if_node) = if_value {
                     let if_text = utils::node_text(if_node, source);
                     let if_cleaned = if_text.trim();
@@ -115,68 +95,65 @@ impl ValidationRule for StepIfExpressionRule {
                         if_cleaned
                     };
 
-                    {
-                        
-                        // Validate expression syntax
-                        if !is_valid_expression_syntax(inner) {
-                            diagnostics.push(Diagnostic {
-                                message: format!(
-                                    "Invalid step 'if' expression syntax: '{}'",
-                                    inner
-                                ),
-                                severity: Severity::Error,
-                                span: Span {
-                                    start: if_node.start_byte(),
-                                    end: if_node.end_byte(),
-                                },
-                            });
-                        }
-                        
-                        // Check for undefined context variables
-                        if inner.contains("github.nonexistent") 
-                            || inner.contains("nonexistent.property")
-                            || (inner.contains("github.") && !is_valid_github_context(inner))
-                            || (inner.contains("matrix.") && !is_valid_matrix_context(inner))
-                            || (inner.contains("secrets.") && !is_valid_secrets_context(inner)) {
-                            diagnostics.push(Diagnostic {
-                                message: format!(
-                                    "Step 'if' expression may reference undefined context variable: '{}'",
-                                    inner
-                                ),
-                                severity: Severity::Warning,
-                                span: Span {
-                                    start: if_node.start_byte(),
-                                    end: if_node.end_byte(),
-                                },
-                            });
-                        }
-                        
-                        // Check for potentially always-true/false conditions
-                        if is_potentially_always_true(inner) {
-                            diagnostics.push(Diagnostic {
-                                message: format!(
-                                    "Step 'if' expression may always evaluate to true: '{}'",
-                                    inner
-                                ),
-                                severity: Severity::Warning,
-                                span: Span {
-                                    start: if_node.start_byte(),
-                                    end: if_node.end_byte(),
-                                },
-                            });
-                        } else if is_potentially_always_false(inner) {
-                            diagnostics.push(Diagnostic {
-                                message: format!(
-                                    "Step 'if' expression may always evaluate to false: '{}'",
-                                    inner
-                                ),
-                                severity: Severity::Warning,
-                                span: Span {
-                                    start: if_node.start_byte(),
-                                    end: if_node.end_byte(),
-                                },
-                            });
-                        }
+                    // Validate expression syntax
+                    if !is_valid_expression_syntax(inner) {
+                        diagnostics.push(Diagnostic {
+                            message: format!(
+                                "Invalid step 'if' expression syntax: '{}'",
+                                inner
+                            ),
+                            severity: Severity::Error,
+                            span: Span {
+                                start: if_node.start_byte(),
+                                end: if_node.end_byte(),
+                            },
+                        });
+                    }
+
+                    // Check for undefined context variables
+                    if inner.contains("github.nonexistent")
+                        || inner.contains("nonexistent.property")
+                        || (inner.contains("github.") && !is_valid_github_context(inner))
+                        || (inner.contains("matrix.") && !is_valid_matrix_context(inner))
+                        || (inner.contains("secrets.") && !is_valid_secrets_context(inner)) {
+                        diagnostics.push(Diagnostic {
+                            message: format!(
+                                "Step 'if' expression may reference undefined context variable: '{}'",
+                                inner
+                            ),
+                            severity: Severity::Warning,
+                            span: Span {
+                                start: if_node.start_byte(),
+                                end: if_node.end_byte(),
+                            },
+                        });
+                    }
+
+                    // Check for potentially always-true/false conditions
+                    if is_potentially_always_true(inner) {
+                        diagnostics.push(Diagnostic {
+                            message: format!(
+                                "Step 'if' expression may always evaluate to true: '{}'",
+                                inner
+                            ),
+                            severity: Severity::Warning,
+                            span: Span {
+                                start: if_node.start_byte(),
+                                end: if_node.end_byte(),
+                            },
+                        });
+                    } else if is_potentially_always_false(inner) {
+                        diagnostics.push(Diagnostic {
+                            message: format!(
+                                "Step 'if' expression may always evaluate to false: '{}'",
+                                inner
+                            ),
+                            severity: Severity::Warning,
+                            span: Span {
+                                start: if_node.start_byte(),
+                                end: if_node.end_byte(),
+                            },
+                        });
                     }
                 }
             }
@@ -191,27 +168,32 @@ impl ValidationRule for StepIfExpressionRule {
 /// Check if an expression has valid syntax (similar to ExpressionValidationRule)
 fn is_valid_expression_syntax(expr: &str) -> bool {
     let expr = expr.trim();
-    
+
     if expr.is_empty() {
         return false;
     }
-    
-    let has_context = expr.starts_with("github.") 
+
+    let has_context = expr.starts_with("github.")
         || expr.starts_with("matrix.")
         || expr.starts_with("secrets.")
         || expr.starts_with("vars.")
         || expr.starts_with("needs.")
         || expr.starts_with("inputs.")
         || expr.starts_with("env.")
-        || expr.starts_with("steps.");
-    
+        || expr.starts_with("job.")
+        || expr.starts_with("jobs.")
+        || expr.starts_with("steps.")
+        || expr.starts_with("runner.")
+        || expr.starts_with("strategy.");
+
+    let expr_lower = expr.to_lowercase();
     let has_function = expr.contains("contains(")
         || expr.contains("startsWith(")
         || expr.contains("endsWith(")
         || expr.contains("format(")
         || expr.contains("join(")
-        || expr.contains("toJSON(")
-        || expr.contains("fromJSON(")
+        || expr_lower.contains("tojson(")
+        || expr_lower.contains("fromjson(")
         || expr.contains("hashFiles(")
         || expr.contains("success()")
         || expr.contains("failure()")
@@ -234,7 +216,7 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         || expr == "true" || expr == "false";
 
     // Bare context names (e.g., "github", "matrix") are valid expressions
-    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps" | "runner" | "strategy");
+    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy");
 
     // Check if expression contains a dot but doesn't start with a known context
     // (e.g., "invalid.expression" should be rejected)
@@ -243,7 +225,7 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         let first_token = expr.split(|c: char| c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')).next().unwrap_or("");
         if first_token.contains('.') {
             let context_name = first_token.split('.').next().unwrap_or("");
-            if !matches!(context_name, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps" | "runner" | "strategy") {
+            if !matches!(context_name, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy") {
                 // Unknown context reference - reject it
                 return false;
             }
@@ -280,7 +262,7 @@ fn is_valid_secrets_context(expr: &str) -> bool {
 /// Check if expression may always evaluate to true
 fn is_potentially_always_true(expr: &str) -> bool {
     let expr_lower = expr.to_lowercase();
-    expr_lower == "true" 
+    expr_lower == "true"
         || expr_lower == "!false"
         || expr_lower.contains("|| true")
         || expr_lower.contains("true ||")
@@ -289,9 +271,8 @@ fn is_potentially_always_true(expr: &str) -> bool {
 /// Check if expression may always evaluate to false
 fn is_potentially_always_false(expr: &str) -> bool {
     let expr_lower = expr.to_lowercase();
-    expr_lower == "false" 
+    expr_lower == "false"
         || expr_lower == "!true"
         || expr_lower.contains("&& false")
         || expr_lower.contains("false &&")
 }
-

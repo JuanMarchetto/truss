@@ -26,12 +26,7 @@ impl ValidationRule for WorkflowInputsRule {
         };
 
         // Check if workflow_dispatch is present
-        let mut on_to_check = on_value;
-        if on_to_check.kind() == "block_node" {
-            if let Some(inner) = on_to_check.child(0) {
-                on_to_check = inner;
-            }
-        }
+        let on_to_check = utils::unwrap_node(on_value);
 
         // Find workflow_dispatch
         let workflow_dispatch_value = utils::find_value_for_key(on_to_check, source, "workflow_dispatch");
@@ -42,12 +37,7 @@ impl ValidationRule for WorkflowInputsRule {
         }
 
         let workflow_dispatch = workflow_dispatch_value.unwrap();
-        let mut dispatch_to_check = workflow_dispatch;
-        if dispatch_to_check.kind() == "block_node" {
-            if let Some(inner) = dispatch_to_check.child(0) {
-                dispatch_to_check = inner;
-            }
-        }
+        let dispatch_to_check = utils::unwrap_node(workflow_dispatch);
 
         // Extract defined inputs and their types
         let inputs_value = utils::find_value_for_key(dispatch_to_check, source, "inputs");
@@ -55,12 +45,7 @@ impl ValidationRule for WorkflowInputsRule {
         let mut defined_inputs: HashMap<String, (String, Span)> = HashMap::new(); // input_name -> (type, span)
         
         if let Some(inputs_node) = inputs_value {
-            let mut inputs_to_check = inputs_node;
-            if inputs_to_check.kind() == "block_node" {
-                if let Some(inner) = inputs_to_check.child(0) {
-                    inputs_to_check = inner;
-                }
-            }
+            let inputs_to_check = utils::unwrap_node(inputs_node);
 
             // Collect all input definitions
             self.collect_input_definitions(inputs_to_check, source, &mut defined_inputs);
@@ -82,12 +67,7 @@ impl ValidationRule for WorkflowInputsRule {
         
         // Validate input properties (default, required, description)
         if let Some(inputs_node) = inputs_value {
-            let mut inputs_to_check = inputs_node;
-            if inputs_to_check.kind() == "block_node" {
-                if let Some(inner) = inputs_to_check.child(0) {
-                    inputs_to_check = inner;
-                }
-            }
+            let inputs_to_check = utils::unwrap_node(inputs_node);
             self.validate_input_properties(inputs_to_check, source, &mut diagnostics);
         }
 
@@ -136,19 +116,11 @@ impl WorkflowInputsRule {
                         .to_string();
                     
                     // Get the input value node
-                    let input_value = if node.kind() == "block_mapping_pair" {
-                        node.child(2)
-                    } else {
-                        node.child(1)
-                    };
-                    
-                    if let Some(mut input_value) = input_value {
-                        if input_value.kind() == "block_node" {
-                            if let Some(inner) = input_value.child(0) {
-                                input_value = inner;
-                            }
-                        }
-                        
+                    let input_value = utils::get_pair_value(node);
+
+                    if let Some(input_value_raw) = input_value {
+                        let input_value = utils::unwrap_node(input_value_raw);
+
                         // Find the type field
                         let type_value = utils::find_value_for_key(input_value, source, "type");
                         if let Some(type_node) = type_value {
@@ -184,19 +156,11 @@ impl WorkflowInputsRule {
                         .trim_end_matches(':')
                         .to_string();
                     
-                    let input_value = if node.kind() == "block_mapping_pair" {
-                        node.child(2)
-                    } else {
-                        node.child(1)
-                    };
-                    
-                    if let Some(mut input_value) = input_value {
-                        if input_value.kind() == "block_node" {
-                            if let Some(inner) = input_value.child(0) {
-                                input_value = inner;
-                            }
-                        }
-                        
+                    let input_value = utils::get_pair_value(node);
+
+                    if let Some(input_value_raw) = input_value {
+                        let input_value = utils::unwrap_node(input_value_raw);
+
                         // Validate required field (must be boolean)
                         let required_value = utils::find_value_for_key(input_value, source, "required");
                         if let Some(required_node) = required_value {

@@ -24,39 +24,20 @@ impl ValidationRule for StepShellRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn process_jobs(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let job_value = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        
-                        if let Some(mut job_value) = job_value {
-                            if job_value.kind() == "block_node" {
-                                if let Some(inner) = job_value.child(0) {
-                                    job_value = inner;
-                                }
-                            }
-                            
+                        if let Some(job_value_raw) = utils::get_pair_value(node) {
+                            let job_value = utils::unwrap_node(job_value_raw);
+
                             if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                                 // Find steps in this job
                                 let steps_value = utils::find_value_for_key(job_value, source, "steps");
-                                if let Some(mut steps_node) = steps_value {
-                                    if steps_node.kind() == "block_node" {
-                                        if let Some(inner) = steps_node.child(0) {
-                                            steps_node = inner;
-                                        }
-                                    }
+                                if let Some(steps_node_raw) = steps_value {
+                                    let steps_node = utils::unwrap_node(steps_node_raw);
                                     validate_steps_in_node(steps_node, source, diagnostics);
                                 }
                             }
@@ -78,12 +59,7 @@ impl ValidationRule for StepShellRule {
                     let mut cursor = node.walk();
                     for step_node in node.children(&mut cursor) {
                         // Each step in a sequence might be wrapped in block_node
-                        let mut step_to_validate = step_node;
-                        if step_to_validate.kind() == "block_node" {
-                            if let Some(inner) = step_to_validate.child(0) {
-                                step_to_validate = inner;
-                            }
-                        }
+                        let step_to_validate = utils::unwrap_node(step_node);
                         validate_step_shell(step_to_validate, source, diagnostics);
                     }
                 }
@@ -97,14 +73,8 @@ impl ValidationRule for StepShellRule {
         }
 
         fn validate_step_shell(step_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-            let mut step_to_check = step_node;
-            
-            if step_to_check.kind() == "block_node" {
-                if let Some(inner) = step_to_check.child(0) {
-                    step_to_check = inner;
-                }
-            }
-            
+            let step_to_check = utils::unwrap_node(step_node);
+
             // Step can be block_mapping, flow_mapping, or we need to search for it
             if step_to_check.kind() == "block_mapping" || step_to_check.kind() == "flow_mapping" {
                 let shell_value = utils::find_value_for_key(step_to_check, source, "shell");
@@ -122,12 +92,7 @@ impl ValidationRule for StepShellRule {
                                 let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                                     .trim_end_matches(':');
                                 if key_cleaned == "shell" {
-                                    let value_node = if node.kind() == "block_mapping_pair" {
-                                        node.child(2)
-                                    } else {
-                                        node.child(1)
-                                    };
-                                    if let Some(shell_node) = value_node {
+                                    if let Some(shell_node) = utils::get_pair_value(node) {
                                         validate_shell_value(shell_node, source, diagnostics);
                                     }
                                 }

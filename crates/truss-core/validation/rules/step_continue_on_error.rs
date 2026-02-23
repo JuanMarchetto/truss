@@ -24,12 +24,7 @@ impl ValidationRule for StepContinueOnErrorRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn find_steps(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
@@ -39,17 +34,8 @@ impl ValidationRule for StepContinueOnErrorRule {
                         let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "steps" {
-                            let steps_value = if node.kind() == "block_mapping_pair" {
-                                node.child(2)
-                            } else {
-                                node.child(1)
-                            };
-                            if let Some(mut steps_value) = steps_value {
-                                if steps_value.kind() == "block_node" {
-                                    if let Some(inner) = steps_value.child(0) {
-                                        steps_value = inner;
-                                    }
-                                }
+                            if let Some(steps_value_raw) = utils::get_pair_value(node) {
+                                let steps_value = utils::unwrap_node(steps_value_raw);
                                 if steps_value.kind() == "block_mapping" {
                                     let mut cursor = steps_value.walk();
                                     for child in steps_value.children(&mut cursor) {
@@ -87,12 +73,7 @@ impl ValidationRule for StepContinueOnErrorRule {
                                 }
                             }
                         }
-                        let value_node = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        if let Some(value_node) = value_node {
+                        if let Some(value_node) = utils::get_pair_value(node) {
                             find_steps(value_node, source, diagnostics);
                         }
                     }
@@ -108,7 +89,7 @@ impl ValidationRule for StepContinueOnErrorRule {
 
         fn validate_step_continue_on_error(step_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             let mut step_to_check = step_node;
-            
+
             // Handle different node types that can represent a step
             // block_sequence_item -> block_node -> block_mapping
             // block_sequence_item has: child(0) = "-" marker, child(1) = actual content
@@ -119,12 +100,7 @@ impl ValidationRule for StepContinueOnErrorRule {
                     step_to_check = inner;
                 }
             }
-            if step_to_check.kind() == "block_node" {
-                // block_node contains block_mapping as child
-                if let Some(inner) = step_to_check.child(0) {
-                    step_to_check = inner;
-                }
-            }
+            let step_to_check = utils::unwrap_node(step_to_check);
             
             if step_to_check.kind() == "block_mapping" || step_to_check.kind() == "flow_mapping" {
                 let continue_on_error_value = utils::find_value_for_key(step_to_check, source, "continue-on-error");

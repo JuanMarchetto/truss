@@ -121,6 +121,39 @@ pub(crate) fn find_value_for_key<'a>(node: Node<'a>, source: &'a str, target_key
     None
 }
 
+/// Extract the value node from a block_mapping_pair or flow_pair.
+///
+/// In tree-sitter-yaml, a `block_mapping_pair` has children: [key, ":", value]
+/// but comments can appear as extra children at any position. This function
+/// iterates from the end to find the last non-comment, non-":" child, which
+/// is the value node.
+///
+/// Returns `None` if no value node is found (e.g., key-only pair).
+pub(crate) fn get_pair_value<'a>(node: Node<'a>) -> Option<Node<'a>> {
+    for i in (1..node.child_count()).rev() {
+        if let Some(child) = node.child(i) {
+            let kind = child.kind();
+            if kind != "comment" && kind != ":" {
+                return Some(child);
+            }
+        }
+    }
+    None
+}
+
+/// Extract the key text from a block_mapping_pair or flow_pair, cleaned of quotes and colons.
+pub(crate) fn get_pair_key_text(node: Node, source: &str) -> Option<String> {
+    if let Some(key_node) = node.child(0) {
+        let key_text = &source[key_node.start_byte()..key_node.end_byte()];
+        let cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+            .trim_end_matches(':');
+        if !cleaned.is_empty() {
+            return Some(cleaned.to_string());
+        }
+    }
+    None
+}
+
 /// Helper to extract text from a node
 pub(crate) fn node_text(node: Node, source: &str) -> String {
     source[node.start_byte()..node.end_byte()].to_string()
