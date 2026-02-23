@@ -1,5 +1,7 @@
 # Truss
 
+> **Early Development Notice:** This project is in early development. A significant portion of the codebase was AI-generated and is actively being reviewed, tested, and refined. While all tests pass and benchmarks are reproducible, you should treat this as an experimental tool — not production-ready software. Feedback, bug reports, and contributions are welcome as we work toward a stable release.
+
 High-performance CI/CD pipeline validation and analysis engine written in Rust. Truss provides real-time feedback, high performance, and reproducible results by detecting configuration errors, semantic inconsistencies, and autocomplete opportunities before a pipeline is executed.
 
 ## Performance Highlights
@@ -324,11 +326,7 @@ For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECT
 
 ## Contributing
 
-1. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) to understand design principles
-2. Ensure all tests pass: `just test`
-3. Run clippy: `cargo clippy --workspace -- -D warnings`
-4. Check formatting: `cargo fmt --all -- --check`
-5. Follow the "Core First" principle: business logic belongs in `truss-core`
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting a pull request.
 
 ## License
 
