@@ -4,8 +4,8 @@
 //!
 //! Validates environment variable names and values at step level in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_step_env_valid_single() {
@@ -20,14 +20,17 @@ jobs:
           NODE_ENV: production
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("env") || d.message.contains("environment")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("env") || d.message.contains("environment"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         env_errors.is_empty(),
         "Valid step env variable should not produce errors"
@@ -48,14 +51,17 @@ jobs:
           VAR2: value2
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("env") || d.message.contains("environment")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("env") || d.message.contains("environment"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         env_errors.is_empty(),
         "Valid multiple step env variables should not produce errors"
@@ -75,14 +81,17 @@ jobs:
           VERSION: ${{ github.ref }}
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("env") || d.message.contains("environment")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("env") || d.message.contains("environment"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         env_errors.is_empty(),
         "Valid step env variable with expression should not produce errors"
@@ -102,15 +111,22 @@ jobs:
           INVALID-NAME: value
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let env_errors: Vec<_> = result.diagnostics
+    let env_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("env") || d.message.contains("environment") || d.message.contains("INVALID-NAME")) && 
-                (d.message.contains("invalid") || d.message.contains("format") || d.message.contains("name")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("env")
+                || d.message.contains("environment")
+                || d.message.contains("INVALID-NAME"))
+                && (d.message.contains("invalid")
+                    || d.message.contains("format")
+                    || d.message.contains("name"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !env_errors.is_empty(),
         "Invalid env variable name format should produce error"
@@ -130,18 +146,22 @@ jobs:
           VAR=value
         run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let _env_errors: Vec<_> = result.diagnostics
+    let _env_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("env") || d.message.contains("environment") || d.message.contains("syntax")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("env")
+                || d.message.contains("environment")
+                || d.message.contains("syntax"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: YAML parser might catch this, but rule should also validate
     assert!(
         true,
         "Invalid env variable syntax may produce error (YAML parser or rule)"
     );
 }
-

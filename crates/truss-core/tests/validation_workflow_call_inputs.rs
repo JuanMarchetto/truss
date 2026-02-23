@@ -4,8 +4,8 @@
 //!
 //! Validates workflow_call inputs and their usage in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_workflow_call_inputs_valid_string() {
@@ -23,14 +23,17 @@ jobs:
     steps:
       - run: echo "Deploying to ${{ inputs.environment }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_call with string input should not produce errors"
@@ -58,14 +61,17 @@ jobs:
     steps:
       - run: echo "${{ inputs.environment }} ${{ inputs.version }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_call with required and optional inputs should not produce errors"
@@ -91,14 +97,17 @@ jobs:
     steps:
       - run: echo "${{ inputs.environment }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_call with choice input should not produce errors"
@@ -122,14 +131,17 @@ jobs:
       - if: ${{ inputs.dry_run }}
         run: echo "Dry run"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_call with boolean input should not produce errors"
@@ -151,14 +163,19 @@ jobs:
     steps:
       - run: echo "${{ inputs.undefined }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("undefined") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input")
+                || d.message.contains("undefined")
+                || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !input_errors.is_empty(),
         "Reference to undefined workflow_call input should produce error"
@@ -181,14 +198,19 @@ jobs:
     steps:
       - run: echo "Deploy"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("type") || d.message.contains("invalid")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input")
+                || d.message.contains("type")
+                || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !input_errors.is_empty(),
         "Invalid workflow_call input type should produce error"
@@ -206,14 +228,17 @@ jobs:
     steps:
       - run: echo "${{ inputs.environment }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !input_errors.is_empty(),
         "Input reference without workflow_call trigger should produce error"
@@ -237,17 +262,19 @@ jobs:
     steps:
       - run: echo "${{ inputs.environment }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let input_errors: Vec<_> = result.diagnostics
+    let input_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("input") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("input") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         input_errors.is_empty(),
         "Valid workflow_call input with default value should not produce errors"
     );
 }
-

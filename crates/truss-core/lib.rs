@@ -11,15 +11,15 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use validation::{
     ActionReferenceRule, ArtifactValidationRule, ConcurrencyRule, DefaultsValidationRule,
-    EnvironmentRule, EventPayloadValidationRule, ExpressionValidationRule,
-    GitHubActionsSchemaRule, JobContainerRule, JobIfExpressionRule, JobNameRule, JobNeedsRule,
-    JobOutputsRule, JobStrategyValidationRule, MatrixStrategyRule, NonEmptyRule, PermissionsRule,
-    ReusableWorkflowCallRule, RuleSet, RunnerLabelRule, RunsOnRequiredRule,
-    SecretsValidationRule, StepContinueOnErrorRule, StepEnvValidationRule,
-    StepIdUniquenessRule, StepIfExpressionRule, StepNameRule, StepOutputReferenceRule,
-    StepShellRule, StepTimeoutRule, StepValidationRule, StepWorkingDirectoryRule, SyntaxRule,
-    TimeoutRule, ValidationRule, WorkflowCallInputsRule, WorkflowCallOutputsRule,
-    WorkflowCallSecretsRule, WorkflowInputsRule, WorkflowNameRule, WorkflowTriggerRule,
+    EnvironmentRule, EventPayloadValidationRule, ExpressionValidationRule, GitHubActionsSchemaRule,
+    JobContainerRule, JobIfExpressionRule, JobNameRule, JobNeedsRule, JobOutputsRule,
+    JobStrategyValidationRule, MatrixStrategyRule, NonEmptyRule, PermissionsRule,
+    ReusableWorkflowCallRule, RuleSet, RunnerLabelRule, RunsOnRequiredRule, SecretsValidationRule,
+    StepContinueOnErrorRule, StepEnvValidationRule, StepIdUniquenessRule, StepIfExpressionRule,
+    StepNameRule, StepOutputReferenceRule, StepShellRule, StepTimeoutRule, StepValidationRule,
+    StepWorkingDirectoryRule, SyntaxRule, TimeoutRule, ValidationRule, WorkflowCallInputsRule,
+    WorkflowCallOutputsRule, WorkflowCallSecretsRule, WorkflowInputsRule, WorkflowNameRule,
+    WorkflowTriggerRule,
 };
 
 /// Entry point for the Truss validation engine.

@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates environment references.
 pub struct EnvironmentRule;
@@ -29,7 +29,8 @@ impl ValidationRule for EnvironmentRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "environment" {
                             let env_value = utils::get_pair_value(node);
@@ -37,10 +38,18 @@ impl ValidationRule for EnvironmentRule {
                                 let actual_env_value = utils::unwrap_node(env_value_raw);
                                 {
                                     match actual_env_value.kind() {
-                                        "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
-                                            let env_name = utils::node_text(actual_env_value, source);
-                                            let env_name_cleaned = env_name.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                            if env_name_cleaned.contains(' ') && !env_name_cleaned.contains("${{") {
+                                        "plain_scalar"
+                                        | "double_quoted_scalar"
+                                        | "single_quoted_scalar" => {
+                                            let env_name =
+                                                utils::node_text(actual_env_value, source);
+                                            let env_name_cleaned =
+                                                env_name.trim_matches(|c: char| {
+                                                    c == '"' || c == '\'' || c.is_whitespace()
+                                                });
+                                            if env_name_cleaned.contains(' ')
+                                                && !env_name_cleaned.contains("${{")
+                                            {
                                                 diagnostics.push(Diagnostic {
                                                     message: format!("Invalid environment name format: '{}' (contains spaces)", env_name_cleaned),
                                                     severity: Severity::Error,
@@ -54,15 +63,26 @@ impl ValidationRule for EnvironmentRule {
                                         "block_mapping" | "flow_mapping" => {
                                             let mut cursor = actual_env_value.walk();
                                             for child in actual_env_value.children(&mut cursor) {
-                                                if child.kind() == "block_mapping_pair" || child.kind() == "flow_pair" {
+                                                if child.kind() == "block_mapping_pair"
+                                                    || child.kind() == "flow_pair"
+                                                {
                                                     let field_key_node = child.child(0);
-                                                    let field_value_node = utils::get_pair_value(child);
-                                                    
+                                                    let field_value_node =
+                                                        utils::get_pair_value(child);
+
                                                     if let Some(field_key_node) = field_key_node {
-                                                        let field_name = utils::node_text(field_key_node, source);
-                                                        let field_cleaned = field_name.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                                                        let field_name = utils::node_text(
+                                                            field_key_node,
+                                                            source,
+                                                        );
+                                                        let field_cleaned = field_name
+                                                            .trim_matches(|c: char| {
+                                                                c == '"'
+                                                                    || c == '\''
+                                                                    || c.is_whitespace()
+                                                            })
                                                             .trim_end_matches(':');
-                                                        
+
                                                         if field_cleaned == "protection_rules" {
                                                             diagnostics.push(Diagnostic {
                                                                 message: "environment protection_rules is not supported in workflow YAML".to_string(),
@@ -73,12 +93,23 @@ impl ValidationRule for EnvironmentRule {
                                                                 },
                                                             });
                                                         }
-                                                        
+
                                                         if field_cleaned == "name" {
-                                                            if let Some(name_value) = field_value_node {
-                                                                let name_text = utils::node_text(name_value, source);
-                                                                let name_cleaned = name_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                                                if name_cleaned.contains(' ') && !name_cleaned.contains("${{") {
+                                                            if let Some(name_value) =
+                                                                field_value_node
+                                                            {
+                                                                let name_text = utils::node_text(
+                                                                    name_value, source,
+                                                                );
+                                                                let name_cleaned = name_text
+                                                                    .trim_matches(|c: char| {
+                                                                        c == '"'
+                                                                            || c == '\''
+                                                                            || c.is_whitespace()
+                                                                    });
+                                                                if name_cleaned.contains(' ')
+                                                                    && !name_cleaned.contains("${{")
+                                                                {
                                                                     diagnostics.push(Diagnostic {
                                                                         message: format!("Invalid environment name format: '{}' (contains spaces)", name_cleaned),
                                                                         severity: Severity::Error,
@@ -123,4 +154,3 @@ impl ValidationRule for EnvironmentRule {
         diagnostics
     }
 }
-

@@ -1,7 +1,7 @@
+use super::super::utils;
+use super::super::ValidationRule;
 use crate::{Diagnostic, Severity, Span};
 use tree_sitter::Tree;
-use super::super::ValidationRule;
-use super::super::utils;
 
 /// Validates workflow trigger configuration.
 pub struct WorkflowTriggerRule;
@@ -51,8 +51,15 @@ impl ValidationRule for WorkflowTriggerRule {
 
         let event_node = utils::unwrap_node(on_to_check);
 
-        let event_text = if event_node.kind() == "plain_scalar" || event_node.kind() == "double_quoted_scalar" || event_node.kind() == "single_quoted_scalar" {
-            Some(utils::node_text(event_node, source).trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace()).to_lowercase())
+        let event_text = if event_node.kind() == "plain_scalar"
+            || event_node.kind() == "double_quoted_scalar"
+            || event_node.kind() == "single_quoted_scalar"
+        {
+            Some(
+                utils::node_text(event_node, source)
+                    .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    .to_lowercase(),
+            )
         } else {
             let text = utils::node_text(event_node, source).trim().to_lowercase();
             if !text.is_empty() && !text.contains('\n') {
@@ -61,29 +68,63 @@ impl ValidationRule for WorkflowTriggerRule {
                 None
             }
         };
-        
+
         // Validate event types - check all possible event types in the on: mapping
-        fn validate_event_types(node: tree_sitter::Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+        fn validate_event_types(
+            node: tree_sitter::Node,
+            source: &str,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let event_type = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let event_type = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_lowercase();
-                        
+
                         // Comprehensive list of valid GitHub Actions event types
                         let valid_events = [
-                            "push", "pull_request", "pull_request_target", "pull_request_review",
-                            "pull_request_review_comment", "issues", "issue_comment", "label",
-                            "milestone", "project", "project_card", "project_column", "repository_dispatch",
-                            "workflow_dispatch", "workflow_call", "workflow_run", "schedule",
-                            "watch", "fork", "create", "delete", "deployment", "deployment_status",
-                            "page_build", "public", "registry_package", "release", "status", "check_run",
-                            "check_suite", "discussion", "discussion_comment", "gollum", "merge_group",
-                            "pull_request_target", "workflow_call", "workflow_dispatch"
+                            "push",
+                            "pull_request",
+                            "pull_request_target",
+                            "pull_request_review",
+                            "pull_request_review_comment",
+                            "issues",
+                            "issue_comment",
+                            "label",
+                            "milestone",
+                            "project",
+                            "project_card",
+                            "project_column",
+                            "repository_dispatch",
+                            "workflow_dispatch",
+                            "workflow_call",
+                            "workflow_run",
+                            "schedule",
+                            "watch",
+                            "fork",
+                            "create",
+                            "delete",
+                            "deployment",
+                            "deployment_status",
+                            "page_build",
+                            "public",
+                            "registry_package",
+                            "release",
+                            "status",
+                            "check_run",
+                            "check_suite",
+                            "discussion",
+                            "discussion_comment",
+                            "gollum",
+                            "merge_group",
+                            "pull_request_target",
+                            "workflow_call",
+                            "workflow_dispatch",
                         ];
-                        
+
                         if !valid_events.contains(&event_type.as_str()) && !event_type.is_empty() {
                             diagnostics.push(Diagnostic {
                                 message: format!(
@@ -107,15 +148,25 @@ impl ValidationRule for WorkflowTriggerRule {
                 }
             }
         }
-        
+
         // Validate event types in the on: mapping
         validate_event_types(on_to_check, source, &mut diagnostics);
-        
+
         // Also validate simple event text if present (for backward compatibility)
         if let Some(event_text) = event_text {
-            let valid_events = ["push", "pull_request", "workflow_dispatch", "schedule", "repository_dispatch", "workflow_run", "workflow_call"];
-            if !valid_events.contains(&event_text.as_str()) && !event_text.is_empty()
-                && !event_text.contains(':') && !event_text.contains('[')
+            let valid_events = [
+                "push",
+                "pull_request",
+                "workflow_dispatch",
+                "schedule",
+                "repository_dispatch",
+                "workflow_run",
+                "workflow_call",
+            ];
+            if !valid_events.contains(&event_text.as_str())
+                && !event_text.is_empty()
+                && !event_text.contains(':')
+                && !event_text.contains('[')
             {
                 diagnostics.push(Diagnostic {
                     message: format!("Invalid event type: '{}'", event_text),
@@ -131,4 +182,3 @@ impl ValidationRule for WorkflowTriggerRule {
         diagnostics
     }
 }
-

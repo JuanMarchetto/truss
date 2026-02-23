@@ -1,11 +1,11 @@
 //! YAML parsing using tree-sitter.
 //! Provides incremental parsing capabilities.
 
-use tree_sitter::{Parser, Tree, Language};
+use tree_sitter::{Language, Parser, Tree};
 use tree_sitter_yaml as ts_yaml;
 
 /// Safely convert LanguageFn to Language.
-/// 
+///
 /// This encapsulates the necessary unsafe FFI call to initialize
 /// the tree-sitter language from the C function pointer.
 /// The unsafe code is safe in practice - it's calling a well-tested
@@ -81,4 +81,3 @@ impl std::fmt::Display for ParseError {
 }
 
 impl std::error::Error for ParseError {}
-

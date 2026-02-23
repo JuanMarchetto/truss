@@ -4,8 +4,8 @@
 //!
 //! Validates defaults configuration at workflow and job levels in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_defaults_valid_workflow_level_shell() {
@@ -21,14 +21,17 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let defaults_errors: Vec<_> = result.diagnostics
+    let defaults_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("defaults") || d.message.contains("shell")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("defaults") || d.message.contains("shell"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         defaults_errors.is_empty(),
         "Valid workflow-level defaults with shell should not produce errors"
@@ -49,14 +52,17 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let defaults_errors: Vec<_> = result.diagnostics
+    let defaults_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("defaults") || d.message.contains("working-directory")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("defaults") || d.message.contains("working-directory"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         defaults_errors.is_empty(),
         "Valid job-level defaults with working-directory should not produce errors"
@@ -80,16 +86,16 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    
+
     // Filter for defaults errors only (not matrix errors that mention "shell")
-    let defaults_errors: Vec<_> = result.diagnostics
+    let defaults_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("defaults") && 
-                d.severity == Severity::Error)
+        .filter(|d| d.message.contains("defaults") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         defaults_errors.is_empty(),
         "Valid defaults with expressions should not produce errors"
@@ -110,15 +116,18 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let defaults_errors: Vec<_> = result.diagnostics
+    let defaults_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("defaults") || d.message.contains("shell")) && 
-                (d.message.contains("invalid") || d.message.contains("unknown")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("defaults") || d.message.contains("shell"))
+                && (d.message.contains("invalid") || d.message.contains("unknown"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !defaults_errors.is_empty(),
         "Invalid shell in defaults should produce error"
@@ -139,15 +148,18 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let defaults_errors: Vec<_> = result.diagnostics
+    let defaults_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("defaults") || d.message.contains("working-directory")) && 
-                (d.message.contains("invalid") || d.message.contains("empty")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("defaults") || d.message.contains("working-directory"))
+                && (d.message.contains("invalid") || d.message.contains("empty"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !defaults_errors.is_empty(),
         "Invalid working-directory in defaults should produce error"
@@ -171,17 +183,21 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let defaults_errors: Vec<_> = result.diagnostics
+    let defaults_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("defaults") || d.message.contains("shell") || d.message.contains("working-directory")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("defaults")
+                || d.message.contains("shell")
+                || d.message.contains("working-directory"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         defaults_errors.is_empty(),
         "Valid defaults inheritance should not produce errors"
     );
 }
-

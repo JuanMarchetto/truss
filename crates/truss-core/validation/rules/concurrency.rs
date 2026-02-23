@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates concurrency syntax.
 pub struct ConcurrencyRule;
@@ -19,13 +19,13 @@ impl ValidationRule for ConcurrencyRule {
         }
 
         let root = tree.root_node();
-        
+
         // Check workflow-level concurrency
         let workflow_concurrency = utils::find_value_for_key(root, source, "concurrency");
         if let Some(concurrency_node) = workflow_concurrency {
             validate_concurrency_node(concurrency_node, source, "workflow", &mut diagnostics);
         }
-        
+
         // Check job-level concurrency
         let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
             Some(v) => v,
@@ -39,7 +39,8 @@ impl ValidationRule for ConcurrencyRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let job_name = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
 
@@ -57,10 +58,18 @@ impl ValidationRule for ConcurrencyRule {
                         if let Some(job_value_raw) = job_value_opt {
                             let job_value = utils::unwrap_node(job_value_raw);
 
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
-                                let concurrency_node = utils::find_value_for_key(job_value, source, "concurrency");
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
+                                let concurrency_node =
+                                    utils::find_value_for_key(job_value, source, "concurrency");
                                 if let Some(concurrency) = concurrency_node {
-                                    validate_concurrency_node(concurrency, source, &format!("job '{}'", job_name), diagnostics);
+                                    validate_concurrency_node(
+                                        concurrency,
+                                        source,
+                                        &format!("job '{}'", job_name),
+                                        diagnostics,
+                                    );
                                 }
                             }
                         }
@@ -81,12 +90,17 @@ impl ValidationRule for ConcurrencyRule {
     }
 }
 
-fn validate_concurrency_node(concurrency_node: Node, source: &str, context: &str, diagnostics: &mut Vec<Diagnostic>) {
+fn validate_concurrency_node(
+    concurrency_node: Node,
+    source: &str,
+    context: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     let concurrency_to_check = utils::unwrap_node(concurrency_node);
-    
+
     // Check if group is present and valid
     let group_value = utils::find_value_for_key(concurrency_to_check, source, "group");
-    
+
     if group_value.is_none() {
         diagnostics.push(Diagnostic {
             message: format!(
@@ -101,11 +115,12 @@ fn validate_concurrency_node(concurrency_node: Node, source: &str, context: &str
         });
         return;
     }
-    
+
     let group_node = group_value.unwrap();
     let group_text = utils::node_text(group_node, source);
-    let group_cleaned = group_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-    
+    let group_cleaned =
+        group_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
     // Group should be string or expression (starts with ${{)
     if !group_cleaned.starts_with("${{") {
         // Try to parse as number - if it succeeds, it's invalid
@@ -124,20 +139,21 @@ fn validate_concurrency_node(concurrency_node: Node, source: &str, context: &str
             });
         }
     }
-    
+
     // Check cancel-in-progress if present
-    let cancel_value = utils::find_value_for_key(concurrency_to_check, source, "cancel-in-progress");
-    
+    let cancel_value =
+        utils::find_value_for_key(concurrency_to_check, source, "cancel-in-progress");
+
     if let Some(cancel_node) = cancel_value {
         let cancel_text = utils::node_text(cancel_node, source);
-        
+
         // Check if it's a quoted scalar (string) - this is invalid
         // Check both node kind and if text starts/ends with quotes
-        let is_quoted_string = cancel_node.kind() == "double_quoted_scalar" || 
-                              cancel_node.kind() == "single_quoted_scalar" ||
-                              (cancel_text.trim().starts_with('"') && cancel_text.trim().ends_with('"')) ||
-                              (cancel_text.trim().starts_with('\'') && cancel_text.trim().ends_with('\''));
-        
+        let is_quoted_string = cancel_node.kind() == "double_quoted_scalar"
+            || cancel_node.kind() == "single_quoted_scalar"
+            || (cancel_text.trim().starts_with('"') && cancel_text.trim().ends_with('"'))
+            || (cancel_text.trim().starts_with('\'') && cancel_text.trim().ends_with('\''));
+
         if is_quoted_string {
             diagnostics.push(Diagnostic {
                 message: format!(
@@ -152,8 +168,9 @@ fn validate_concurrency_node(concurrency_node: Node, source: &str, context: &str
             });
         } else {
             // Check the actual value
-            let cancel_cleaned = cancel_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-            
+            let cancel_cleaned =
+                cancel_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
             // cancel-in-progress should be boolean (true/false)
             if cancel_cleaned != "true" && cancel_cleaned != "false" {
                 // Try to parse as boolean
@@ -174,4 +191,3 @@ fn validate_concurrency_node(concurrency_node: Node, source: &str, context: &str
         }
     }
 }
-

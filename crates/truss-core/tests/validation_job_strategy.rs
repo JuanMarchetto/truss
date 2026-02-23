@@ -4,8 +4,8 @@
 //!
 //! Validates strategy field syntax and constraints (max-parallel, fail-fast) in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_job_strategy_valid_max_parallel() {
@@ -20,14 +20,17 @@ jobs:
         os: [ubuntu-latest, windows-latest]
       max-parallel: 2
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let strategy_errors: Vec<_> = result.diagnostics
+    let strategy_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("strategy") || d.message.contains("max-parallel")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("strategy") || d.message.contains("max-parallel"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         strategy_errors.is_empty(),
         "Valid max-parallel value should not produce errors"
@@ -47,14 +50,17 @@ jobs:
         os: [ubuntu-latest, windows-latest]
       fail-fast: true
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let strategy_errors: Vec<_> = result.diagnostics
+    let strategy_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("strategy") || d.message.contains("fail-fast")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("strategy") || d.message.contains("fail-fast"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         strategy_errors.is_empty(),
         "Valid fail-fast boolean value should not produce errors"
@@ -75,14 +81,19 @@ jobs:
       max-parallel: 2
       fail-fast: false
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let strategy_errors: Vec<_> = result.diagnostics
+    let strategy_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("strategy") || d.message.contains("max-parallel") || d.message.contains("fail-fast")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("strategy")
+                || d.message.contains("max-parallel")
+                || d.message.contains("fail-fast"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         strategy_errors.is_empty(),
         "Valid strategy with both max-parallel and fail-fast should not produce errors"
@@ -102,15 +113,20 @@ jobs:
         os: [ubuntu-latest, windows-latest]
       max-parallel: -1
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let strategy_errors: Vec<_> = result.diagnostics
+    let strategy_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("strategy") || d.message.contains("max-parallel")) && 
-                (d.message.contains("negative") || d.message.contains("positive") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("strategy") || d.message.contains("max-parallel"))
+                && (d.message.contains("negative")
+                    || d.message.contains("positive")
+                    || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !strategy_errors.is_empty(),
         "Negative max-parallel value should produce error"
@@ -130,15 +146,20 @@ jobs:
         os: [ubuntu-latest, windows-latest]
       max-parallel: 0
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let strategy_errors: Vec<_> = result.diagnostics
+    let strategy_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("strategy") || d.message.contains("max-parallel")) && 
-                (d.message.contains("zero") || d.message.contains("positive") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("strategy") || d.message.contains("max-parallel"))
+                && (d.message.contains("zero")
+                    || d.message.contains("positive")
+                    || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !strategy_errors.is_empty(),
         "Zero max-parallel value should produce error"
@@ -158,15 +179,20 @@ jobs:
         os: [ubuntu-latest, windows-latest]
       max-parallel: "3"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let strategy_errors: Vec<_> = result.diagnostics
+    let strategy_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("strategy") || d.message.contains("max-parallel")) && 
-                (d.message.contains("string") || d.message.contains("number") || d.message.contains("type")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("strategy") || d.message.contains("max-parallel"))
+                && (d.message.contains("string")
+                    || d.message.contains("number")
+                    || d.message.contains("type"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !strategy_errors.is_empty(),
         "String max-parallel value should produce error"
@@ -186,15 +212,20 @@ jobs:
         os: [ubuntu-latest, windows-latest]
       fail-fast: "true"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let strategy_errors: Vec<_> = result.diagnostics
+    let strategy_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("strategy") || d.message.contains("fail-fast")) && 
-                (d.message.contains("string") || d.message.contains("boolean") || d.message.contains("type")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("strategy") || d.message.contains("fail-fast"))
+                && (d.message.contains("string")
+                    || d.message.contains("boolean")
+                    || d.message.contains("type"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !strategy_errors.is_empty(),
         "String fail-fast value should produce error"
@@ -214,18 +245,22 @@ jobs:
         os: [ubuntu-latest, windows-latest]
       fail-fast: 1
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let strategy_errors: Vec<_> = result.diagnostics
+    let strategy_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("strategy") || d.message.contains("fail-fast")) && 
-                (d.message.contains("number") || d.message.contains("boolean") || d.message.contains("type")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("strategy") || d.message.contains("fail-fast"))
+                && (d.message.contains("number")
+                    || d.message.contains("boolean")
+                    || d.message.contains("type"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !strategy_errors.is_empty(),
         "Number fail-fast value should produce error"
     );
 }
-

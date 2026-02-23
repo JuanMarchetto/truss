@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates action reference format (owner/repo@ref).
 pub struct ActionReferenceRule;
@@ -31,7 +31,8 @@ impl ValidationRule for ActionReferenceRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
 
                         if key_cleaned == "steps" {
@@ -39,13 +40,25 @@ impl ValidationRule for ActionReferenceRule {
 
                             if let Some(steps_value_raw) = steps_value {
                                 let steps_value = utils::unwrap_node(steps_value_raw);
-                                fn process_steps_sequence(seq_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+                                fn process_steps_sequence(
+                                    seq_node: Node,
+                                    source: &str,
+                                    diagnostics: &mut Vec<Diagnostic>,
+                                ) {
                                     let mut cursor = seq_node.walk();
                                     for step_item in seq_node.children(&mut cursor) {
-                                        if step_item.kind() == "block_mapping" || step_item.kind() == "flow_mapping" {
-                                            let uses_value = utils::find_value_for_key(step_item, source, "uses");
+                                        if step_item.kind() == "block_mapping"
+                                            || step_item.kind() == "flow_mapping"
+                                        {
+                                            let uses_value = utils::find_value_for_key(
+                                                step_item, source, "uses",
+                                            );
                                             if let Some(uses_node) = uses_value {
-                                                validate_action_reference(uses_node, source, diagnostics);
+                                                validate_action_reference(
+                                                    uses_node,
+                                                    source,
+                                                    diagnostics,
+                                                );
                                             }
                                         } else {
                                             process_steps_sequence(step_item, source, diagnostics);
@@ -53,7 +66,9 @@ impl ValidationRule for ActionReferenceRule {
                                     }
                                 }
 
-                                if steps_value.kind() == "block_sequence" || steps_value.kind() == "flow_sequence" {
+                                if steps_value.kind() == "block_sequence"
+                                    || steps_value.kind() == "flow_sequence"
+                                {
                                     process_steps_sequence(steps_value, source, diagnostics);
                                 }
                             }
@@ -86,7 +101,10 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
     let uses_cleaned = uses_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
 
     // Exceptions: local paths and docker actions don't need @ref
-    if uses_cleaned.starts_with("./") || uses_cleaned.starts_with("../") || uses_cleaned.starts_with("/") {
+    if uses_cleaned.starts_with("./")
+        || uses_cleaned.starts_with("../")
+        || uses_cleaned.starts_with("/")
+    {
         return;
     }
 
@@ -190,4 +208,3 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
         });
     }
 }
-

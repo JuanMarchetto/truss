@@ -5,7 +5,7 @@
 //! access can return a comment node instead of the actual content node.
 //! These tests ensure our validation rules handle this correctly.
 
-use truss_core::{TrussEngine, Severity};
+use truss_core::{Severity, TrussEngine};
 
 // ---------------------------------------------------------------------------
 // Concurrency: comments before group key
@@ -29,7 +29,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("oncurrency") && d.severity == Severity::Error)
         .collect();
@@ -37,7 +38,10 @@ jobs:
     assert!(
         concurrency_errors.is_empty(),
         "Concurrency with comment before group should not produce errors. Got: {:?}",
-        concurrency_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        concurrency_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -61,7 +65,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let concurrency_errors: Vec<_> = result.diagnostics
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("oncurrency") && d.severity == Severity::Error)
         .collect();
@@ -69,7 +74,10 @@ jobs:
     assert!(
         concurrency_errors.is_empty(),
         "Multiple comments before concurrency group should not cause errors. Got: {:?}",
-        concurrency_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        concurrency_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -99,7 +107,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let matrix_errors: Vec<_> = result.diagnostics
+    let matrix_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("atrix") && d.severity == Severity::Error)
         .collect();
@@ -134,7 +143,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let schedule_errors: Vec<_> = result.diagnostics
+    let schedule_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("chedule") && d.severity == Severity::Error)
         .collect();
@@ -142,7 +152,10 @@ jobs:
     assert!(
         schedule_errors.is_empty(),
         "Schedule with comments between cron entries should not produce errors. Got: {:?}",
-        schedule_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        schedule_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -172,7 +185,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let schedule_errors: Vec<_> = result.diagnostics
+    let schedule_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("chedule") && d.severity == Severity::Error)
         .collect();
@@ -180,7 +194,10 @@ jobs:
     assert!(
         schedule_errors.is_empty(),
         "Comment-heavy schedule should not produce errors. Got: {:?}",
-        schedule_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        schedule_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -203,7 +220,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let expression_errors: Vec<_> = result.diagnostics
+    let expression_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("invalid") && d.message.contains("expression"))
         .collect();
@@ -211,7 +229,10 @@ jobs:
     assert!(
         expression_errors.is_empty(),
         "Expressions in YAML comments should not be validated. Got: {:?}",
-        expression_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        expression_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -231,7 +252,8 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    let expression_errors: Vec<_> = result.diagnostics
+    let expression_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("nonexistent") || d.message.contains("invalid"))
         .collect();
@@ -239,7 +261,10 @@ jobs:
     assert!(
         expression_errors.is_empty(),
         "Commented-out YAML code should not be validated. Got: {:?}",
-        expression_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+        expression_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -272,7 +297,9 @@ jobs:
     assert!(
         result.is_ok(),
         "Jobs with comments between key and body should validate cleanly. Errors: {:?}",
-        result.diagnostics.iter()
+        result
+            .diagnostics
+            .iter()
             .filter(|d| d.severity == Severity::Error)
             .map(|d| &d.message)
             .collect::<Vec<_>>()

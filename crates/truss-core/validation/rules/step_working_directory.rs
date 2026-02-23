@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates working-directory paths.
 pub struct StepWorkingDirectoryRule;
@@ -31,15 +31,22 @@ impl ValidationRule for StepWorkingDirectoryRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "steps" {
                             if let Some(steps_value_raw) = utils::get_pair_value(node) {
                                 let steps_value = utils::unwrap_node(steps_value_raw);
-                                if steps_value.kind() == "block_sequence" || steps_value.kind() == "flow_sequence" {
+                                if steps_value.kind() == "block_sequence"
+                                    || steps_value.kind() == "flow_sequence"
+                                {
                                     let mut cursor = steps_value.walk();
                                     for step_node in steps_value.children(&mut cursor) {
-                                        validate_step_working_directory(step_node, source, diagnostics);
+                                        validate_step_working_directory(
+                                            step_node,
+                                            source,
+                                            diagnostics,
+                                        );
                                     }
                                 }
                             }
@@ -58,22 +65,28 @@ impl ValidationRule for StepWorkingDirectoryRule {
             }
         }
 
-        fn validate_step_working_directory(step_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+        fn validate_step_working_directory(
+            step_node: Node,
+            source: &str,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             let step_to_check = utils::unwrap_node(step_node);
 
             if step_to_check.kind() == "block_mapping" || step_to_check.kind() == "flow_mapping" {
-                let working_dir_value = utils::find_value_for_key(step_to_check, source, "working-directory");
-                
+                let working_dir_value =
+                    utils::find_value_for_key(step_to_check, source, "working-directory");
+
                 if let Some(working_dir_node) = working_dir_value {
                     let working_dir_text = utils::node_text(working_dir_node, source);
-                    let working_dir_cleaned = working_dir_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                    
+                    let working_dir_cleaned = working_dir_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
                     // Check if it's an expression
                     if working_dir_cleaned.starts_with("${{") {
                         // Expressions are valid
                         return;
                     }
-                    
+
                     // Basic format validation
                     if working_dir_cleaned.is_empty() {
                         diagnostics.push(Diagnostic {
@@ -87,7 +100,10 @@ impl ValidationRule for StepWorkingDirectoryRule {
                     } else {
                         // Basic path format validation
                         // Warn about potentially invalid paths
-                        if working_dir_cleaned.starts_with("/") && !working_dir_cleaned.starts_with("/home") && !working_dir_cleaned.starts_with("/github") {
+                        if working_dir_cleaned.starts_with("/")
+                            && !working_dir_cleaned.starts_with("/home")
+                            && !working_dir_cleaned.starts_with("/github")
+                        {
                             // Absolute paths that don't look like standard GitHub Actions paths
                             diagnostics.push(Diagnostic {
                                 message: format!(
@@ -101,9 +117,12 @@ impl ValidationRule for StepWorkingDirectoryRule {
                                 },
                             });
                         }
-                        
+
                         // Warn about paths with invalid characters (basic check)
-                        if working_dir_cleaned.contains("..") && working_dir_cleaned != ".." && !working_dir_cleaned.starts_with("../") {
+                        if working_dir_cleaned.contains("..")
+                            && working_dir_cleaned != ".."
+                            && !working_dir_cleaned.starts_with("../")
+                        {
                             diagnostics.push(Diagnostic {
                                 message: format!(
                                     "Step working-directory '{}' contains '..' in an unusual position. Verify the path is correct.",
@@ -128,4 +147,3 @@ impl ValidationRule for StepWorkingDirectoryRule {
         diagnostics
     }
 }
-

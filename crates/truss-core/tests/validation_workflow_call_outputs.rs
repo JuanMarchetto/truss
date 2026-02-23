@@ -4,8 +4,8 @@
 //!
 //! Validates workflow_call outputs are properly defined in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_workflow_call_outputs_valid_reference() {
@@ -26,14 +26,17 @@ jobs:
       - id: build
         run: echo "result=success" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid workflow_call output referencing valid job output should not produce errors"
@@ -65,14 +68,17 @@ jobs:
       - id: hash
         run: echo "hash=abc123" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid workflow_call with multiple outputs should not produce errors"
@@ -98,14 +104,17 @@ jobs:
       - id: build
         run: echo "result=success" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("workflow_call")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("workflow_call"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid workflow_call output with description should not produce errors"
@@ -128,14 +137,19 @@ jobs:
     steps:
       - run: echo "Build"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("workflow_call") || d.message.contains("nonexistent")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output")
+                || d.message.contains("workflow_call")
+                || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !output_errors.is_empty(),
         "workflow_call output referencing non-existent job should produce error"
@@ -161,14 +175,19 @@ jobs:
       - id: version
         run: echo "version=1.0.0" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("workflow_call") || d.message.contains("nonexistent")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output")
+                || d.message.contains("workflow_call")
+                || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !output_errors.is_empty(),
         "workflow_call output referencing non-existent job output should produce error"
@@ -191,17 +210,21 @@ jobs:
     steps:
       - run: echo "Build"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("workflow_call") || d.message.contains("expression")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output")
+                || d.message.contains("workflow_call")
+                || d.message.contains("expression"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !output_errors.is_empty(),
         "workflow_call output with invalid expression should produce error"
     );
 }
-

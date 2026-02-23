@@ -1,6 +1,6 @@
+use super::super::ValidationRule;
 use crate::{Diagnostic, Severity, Span};
 use tree_sitter::Tree;
-use super::super::ValidationRule;
 
 /// Validates that the document is not empty.
 pub struct NonEmptyRule;
@@ -22,4 +22,3 @@ impl ValidationRule for NonEmptyRule {
         }
     }
 }
-

@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates event-specific fields in on: triggers.
 pub struct EventPayloadValidationRule;
@@ -45,7 +45,8 @@ impl ValidationRule for EventPayloadValidationRule {
         }
 
         // Validate workflow_dispatch event fields
-        let workflow_dispatch_value = utils::find_value_for_key(on_to_check, source, "workflow_dispatch");
+        let workflow_dispatch_value =
+            utils::find_value_for_key(on_to_check, source, "workflow_dispatch");
         if let Some(wd_node) = workflow_dispatch_value {
             validate_workflow_dispatch_event(wd_node, source, &mut diagnostics);
         }
@@ -71,14 +72,21 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
 
     // Valid fields for push: branches, branches-ignore, paths, paths-ignore, tags, tags-ignore
     // Note: tags and branches are mutually exclusive
-    let valid_fields = ["branches", "branches-ignore", "paths", "paths-ignore", "tags", "tags-ignore"];
-    
+    let valid_fields = [
+        "branches",
+        "branches-ignore",
+        "paths",
+        "paths-ignore",
+        "tags",
+        "tags-ignore",
+    ];
+
     // Check for mutual exclusivity: tags and branches cannot be used together
-    let has_branches = utils::find_value_for_key(push_to_check, source, "branches").is_some() ||
-                      utils::find_value_for_key(push_to_check, source, "branches-ignore").is_some();
-    let has_tags = utils::find_value_for_key(push_to_check, source, "tags").is_some() ||
-                   utils::find_value_for_key(push_to_check, source, "tags-ignore").is_some();
-    
+    let has_branches = utils::find_value_for_key(push_to_check, source, "branches").is_some()
+        || utils::find_value_for_key(push_to_check, source, "branches-ignore").is_some();
+    let has_tags = utils::find_value_for_key(push_to_check, source, "tags").is_some()
+        || utils::find_value_for_key(push_to_check, source, "tags-ignore").is_some();
+
     if has_branches && has_tags {
         // Find the tags field to report the error
         if let Some(tags_node) = utils::find_value_for_key(push_to_check, source, "tags") {
@@ -90,7 +98,9 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
                     end: tags_node.end_byte(),
                 },
             });
-        } else if let Some(tags_ignore_node) = utils::find_value_for_key(push_to_check, source, "tags-ignore") {
+        } else if let Some(tags_ignore_node) =
+            utils::find_value_for_key(push_to_check, source, "tags-ignore")
+        {
             diagnostics.push(Diagnostic {
                 message: "Invalid field 'tags-ignore' for push event when 'branches' is present. 'tags-ignore' and 'branches' are mutually exclusive.".to_string(),
                 severity: Severity::Error,
@@ -101,15 +111,21 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
             });
         }
     }
-    
-    fn check_fields(node: Node, source: &str, valid_fields: &[&str], diagnostics: &mut Vec<Diagnostic>) {
+
+    fn check_fields(
+        node: Node,
+        source: &str,
+        valid_fields: &[&str],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
                     let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    let key_cleaned = key_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
-                    
+
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
@@ -142,16 +158,28 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
     let pr_to_check = utils::unwrap_node(pr_node);
 
     // Valid fields for pull_request: types, branches, branches-ignore, paths, paths-ignore
-    let valid_fields = ["types", "branches", "branches-ignore", "paths", "paths-ignore"];
-    
-    fn check_fields(node: Node, source: &str, valid_fields: &[&str], diagnostics: &mut Vec<Diagnostic>) {
+    let valid_fields = [
+        "types",
+        "branches",
+        "branches-ignore",
+        "paths",
+        "paths-ignore",
+    ];
+
+    fn check_fields(
+        node: Node,
+        source: &str,
+        valid_fields: &[&str],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
                     let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    let key_cleaned = key_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
-                    
+
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
@@ -166,7 +194,7 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
                             },
                         });
                     }
-                    
+
                     // Validate types field values
                     if key_cleaned == "types" {
                         if let Some(value_node) = utils::get_pair_value(node) {
@@ -188,13 +216,30 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
 }
 
 fn validate_pr_types(types_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let valid_types = ["opened", "closed", "synchronize", "reopened", "assigned", "unassigned", "labeled", "unlabeled", "review_requested", "review_request_removed"];
-    
-    fn check_type(node: Node, source: &str, valid_types: &[&str], diagnostics: &mut Vec<Diagnostic>) {
+    let valid_types = [
+        "opened",
+        "closed",
+        "synchronize",
+        "reopened",
+        "assigned",
+        "unassigned",
+        "labeled",
+        "unlabeled",
+        "review_requested",
+        "review_request_removed",
+    ];
+
+    fn check_type(
+        node: Node,
+        source: &str,
+        valid_types: &[&str],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         match node.kind() {
             "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
                 let type_text = utils::node_text(node, source);
-                let type_cleaned = type_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+                let type_cleaned =
+                    type_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
                 if !valid_types.contains(&type_cleaned) {
                     diagnostics.push(Diagnostic {
                         message: format!(
@@ -234,7 +279,10 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
             let item_content = utils::unwrap_node(item);
             // block_sequence_item children: "-" token, then content
             let actual_content = if item_content.kind() == "block_sequence_item" {
-                item_content.child(1).map(|c| utils::unwrap_node(c)).unwrap_or(item_content)
+                item_content
+                    .child(1)
+                    .map(|c| utils::unwrap_node(c))
+                    .unwrap_or(item_content)
             } else {
                 item_content
             };
@@ -250,7 +298,8 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
             // Validate the first cron expression we can find
             if let Some(cron_node) = utils::find_value_for_key(schedule_to_check, source, "cron") {
                 let cron_text = utils::node_text(cron_node, source);
-                let cron_cleaned = cron_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+                let cron_cleaned =
+                    cron_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
 
                 if !cron_cleaned.starts_with("${{") {
                     let parts: Vec<&str> = cron_cleaned.split_whitespace().collect();
@@ -287,8 +336,9 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
     } else if let Some(cron_node) = cron_value {
         // Validate cron expression format
         let cron_text = utils::node_text(cron_node, source);
-        let cron_cleaned = cron_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-        
+        let cron_cleaned =
+            cron_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
         if !cron_cleaned.starts_with("${{") {
             // Basic cron format validation: should have 5 space-separated fields
             let parts: Vec<&str> = cron_cleaned.split_whitespace().collect();
@@ -307,17 +357,23 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
             }
         }
     }
-    
+
     // Valid fields for schedule: cron
     let valid_fields = ["cron"];
-    fn check_fields(node: Node, source: &str, valid_fields: &[&str], diagnostics: &mut Vec<Diagnostic>) {
+    fn check_fields(
+        node: Node,
+        source: &str,
+        valid_fields: &[&str],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
                     let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    let key_cleaned = key_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
-                    
+
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
@@ -342,23 +398,33 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
             }
         }
     }
-    
+
     check_fields(schedule_to_check, source, &valid_fields, diagnostics);
 }
 
-fn validate_workflow_dispatch_event(wd_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+fn validate_workflow_dispatch_event(
+    wd_node: Node,
+    source: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     let wd_to_check = utils::unwrap_node(wd_node);
 
     // Valid fields for workflow_dispatch: inputs
     let valid_fields = ["inputs"];
-    fn check_fields(node: Node, source: &str, valid_fields: &[&str], diagnostics: &mut Vec<Diagnostic>) {
+    fn check_fields(
+        node: Node,
+        source: &str,
+        valid_fields: &[&str],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
                     let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    let key_cleaned = key_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
-                    
+
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
@@ -383,7 +449,7 @@ fn validate_workflow_dispatch_event(wd_node: Node, source: &str, diagnostics: &m
             }
         }
     }
-    
+
     check_fields(wd_to_check, source, &valid_fields, diagnostics);
 }
 
@@ -392,14 +458,20 @@ fn validate_workflow_call_event(wc_node: Node, source: &str, diagnostics: &mut V
 
     // Valid fields for workflow_call: inputs, secrets, outputs
     let valid_fields = ["inputs", "secrets", "outputs"];
-    fn check_fields(node: Node, source: &str, valid_fields: &[&str], diagnostics: &mut Vec<Diagnostic>) {
+    fn check_fields(
+        node: Node,
+        source: &str,
+        valid_fields: &[&str],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
                     let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    let key_cleaned = key_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
-                    
+
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
@@ -424,7 +496,7 @@ fn validate_workflow_call_event(wc_node: Node, source: &str, diagnostics: &mut V
             }
         }
     }
-    
+
     check_fields(wc_to_check, source, &valid_fields, diagnostics);
 }
 
@@ -433,15 +505,21 @@ fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<
 
     // Valid fields for issues: types
     let valid_fields = ["types"];
-    
-    fn check_fields(node: Node, source: &str, valid_fields: &[&str], diagnostics: &mut Vec<Diagnostic>) {
+
+    fn check_fields(
+        node: Node,
+        source: &str,
+        valid_fields: &[&str],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
                     let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    let key_cleaned = key_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
-                    
+
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
@@ -456,7 +534,7 @@ fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<
                             },
                         });
                     }
-                    
+
                     // Validate types field values
                     if key_cleaned == "types" {
                         if let Some(value_node) = utils::get_pair_value(node) {
@@ -478,13 +556,34 @@ fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<
 }
 
 fn validate_issues_types(types_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let valid_types = ["opened", "closed", "reopened", "assigned", "unassigned", "labeled", "unlabeled", "locked", "unlocked", "transferred", "milestoned", "demilestoned", "pinned", "unpinned"];
-    
-    fn check_type(node: Node, source: &str, valid_types: &[&str], diagnostics: &mut Vec<Diagnostic>) {
+    let valid_types = [
+        "opened",
+        "closed",
+        "reopened",
+        "assigned",
+        "unassigned",
+        "labeled",
+        "unlabeled",
+        "locked",
+        "unlocked",
+        "transferred",
+        "milestoned",
+        "demilestoned",
+        "pinned",
+        "unpinned",
+    ];
+
+    fn check_type(
+        node: Node,
+        source: &str,
+        valid_types: &[&str],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         match node.kind() {
             "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
                 let type_text = utils::node_text(node, source);
-                let type_cleaned = type_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+                let type_cleaned =
+                    type_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
                 if !valid_types.contains(&type_cleaned) {
                     diagnostics.push(Diagnostic {
                         message: format!(
@@ -511,4 +610,3 @@ fn validate_issues_types(types_node: Node, source: &str, diagnostics: &mut Vec<D
 
     check_type(types_node, source, &valid_types, diagnostics);
 }
-

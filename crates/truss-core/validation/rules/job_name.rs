@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates job names.
 pub struct JobNameRule;
@@ -25,18 +25,22 @@ impl ValidationRule for JobNameRule {
         };
 
         let mut job_names = Vec::new();
-        
+
         fn collect_job_names(node: Node, source: &str, names: &mut Vec<(String, Span)>) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
-                        names.push((key_cleaned.to_string(), Span {
-                            start: key_node.start_byte(),
-                            end: key_node.end_byte(),
-                        }));
+                        names.push((
+                            key_cleaned.to_string(),
+                            Span {
+                                start: key_node.start_byte(),
+                                end: key_node.end_byte(),
+                            },
+                        ));
                     }
                 }
                 _ => {
@@ -66,7 +70,7 @@ impl ValidationRule for JobNameRule {
         let reserved_names = ["if", "else", "elif", "for", "while", "with"];
         for (name, span) in &job_names {
             let name_trimmed = name.trim();
-            
+
             // Validate job name length (GitHub Actions has practical limits)
             if name_trimmed.len() > 100 {
                 diagnostics.push(Diagnostic {
@@ -78,7 +82,7 @@ impl ValidationRule for JobNameRule {
                     span: *span,
                 });
             }
-            
+
             // Validate job name character set (alphanumeric, hyphens, underscores)
             if !is_valid_job_name_format(name_trimmed) {
                 diagnostics.push(Diagnostic {
@@ -90,10 +94,13 @@ impl ValidationRule for JobNameRule {
                     span: *span,
                 });
             }
-            
+
             if reserved_names.contains(&name_trimmed.to_lowercase().as_str()) {
                 diagnostics.push(Diagnostic {
-                    message: format!("Reserved name cannot be used as job name: '{}'", name_trimmed),
+                    message: format!(
+                        "Reserved name cannot be used as job name: '{}'",
+                        name_trimmed
+                    ),
                     severity: Severity::Error,
                     span: *span,
                 });
@@ -110,9 +117,8 @@ fn is_valid_job_name_format(job_name: &str) -> bool {
     if job_name.is_empty() {
         return false;
     }
-    
-    job_name.chars().all(|c| {
-        c.is_alphanumeric() || c == '-' || c == '_'
-    })
-}
 
+    job_name
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+}

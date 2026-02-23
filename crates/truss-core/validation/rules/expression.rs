@@ -1,13 +1,13 @@
+use super::super::utils;
+use super::super::ValidationRule;
 use crate::{Diagnostic, Severity, Span};
 use tree_sitter::Tree;
-use super::super::ValidationRule;
-use super::super::utils;
 
 /// Validates GitHub Actions expressions.
 pub struct ExpressionValidationRule;
 
 /// Check if an expression has valid syntax.
-/// 
+///
 /// GitHub Actions expressions are JavaScript-like, so we check for:
 /// - Valid property access (dot notation, bracket notation)
 /// - Valid operators
@@ -15,12 +15,12 @@ pub struct ExpressionValidationRule;
 /// - No obvious syntax errors
 fn is_valid_expression_syntax(expr: &str) -> bool {
     let expr = expr.trim();
-    
+
     // Empty expressions are invalid (handled separately)
     if expr.is_empty() {
         return false;
     }
-    
+
     let has_context = expr.starts_with("github.")
         || expr.starts_with("matrix.")
         || expr.starts_with("secrets.")
@@ -61,13 +61,34 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
     let is_literal = (expr.starts_with("'") && expr.ends_with("'"))
         || (expr.starts_with("\"") && expr.ends_with("\""))
         || expr.parse::<f64>().is_ok()
-        || expr == "true" || expr == "false";
+        || expr == "true"
+        || expr == "false";
 
     // Bare context names (e.g., "github", "matrix") are valid expressions
-    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy");
+    let is_bare_context = matches!(
+        expr,
+        "github"
+            | "matrix"
+            | "secrets"
+            | "vars"
+            | "needs"
+            | "inputs"
+            | "env"
+            | "job"
+            | "jobs"
+            | "steps"
+            | "runner"
+            | "strategy"
+    );
 
-    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context
-        && !expr.contains('.') && !expr.contains('(') && !expr.contains('[')
+    if !has_context
+        && !has_function
+        && !has_operator
+        && !is_literal
+        && !is_bare_context
+        && !expr.contains('.')
+        && !expr.contains('(')
+        && !expr.contains('[')
     {
         return false;
     }
@@ -93,7 +114,10 @@ impl ValidationRule for ExpressionValidationRule {
             let after_start = actual_start + 3;
 
             // Skip expressions inside YAML comments (# ... ${{ expr }})
-            let line_start = source[..actual_start].rfind('\n').map(|i| i + 1).unwrap_or(0);
+            let line_start = source[..actual_start]
+                .rfind('\n')
+                .map(|i| i + 1)
+                .unwrap_or(0);
             let line_before = &source[line_start..actual_start];
             if line_before.trim_start().starts_with('#') {
                 pos = after_start;
@@ -103,8 +127,8 @@ impl ValidationRule for ExpressionValidationRule {
             if let Some(end_offset) = source[after_start..].find("}}") {
                 let end = after_start + end_offset + 2;
                 let expr = &source[actual_start..end];
-                
-                let inner = expr[3..expr.len()-2].trim();
+
+                let inner = expr[3..expr.len() - 2].trim();
                 if inner.is_empty() {
                     diagnostics.push(Diagnostic {
                         message: "Empty expression".to_string(),
@@ -124,7 +148,7 @@ impl ValidationRule for ExpressionValidationRule {
                         },
                     });
                 }
-                
+
                 if inner.contains("github.nonexistent") || inner.contains("nonexistent.property") {
                     diagnostics.push(Diagnostic {
                         message: format!("Undefined context variable: {}", inner),
@@ -135,13 +159,13 @@ impl ValidationRule for ExpressionValidationRule {
                         },
                     });
                 }
-                
+
                 // Validate operators
                 validate_expression_operators(inner, actual_start, end, &mut diagnostics);
-                
+
                 // Validate function calls
                 validate_expression_functions(inner, actual_start, end, &mut diagnostics);
-                
+
                 pos = end;
             } else {
                 diagnostics.push(Diagnostic {
@@ -161,7 +185,12 @@ impl ValidationRule for ExpressionValidationRule {
 }
 
 /// Validates expression operators
-fn validate_expression_operators(expr: &str, start: usize, end: usize, diagnostics: &mut Vec<Diagnostic>) {
+fn validate_expression_operators(
+    expr: &str,
+    start: usize,
+    end: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     // Check for invalid operator combinations
     if expr.contains("===") || expr.contains("!==") {
         diagnostics.push(Diagnostic {
@@ -173,9 +202,14 @@ fn validate_expression_operators(expr: &str, start: usize, end: usize, diagnosti
             span: Span { start, end },
         });
     }
-    
+
     // Check for invalid assignment operators (expressions are read-only)
-    if expr.contains("=") && !expr.contains("==") && !expr.contains("!=") && !expr.contains("<=") && !expr.contains(">=") {
+    if expr.contains("=")
+        && !expr.contains("==")
+        && !expr.contains("!=")
+        && !expr.contains("<=")
+        && !expr.contains(">=")
+    {
         // Might be assignment - warn
         if expr.matches('=').count() == 1 && !expr.contains("${{") {
             diagnostics.push(Diagnostic {
@@ -194,11 +228,25 @@ fn validate_expression_operators(expr: &str, start: usize, end: usize, diagnosti
 }
 
 /// Validates expression function calls
-fn validate_expression_functions(expr: &str, start: usize, _end: usize, diagnostics: &mut Vec<Diagnostic>) {
+fn validate_expression_functions(
+    expr: &str,
+    start: usize,
+    _end: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     let valid_functions = [
-        "contains", "startsWith", "endsWith", "format", "join",
-        "toJSON", "fromJSON", "hashFiles",
-        "success", "failure", "cancelled", "always"
+        "contains",
+        "startsWith",
+        "endsWith",
+        "format",
+        "join",
+        "toJSON",
+        "fromJSON",
+        "hashFiles",
+        "success",
+        "failure",
+        "cancelled",
+        "always",
     ];
 
     // Case-insensitive variants that GitHub Actions accepts
@@ -211,7 +259,15 @@ fn validate_expression_functions(expr: &str, start: usize, _end: usize, diagnost
         let before_paren = &expr[..actual_pos];
 
         // Find function name (backwards from '(')
-        if let Some(func_start) = before_paren.rfind(|c: char| c.is_whitespace() || c == '&' || c == '|' || c == '!' || c == '(' || c == '[' || c == '.') {
+        if let Some(func_start) = before_paren.rfind(|c: char| {
+            c.is_whitespace()
+                || c == '&'
+                || c == '|'
+                || c == '!'
+                || c == '('
+                || c == '['
+                || c == '.'
+        }) {
             let func_name = expr[func_start + 1..actual_pos].trim();
             if !func_name.is_empty() {
                 let is_valid = valid_functions.contains(&func_name)
@@ -236,4 +292,3 @@ fn validate_expression_functions(expr: &str, start: usize, _end: usize, diagnost
         search_pos = actual_pos + 1;
     }
 }
-

@@ -4,8 +4,8 @@
 //!
 //! Validates permissions configuration in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_permissions_valid_read_all() {
@@ -17,13 +17,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let perm_errors: Vec<_> = result.diagnostics
+    let perm_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("permission") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         perm_errors.is_empty(),
         "Valid 'read-all' permission should not produce errors"
@@ -40,13 +41,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let perm_errors: Vec<_> = result.diagnostics
+    let perm_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("permission") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         perm_errors.is_empty(),
         "Valid 'write-all' permission should not produce errors"
@@ -65,13 +67,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let perm_errors: Vec<_> = result.diagnostics
+    let perm_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("permission") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         perm_errors.is_empty(),
         "Valid permissions object should not produce errors"
@@ -88,13 +91,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let perm_errors: Vec<_> = result.diagnostics
+    let perm_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("permission") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         perm_errors.is_empty(),
         "Empty permissions object should be valid (no permissions granted)"
@@ -112,13 +116,14 @@ jobs:
     permissions:
       contents: read
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let perm_errors: Vec<_> = result.diagnostics
+    let perm_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("permission") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         perm_errors.is_empty(),
         "Valid job-level permissions should not produce errors"
@@ -136,20 +141,25 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let perm_errors: Vec<_> = result.diagnostics
+    let perm_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("permission") && 
-                (d.message.contains("invalid") || d.message.contains("scope")))
+        .filter(|d| {
+            d.message.contains("permission")
+                && (d.message.contains("invalid") || d.message.contains("scope"))
+        })
         .collect();
-    
+
     assert!(
         !perm_errors.is_empty(),
         "Invalid permission scope should produce error"
     );
     assert!(
-        perm_errors.iter().any(|d| d.message.contains("invalid") || d.message.contains("scope")),
+        perm_errors
+            .iter()
+            .any(|d| d.message.contains("invalid") || d.message.contains("scope")),
         "Error message should mention 'invalid' or 'scope'"
     );
 }
@@ -165,20 +175,25 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let perm_errors: Vec<_> = result.diagnostics
+    let perm_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("permission") && 
-                (d.message.contains("invalid") || d.message.contains("value")))
+        .filter(|d| {
+            d.message.contains("permission")
+                && (d.message.contains("invalid") || d.message.contains("value"))
+        })
         .collect();
-    
+
     assert!(
         !perm_errors.is_empty(),
         "Invalid permission value should produce error"
     );
     assert!(
-        perm_errors.iter().any(|d| d.message.contains("read") || d.message.contains("write") || d.message.contains("none")),
+        perm_errors.iter().any(|d| d.message.contains("read")
+            || d.message.contains("write")
+            || d.message.contains("none")),
         "Error message should mention valid values (read, write, none)"
     );
 }
@@ -194,16 +209,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let perm_errors: Vec<_> = result.diagnostics
+    let perm_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("permission") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         perm_errors.is_empty(),
         "Valid 'none' permission value should not produce errors"
     );
 }
-

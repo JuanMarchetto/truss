@@ -181,7 +181,10 @@ fn validate_files(paths: Vec<String>, quiet: bool, json: bool) -> Result<(), Tru
     } else {
         // Print summary if multiple files and not quiet
         if !quiet && paths.len() > 1 {
-            println!("\nSummary: {} passed, {} failed", success_count, error_count);
+            println!(
+                "\nSummary: {} passed, {} failed",
+                success_count, error_count
+            );
         }
     }
 

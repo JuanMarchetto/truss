@@ -1,7 +1,7 @@
+use super::super::utils;
+use super::super::ValidationRule;
 use crate::{Diagnostic, Severity, Span};
 use tree_sitter::Tree;
-use super::super::ValidationRule;
-use super::super::utils;
 
 /// Validates workflow name field.
 pub struct WorkflowNameRule;
@@ -25,8 +25,9 @@ impl ValidationRule for WorkflowNameRule {
         };
 
         let name_text = utils::node_text(name_value, source);
-        let name_cleaned = name_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-        
+        let name_cleaned =
+            name_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
         if name_cleaned.is_empty() || name_cleaned == "\"\"" || name_cleaned == "''" {
             diagnostics.push(Diagnostic {
                 message: "Workflow name cannot be empty".to_string(),
@@ -37,10 +38,13 @@ impl ValidationRule for WorkflowNameRule {
                 },
             });
         }
-        
+
         if !name_cleaned.contains("${{") && name_cleaned.len() > 255 {
             diagnostics.push(Diagnostic {
-                message: format!("Workflow name is too long ({} characters, maximum is 255)", name_cleaned.len()),
+                message: format!(
+                    "Workflow name is too long ({} characters, maximum is 255)",
+                    name_cleaned.len()
+                ),
                 severity: Severity::Error,
                 span: Span {
                     start: name_value.start_byte(),
@@ -52,4 +56,3 @@ impl ValidationRule for WorkflowNameRule {
         diagnostics
     }
 }
-

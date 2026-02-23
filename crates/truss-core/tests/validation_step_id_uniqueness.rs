@@ -4,8 +4,8 @@
 //!
 //! Validates that step IDs are unique within a job in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_step_id_uniqueness_valid_unique_ids() {
@@ -23,15 +23,18 @@ jobs:
       - id: test
         run: echo "Testing"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let step_id_errors: Vec<_> = result.diagnostics
+    let step_id_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("step") || d.message.contains("id")) && 
-                (d.message.contains("duplicate") || d.message.contains("unique")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("step") || d.message.contains("id"))
+                && (d.message.contains("duplicate") || d.message.contains("unique"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         step_id_errors.is_empty(),
         "Unique step IDs within a job should not produce errors"
@@ -55,15 +58,18 @@ jobs:
       - id: step1
         run: echo "Test step"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let step_id_errors: Vec<_> = result.diagnostics
+    let step_id_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("step") || d.message.contains("id")) && 
-                (d.message.contains("duplicate") || d.message.contains("unique")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("step") || d.message.contains("id"))
+                && (d.message.contains("duplicate") || d.message.contains("unique"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         step_id_errors.is_empty(),
         "Same step IDs in different jobs should be valid"
@@ -84,21 +90,28 @@ jobs:
       - id: build
         run: echo "Build step 2"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let step_id_errors: Vec<_> = result.diagnostics
+    let step_id_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("step") || d.message.contains("id")) && 
-                (d.message.contains("duplicate") || d.message.contains("unique") || d.message.contains("build")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("step") || d.message.contains("id"))
+                && (d.message.contains("duplicate")
+                    || d.message.contains("unique")
+                    || d.message.contains("build"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !step_id_errors.is_empty(),
         "Duplicate step ID in same job should produce error"
     );
     assert!(
-        step_id_errors.iter().any(|d| d.message.contains("duplicate") || d.message.contains("build")),
+        step_id_errors
+            .iter()
+            .any(|d| d.message.contains("duplicate") || d.message.contains("build")),
         "Error message should mention duplicate step ID"
     );
 }
@@ -121,15 +134,18 @@ jobs:
       - id: step2
         run: echo "Step 2 duplicate"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let step_id_errors: Vec<_> = result.diagnostics
+    let step_id_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("step") || d.message.contains("id")) && 
-                (d.message.contains("duplicate") || d.message.contains("unique")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("step") || d.message.contains("id"))
+                && (d.message.contains("duplicate") || d.message.contains("unique"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !step_id_errors.is_empty(),
         "Multiple duplicate step IDs should produce errors"
@@ -150,15 +166,18 @@ jobs:
       - id: build
         run: echo "Build"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let step_id_errors: Vec<_> = result.diagnostics
+    let step_id_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("step") || d.message.contains("id")) && 
-                (d.message.contains("duplicate") || d.message.contains("unique")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("step") || d.message.contains("id"))
+                && (d.message.contains("duplicate") || d.message.contains("unique"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !step_id_errors.is_empty(),
         "Duplicate step ID with different step types should produce error"
@@ -177,15 +196,18 @@ jobs:
       - run: echo "Step 1"
       - run: echo "Step 2"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let step_id_errors: Vec<_> = result.diagnostics
+    let step_id_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("step") || d.message.contains("id")) && 
-                (d.message.contains("duplicate") || d.message.contains("unique")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("step") || d.message.contains("id"))
+                && (d.message.contains("duplicate") || d.message.contains("unique"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         step_id_errors.is_empty(),
         "Steps without IDs should not produce uniqueness errors"
@@ -207,18 +229,20 @@ jobs:
       - id: build
         run: echo "Build"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let step_id_errors: Vec<_> = result.diagnostics
+    let step_id_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("step") || d.message.contains("id")) && 
-                (d.message.contains("duplicate") || d.message.contains("unique")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("step") || d.message.contains("id"))
+                && (d.message.contains("duplicate") || d.message.contains("unique"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         step_id_errors.is_empty(),
         "Mixed steps with and without IDs should be valid if IDs are unique"
     );
 }
-

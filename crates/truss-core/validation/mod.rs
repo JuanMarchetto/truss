@@ -70,4 +70,3 @@ impl Default for RuleSet {
 
 // Re-export all rules for backward compatibility
 pub use rules::*;
-

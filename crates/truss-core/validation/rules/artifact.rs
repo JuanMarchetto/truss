@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates actions/upload-artifact and actions/download-artifact usage.
 pub struct ArtifactValidationRule;
@@ -31,13 +31,16 @@ impl ValidationRule for ArtifactValidationRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "steps" {
                             let steps_value = utils::get_pair_value(node);
                             if let Some(steps_value) = steps_value {
                                 let steps_value = utils::unwrap_node(steps_value);
-                                if steps_value.kind() == "block_sequence" || steps_value.kind() == "flow_sequence" {
+                                if steps_value.kind() == "block_sequence"
+                                    || steps_value.kind() == "flow_sequence"
+                                {
                                     let mut cursor = steps_value.walk();
                                     for step_node in steps_value.children(&mut cursor) {
                                         validate_artifact_step(step_node, source, diagnostics);
@@ -59,7 +62,11 @@ impl ValidationRule for ArtifactValidationRule {
             }
         }
 
-        fn validate_artifact_step(step_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
+        fn validate_artifact_step(
+            step_node: Node,
+            source: &str,
+            diagnostics: &mut Vec<Diagnostic>,
+        ) {
             let mut step_to_check = utils::unwrap_node(step_node);
 
             // Handle block_sequence_item - the mapping is a child
@@ -69,50 +76,56 @@ impl ValidationRule for ArtifactValidationRule {
                 for i in 0..step_to_check.child_count() {
                     if let Some(child) = step_to_check.child(i) {
                         let candidate = utils::unwrap_node(child);
-                        if candidate.kind() == "block_mapping" || candidate.kind() == "flow_mapping" {
+                        if candidate.kind() == "block_mapping" || candidate.kind() == "flow_mapping"
+                        {
                             step_to_check = candidate;
                             break;
                         }
                     }
                 }
             }
-            
+
             if step_to_check.kind() == "block_mapping" || step_to_check.kind() == "flow_mapping" {
                 let uses_value = utils::find_value_for_key(step_to_check, source, "uses");
-                
+
                 if let Some(uses_node) = uses_value {
                     let uses_text = utils::node_text(uses_node, source);
-                    let uses_cleaned = uses_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                    
+                    let uses_cleaned = uses_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
                     // Check if it's an artifact action
-                    if uses_cleaned.starts_with("actions/upload-artifact") || uses_cleaned.starts_with("actions/download-artifact") {
+                    if uses_cleaned.starts_with("actions/upload-artifact")
+                        || uses_cleaned.starts_with("actions/download-artifact")
+                    {
                         // Check for name field in with mapping
                         let with_value = utils::find_value_for_key(step_to_check, source, "with");
-                        
+
                         if let Some(with_value) = with_value {
                             let with_node = utils::unwrap_node(with_value);
-                            
+
                             // Find name field - search recursively in the with mapping
                             let name_node = utils::find_value_for_key(with_node, source, "name");
-                            
+
                             if let Some(name_value) = name_node {
                                 let name_node = utils::unwrap_node(name_value);
-                                
+
                                 // Get name text
                                 let name_text = utils::node_text(name_node, source);
-                                
+
                                 // Check if it's an expression - expressions are valid
                                 let trimmed_name = name_text.trim();
                                 let is_expression = trimmed_name.starts_with("${{");
-                                
+
                                 if !is_expression {
                                     // Clean the name text (remove quotes and whitespace)
-                                    let name_cleaned = name_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                    
+                                    let name_cleaned = name_text.trim_matches(|c: char| {
+                                        c == '"' || c == '\'' || c.is_whitespace()
+                                    });
+
                                     // Check if empty: For YAML `name: ""`, we need to detect empty strings
                                     // The most reliable check is if cleaned text is empty after removing quotes
                                     let is_empty = name_cleaned.is_empty();
-                                    
+
                                     if is_empty {
                                         diagnostics.push(Diagnostic {
                                             message: format!(
@@ -143,14 +156,17 @@ impl ValidationRule for ArtifactValidationRule {
                                     }
                                 }
                             }
-                            
+
                             // Validate path field (for upload-artifact)
                             if uses_cleaned.starts_with("actions/upload-artifact") {
-                                let path_value = utils::find_value_for_key(with_node, source, "path");
+                                let path_value =
+                                    utils::find_value_for_key(with_node, source, "path");
                                 if let Some(path_node) = path_value {
                                     let path_text = utils::node_text(path_node, source);
-                                    let path_cleaned = path_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                    
+                                    let path_cleaned = path_text.trim_matches(|c: char| {
+                                        c == '"' || c == '\'' || c.is_whitespace()
+                                    });
+
                                     if !path_cleaned.starts_with("${{") && path_cleaned.is_empty() {
                                         diagnostics.push(Diagnostic {
                                             message: format!(
@@ -166,13 +182,16 @@ impl ValidationRule for ArtifactValidationRule {
                                     }
                                 }
                             }
-                            
+
                             // Validate retention-days (must be a number between 1 and 90)
-                            let retention_days_value = utils::find_value_for_key(with_node, source, "retention-days");
+                            let retention_days_value =
+                                utils::find_value_for_key(with_node, source, "retention-days");
                             if let Some(retention_node) = retention_days_value {
                                 let retention_text = utils::node_text(retention_node, source);
-                                let retention_cleaned = retention_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                
+                                let retention_cleaned = retention_text.trim_matches(|c: char| {
+                                    c == '"' || c == '\'' || c.is_whitespace()
+                                });
+
                                 if !retention_cleaned.starts_with("${{") {
                                     match retention_cleaned.parse::<i64>() {
                                         Ok(value) => {
@@ -206,17 +225,22 @@ impl ValidationRule for ArtifactValidationRule {
                                     }
                                 }
                             }
-                            
+
                             // Validate compression-level (must be a number between 0 and 9, or 'fastest', 'fast', 'default', 'best')
-                            let compression_level_value = utils::find_value_for_key(with_node, source, "compression-level");
+                            let compression_level_value =
+                                utils::find_value_for_key(with_node, source, "compression-level");
                             if let Some(compression_node) = compression_level_value {
                                 let compression_text = utils::node_text(compression_node, source);
-                                let compression_cleaned = compression_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                
+                                let compression_cleaned =
+                                    compression_text.trim_matches(|c: char| {
+                                        c == '"' || c == '\'' || c.is_whitespace()
+                                    });
+
                                 if !compression_cleaned.starts_with("${{") {
                                     let valid_levels = ["fastest", "fast", "default", "best"];
-                                    let is_valid_string = valid_levels.contains(&compression_cleaned.to_lowercase().as_str());
-                                    
+                                    let is_valid_string = valid_levels
+                                        .contains(&compression_cleaned.to_lowercase().as_str());
+
                                     if !is_valid_string {
                                         match compression_cleaned.parse::<i64>() {
                                             Ok(value) => {
@@ -269,9 +293,7 @@ fn is_valid_artifact_name_format(name: &str) -> bool {
     if name.is_empty() {
         return false;
     }
-    
-    name.chars().all(|c| {
-        c.is_alphanumeric() || c == '-' || c == '_' || c == '.'
-    })
-}
 
+    name.chars()
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
+}

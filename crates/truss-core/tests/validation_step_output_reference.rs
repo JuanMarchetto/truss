@@ -5,8 +5,8 @@
 //! Validates that step output references (steps.<step_id>.outputs.<output_name>) reference valid outputs
 //! in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_step_output_reference_valid_existing_output() {
@@ -21,15 +21,20 @@ jobs:
         run: echo "result=success" >> $GITHUB_OUTPUT
       - run: echo "${{ steps.build.outputs.result }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("nonexistent") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found")
+                    || d.message.contains("nonexistent")
+                    || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid step output reference should not produce errors"
@@ -52,15 +57,18 @@ jobs:
       - run: echo "${{ steps.build.outputs.version }}"
       - run: echo "${{ steps.build.outputs.hash }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("nonexistent")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found") || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid references to multiple outputs from same step should not produce errors"
@@ -81,15 +89,18 @@ jobs:
       - id: build
         run: echo "result=success" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("nonexistent")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found") || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid step output reference in job outputs should not produce errors"
@@ -110,15 +121,18 @@ jobs:
       - if: ${{ steps.build.outputs.result == 'success' }}
         run: echo "Build succeeded"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("nonexistent")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found") || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid step output reference in step if condition should not produce errors"
@@ -140,15 +154,18 @@ jobs:
           VERSION: ${{ steps.build.outputs.version }}
         run: echo "$VERSION"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("nonexistent")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found") || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid step output reference in step env should not produce errors"
@@ -168,21 +185,28 @@ jobs:
         run: echo "result=success" >> $GITHUB_OUTPUT
       - run: echo "${{ steps.build.outputs.nonexistent }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("nonexistent") || d.message.contains("invalid")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found")
+                    || d.message.contains("nonexistent")
+                    || d.message.contains("invalid"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !output_errors.is_empty(),
         "Reference to non-existent step output should produce error"
     );
     assert!(
-        output_errors.iter().any(|d| d.message.contains("nonexistent") || d.message.contains("not found")),
+        output_errors
+            .iter()
+            .any(|d| d.message.contains("nonexistent") || d.message.contains("not found")),
         "Error message should mention non-existent output"
     );
 }
@@ -199,15 +223,20 @@ jobs:
       - run: echo "result=success" >> $GITHUB_OUTPUT
       - run: echo "${{ steps.build.outputs.result }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("missing") || d.message.contains("id")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found")
+                    || d.message.contains("missing")
+                    || d.message.contains("id"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !output_errors.is_empty(),
         "Reference to step without id field should produce error"
@@ -230,15 +259,20 @@ jobs:
     steps:
       - run: echo "${{ steps.build.outputs.result }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("different") || d.message.contains("job")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found")
+                    || d.message.contains("different")
+                    || d.message.contains("job"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !output_errors.is_empty(),
         "Reference to step output from different job should produce error"
@@ -258,18 +292,20 @@ jobs:
         run: echo "result=success" >> $GITHUB_OUTPUT
       - run: echo "${{ steps.build.outputs.result || 'default' }}"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("not found") || d.message.contains("nonexistent")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found") || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid step output reference with expression fallback should not produce errors"
     );
 }
-

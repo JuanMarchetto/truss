@@ -4,8 +4,8 @@
 //!
 //! Validates that job outputs reference valid step IDs in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_job_outputs_valid_reference() {
@@ -21,13 +21,14 @@ jobs:
       - id: build_step
         run: echo "result=success" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("output") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid job output referencing existing step ID should not produce errors"
@@ -51,13 +52,14 @@ jobs:
       - id: hash
         run: echo "hash=abc123" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("output") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Valid job outputs referencing multiple step IDs should not produce errors"
@@ -78,16 +80,19 @@ jobs:
       - id: build_step
         run: echo "Hello"
 "#;
-    
+
     let result = engine.analyze(yaml);
     // Job outputs must reference step IDs that exist in the same job
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("nonexistent") || d.message.contains("not found")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("nonexistent") || d.message.contains("not found"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: JobOutputsRule is not yet implemented
     // When implemented, this should produce an error
     assert!(
@@ -95,7 +100,9 @@ jobs:
         "Job output referencing non-existent step ID should produce error"
     );
     assert!(
-        output_errors.iter().any(|d| d.message.contains("nonexistent")),
+        output_errors
+            .iter()
+            .any(|d| d.message.contains("nonexistent")),
         "Error message should mention 'nonexistent' step"
     );
 }
@@ -118,15 +125,18 @@ jobs:
     steps:
       - run: echo "Deploy"
 "#;
-    
+
     let result = engine.analyze(yaml);
     // Job outputs can only reference steps from the same job
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: JobOutputsRule is not yet implemented
     // When implemented, this should produce an error
     assert!(
@@ -146,13 +156,14 @@ jobs:
     steps:
       - run: echo "Hello"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("output") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Job without outputs should not produce errors"
@@ -173,13 +184,14 @@ jobs:
       - id: build
         run: echo "result=success" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("output") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Job output with expression referencing valid step should not produce errors"
@@ -200,20 +212,27 @@ jobs:
       - id: build
         run: echo "Hello"
 "#;
-    
+
     let result = engine.analyze(yaml);
     // Output reference should include the output name, not just steps.step_id.outputs
     // This might be caught by expression validation, but job outputs rule should also check
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("syntax")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("syntax"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: JobOutputsRule is not yet implemented
     // ExpressionValidationRule might catch this, but JobOutputsRule should also validate
     assert!(
-        !output_errors.is_empty() || result.diagnostics.iter().any(|d| d.message.contains("expression")),
+        !output_errors.is_empty()
+            || result
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("expression")),
         "Invalid output syntax should produce error or expression error"
     );
 }
@@ -237,13 +256,14 @@ jobs:
           echo "hash=abc123" >> $GITHUB_OUTPUT
           echo "tag=v1.0.0" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("output") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Multiple outputs referencing same step ID should be valid"
@@ -263,16 +283,21 @@ jobs:
     steps:
       - run: echo "result=success" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
     // Step without 'id' field cannot be referenced in outputs
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("output") || d.message.contains("step")) && 
-                (d.message.contains("build_step") || d.message.contains("not found") || d.message.contains("missing")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("build_step")
+                    || d.message.contains("not found")
+                    || d.message.contains("missing"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     // Note: JobOutputsRule is not yet implemented
     // When implemented, this should produce an error
     assert!(
@@ -297,16 +322,16 @@ jobs:
       - id: fallback
         run: echo "result=fallback" >> $GITHUB_OUTPUT
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let output_errors: Vec<_> = result.diagnostics
+    let output_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("output") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         output_errors.is_empty(),
         "Job output with conditional expression referencing valid step IDs should not produce errors"
     );
 }
-

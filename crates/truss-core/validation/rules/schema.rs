@@ -1,7 +1,7 @@
+use super::super::utils;
+use super::super::ValidationRule;
 use crate::{Diagnostic, Severity, Span};
 use tree_sitter::Tree;
-use super::super::ValidationRule;
-use super::super::utils;
 
 /// Validates that GitHub Actions workflows have required top-level fields.
 pub struct GitHubActionsSchemaRule;
@@ -19,13 +19,14 @@ impl ValidationRule for GitHubActionsSchemaRule {
         }
 
         let root = tree.root_node();
-        
+
         fn find_key_in_tree(node: tree_sitter::Node, source: &str, target_key: &str) -> bool {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = &source[key_node.start_byte()..key_node.end_byte()];
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == target_key {
                             return true;
@@ -43,7 +44,7 @@ impl ValidationRule for GitHubActionsSchemaRule {
             }
             false
         }
-        
+
         let has_on = find_key_in_tree(root, source, "on");
 
         if !has_on {
@@ -60,4 +61,3 @@ impl ValidationRule for GitHubActionsSchemaRule {
         diagnostics
     }
 }
-

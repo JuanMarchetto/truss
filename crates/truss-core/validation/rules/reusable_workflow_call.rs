@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates uses: workflow calls reference valid reusable workflows.
 pub struct ReusableWorkflowCallRule;
@@ -31,31 +31,41 @@ impl ValidationRule for ReusableWorkflowCallRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let job_name = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
-                        
+
                         let job_value = utils::get_pair_value(node);
 
                         if let Some(job_value_raw) = job_value {
                             let job_value = utils::unwrap_node(job_value_raw);
 
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
                                 // Check for uses: field (reusable workflow call)
-                                let uses_value = utils::find_value_for_key(job_value, source, "uses");
-                                
+                                let uses_value =
+                                    utils::find_value_for_key(job_value, source, "uses");
+
                                 if let Some(uses_node) = uses_value {
                                     let uses_text = utils::node_text(uses_node, source);
-                                    let uses_cleaned = uses_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                    
+                                    let uses_cleaned = uses_text.trim_matches(|c: char| {
+                                        c == '"' || c == '\'' || c.is_whitespace()
+                                    });
+
                                     // Check if it looks like a reusable workflow call (has @ and owner/repo format)
                                     // but is missing the .github/workflows/ path
-                                    if uses_cleaned.contains('@') && !uses_cleaned.contains(".github/workflows/") {
+                                    if uses_cleaned.contains('@')
+                                        && !uses_cleaned.contains(".github/workflows/")
+                                    {
                                         let parts: Vec<&str> = uses_cleaned.split('@').collect();
                                         if parts.len() == 2 {
                                             let path_part = parts[0];
                                             // Check if it looks like owner/repo (has exactly one slash, no path)
-                                            if path_part.matches('/').count() == 1 && !path_part.contains("/.github/") {
+                                            if path_part.matches('/').count() == 1
+                                                && !path_part.contains("/.github/")
+                                            {
                                                 diagnostics.push(Diagnostic {
                                                     message: format!(
                                                         "Job '{}' reusable workflow call '{}' has invalid format: missing path. Format: owner/repo/.github/workflows/file.yml@ref",
@@ -70,7 +80,7 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                             }
                                         }
                                     }
-                                    
+
                                     // Check if it's a reusable workflow call (contains .github/workflows/)
                                     if uses_cleaned.contains(".github/workflows/") {
                                         // Validate format: owner/repo/.github/workflows/file.yml@ref
@@ -88,7 +98,8 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                             });
                                         } else {
                                             // Check if path is valid
-                                            let parts: Vec<&str> = uses_cleaned.split('@').collect();
+                                            let parts: Vec<&str> =
+                                                uses_cleaned.split('@').collect();
                                             if parts.len() == 2 {
                                                 let path = parts[0];
                                                 if !path.contains("/.github/workflows/") {
@@ -106,11 +117,16 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                                 } else {
                                                     // Validate that with: and secrets: fields are properly structured
                                                     // Note: Full validation of required inputs/secrets would require parsing the referenced workflow file
-                                                    let with_value = utils::find_value_for_key(job_value, source, "with");
-                                                    let secrets_value = utils::find_value_for_key(job_value, source, "secrets");
-                                                    
+                                                    let with_value = utils::find_value_for_key(
+                                                        job_value, source, "with",
+                                                    );
+                                                    let secrets_value = utils::find_value_for_key(
+                                                        job_value, source, "secrets",
+                                                    );
+
                                                     if let Some(with_node) = with_value {
-                                                        let with_text = utils::node_text(with_node, source);
+                                                        let with_text =
+                                                            utils::node_text(with_node, source);
                                                         // Basic check - with should be a mapping, not a scalar
                                                         if with_text.trim().is_empty() {
                                                             diagnostics.push(Diagnostic {
@@ -126,9 +142,10 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                                             });
                                                         }
                                                     }
-                                                    
+
                                                     if let Some(secrets_node) = secrets_value {
-                                                        let secrets_text = utils::node_text(secrets_node, source);
+                                                        let secrets_text =
+                                                            utils::node_text(secrets_node, source);
                                                         // Basic check - secrets should be a mapping, not a scalar
                                                         if secrets_text.trim().is_empty() {
                                                             diagnostics.push(Diagnostic {
@@ -144,7 +161,7 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                                             });
                                                         }
                                                     }
-                                                    
+
                                                     // Note: Full validation of required inputs/secrets would require:
                                                     // 1. Parsing the referenced workflow file
                                                     // 2. Extracting workflow_call inputs/secrets definitions

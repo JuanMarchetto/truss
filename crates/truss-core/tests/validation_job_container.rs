@@ -4,8 +4,8 @@
 //!
 //! Validates container and services configurations in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_job_container_valid_image() {
@@ -20,14 +20,17 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let container_errors: Vec<_> = result.diagnostics
+    let container_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("container") || d.message.contains("image")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("container") || d.message.contains("image"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         container_errors.is_empty(),
         "Valid container with image should not produce errors"
@@ -49,14 +52,17 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let container_errors: Vec<_> = result.diagnostics
+    let container_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("container") || d.message.contains("ports")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("container") || d.message.contains("ports"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         container_errors.is_empty(),
         "Valid container with ports should not produce errors"
@@ -78,14 +84,17 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let container_errors: Vec<_> = result.diagnostics
+    let container_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("container") || d.message.contains("env")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("container") || d.message.contains("env"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         container_errors.is_empty(),
         "Valid container with env variables should not produce errors"
@@ -108,14 +117,17 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let container_errors: Vec<_> = result.diagnostics
+    let container_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("container") || d.message.contains("services")) && 
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("container") || d.message.contains("services"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         container_errors.is_empty(),
         "Valid services configuration should not produce errors"
@@ -137,15 +149,18 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let container_errors: Vec<_> = result.diagnostics
+    let container_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("container") || d.message.contains("ports")) && 
-                (d.message.contains("invalid") || d.message.contains("format")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("container") || d.message.contains("ports"))
+                && (d.message.contains("invalid") || d.message.contains("format"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !container_errors.is_empty(),
         "Invalid port mapping format should produce error"
@@ -165,18 +180,20 @@ jobs:
     steps:
       - run: echo "Test"
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let container_errors: Vec<_> = result.diagnostics
+    let container_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| (d.message.contains("container") || d.message.contains("image")) && 
-                (d.message.contains("invalid") || d.message.contains("empty")) &&
-                d.severity == Severity::Error)
+        .filter(|d| {
+            (d.message.contains("container") || d.message.contains("image"))
+                && (d.message.contains("invalid") || d.message.contains("empty"))
+                && d.severity == Severity::Error
+        })
         .collect();
-    
+
     assert!(
         !container_errors.is_empty(),
         "Invalid container image format should produce error"
     );
 }
-

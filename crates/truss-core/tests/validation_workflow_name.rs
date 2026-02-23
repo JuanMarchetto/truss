@@ -4,8 +4,8 @@
 //!
 //! Validates workflow name field in GitHub Actions workflows.
 
-use truss_core::TrussEngine;
 use truss_core::Severity;
+use truss_core::TrussEngine;
 
 #[test]
 fn test_workflow_name_valid_simple() {
@@ -17,13 +17,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("name") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         name_errors.is_empty(),
         "Valid workflow name should not produce errors"
@@ -40,13 +41,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("name") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         name_errors.is_empty(),
         "Valid workflow name with expression should not produce errors"
@@ -62,14 +64,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
     // Workflow name is optional, so missing name should not be an error
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("name") && d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
         name_errors.is_empty(),
         "Missing workflow name should not produce errors (name is optional)"
@@ -80,21 +83,27 @@ jobs:
 fn test_workflow_name_invalid_too_long() {
     let mut engine = TrussEngine::new();
     // 300 characters should exceed typical GitHub Actions name limit (255)
-    let yaml = format!(r#"
+    let yaml = format!(
+        r#"
 name: {}
 on: push
 jobs:
   test:
     runs-on: ubuntu-latest
-"#, "A".repeat(300));
-    
+"#,
+        "A".repeat(300)
+    );
+
     let result = engine.analyze(&yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("name") && 
-                (d.message.contains("long") || d.message.contains("length")))
+        .filter(|d| {
+            d.message.contains("name")
+                && (d.message.contains("long") || d.message.contains("length"))
+        })
         .collect();
-    
+
     assert!(
         !name_errors.is_empty(),
         "Very long workflow name should produce error"
@@ -111,13 +120,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("name") && d.severity == Severity::Error)
         .collect();
-    
+
     // Special characters in quotes should be valid
     assert!(
         name_errors.is_empty(),
@@ -135,14 +145,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
-        .filter(|d| d.message.contains("name") && 
-                (d.message.contains("empty") || d.message.contains("required")))
+        .filter(|d| {
+            d.message.contains("name")
+                && (d.message.contains("empty") || d.message.contains("required"))
+        })
         .collect();
-    
+
     assert!(
         !name_errors.is_empty(),
         "Empty workflow name should produce error"
@@ -163,17 +176,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
 "#;
-    
+
     let result = engine.analyze(yaml);
-    let name_errors: Vec<_> = result.diagnostics
+    let name_errors: Vec<_> = result
+        .diagnostics
         .iter()
         .filter(|d| d.message.contains("name") && d.severity == Severity::Error)
         .collect();
-    
+
     // Unicode characters should be valid in workflow names
     assert!(
         name_errors.is_empty(),
         "Workflow name with unicode should be valid"
     );
 }
-

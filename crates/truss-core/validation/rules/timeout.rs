@@ -1,7 +1,7 @@
-use crate::{Diagnostic, Severity, Span};
-use tree_sitter::{Tree, Node};
-use super::super::ValidationRule;
 use super::super::utils;
+use super::super::ValidationRule;
+use crate::{Diagnostic, Severity, Span};
+use tree_sitter::{Node, Tree};
 
 /// Validates that `timeout-minutes` is a positive number.
 pub struct TimeoutRule;
@@ -30,9 +30,10 @@ impl ValidationRule for TimeoutRule {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
                         let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        let key_cleaned = key_text
+                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
-                        
+
                         // Get the job value node
                         let job_value = utils::get_pair_value(node);
 
@@ -40,22 +41,29 @@ impl ValidationRule for TimeoutRule {
                             let job_value = utils::unwrap_node(job_value_raw);
 
                             // Only consider it a job if the value is a mapping (job definition)
-                            if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
+                            if job_value.kind() == "block_mapping"
+                                || job_value.kind() == "flow_mapping"
+                            {
                                 // Check for timeout-minutes in this job
-                                let timeout_value = utils::find_value_for_key(job_value, source, "timeout-minutes");
-                                
+                                let timeout_value =
+                                    utils::find_value_for_key(job_value, source, "timeout-minutes");
+
                                 if let Some(timeout_node) = timeout_value {
                                     let timeout_text = utils::node_text(timeout_node, source);
-                                    let timeout_cleaned = timeout_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                    
+                                    let timeout_cleaned = timeout_text.trim_matches(|c: char| {
+                                        c == '"' || c == '\'' || c.is_whitespace()
+                                    });
+
                                     // Check if it's an expression (starts with ${{)
                                     if timeout_cleaned.starts_with("${{") {
                                         // Expressions are valid, skip validation
                                         return;
                                     }
-                                    
+
                                     // Check if it's a string (quoted)
-                                    if timeout_text.trim().starts_with('"') || timeout_text.trim().starts_with('\'') {
+                                    if timeout_text.trim().starts_with('"')
+                                        || timeout_text.trim().starts_with('\'')
+                                    {
                                         // String value is invalid
                                         diagnostics.push(Diagnostic {
                                             message: format!(
@@ -70,7 +78,7 @@ impl ValidationRule for TimeoutRule {
                                         });
                                         return;
                                     }
-                                    
+
                                     // Try to parse as number
                                     match timeout_cleaned.parse::<f64>() {
                                         Ok(value) => {
@@ -141,4 +149,3 @@ impl ValidationRule for TimeoutRule {
         diagnostics
     }
 }
-
