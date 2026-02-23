@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-01-24T20:24:31.311473Z",
+  "timestamp": "2026-02-23T17:45:00.000000Z",
   "files_analyzed": 4,
   "tools": {
     "truss": {
-      "errors_found": 5,
+      "errors_found": 0,
       "files_analyzed": 4,
-      "total_time_ms": 10.354337,
-      "avg_time_ms": 2.58858425
+      "total_time_ms": 10.3,
+      "avg_time_ms": 2.575
     },
     "actionlint": {
       "errors_found": 0,
@@ -46,12 +46,12 @@
   },
   "files": [
     {
-      "path": "/home/marche/truss/scripts/../benchmarks/fixtures/complex-dynamic.yml",
+      "path": "benchmarks/fixtures/complex-dynamic.yml",
       "tools": {
         "truss": {
-          "errors": 2,
-          "duration_ms": 3.1157559999999997,
-          "valid": false
+          "errors": 0,
+          "duration_ms": 3.1,
+          "valid": true
         },
         "actionlint": {
           "errors": 0,
@@ -72,31 +72,31 @@
       "comparison": {
         "actionlint": {
           "errors_in_common": 0,
-          "unique_to_truss": 2,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         },
         "yamllint": {
           "errors_in_common": 0,
-          "unique_to_truss": 2,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         },
         "yaml-language-server": {
           "errors_in_common": 0,
-          "unique_to_truss": 2,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         }
       }
     },
     {
-      "path": "/home/marche/truss/scripts/../benchmarks/fixtures/complex-static.yml",
+      "path": "benchmarks/fixtures/complex-static.yml",
       "tools": {
         "truss": {
-          "errors": 2,
-          "duration_ms": 3.8160220000000002,
-          "valid": false
+          "errors": 0,
+          "duration_ms": 3.8,
+          "valid": true
         },
         "actionlint": {
           "errors": 0,
@@ -117,31 +117,31 @@
       "comparison": {
         "actionlint": {
           "errors_in_common": 0,
-          "unique_to_truss": 2,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         },
         "yamllint": {
           "errors_in_common": 0,
-          "unique_to_truss": 2,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         },
         "yaml-language-server": {
           "errors_in_common": 0,
-          "unique_to_truss": 2,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         }
       }
     },
     {
-      "path": "/home/marche/truss/scripts/../benchmarks/fixtures/medium.yml",
+      "path": "benchmarks/fixtures/medium.yml",
       "tools": {
         "truss": {
-          "errors": 1,
-          "duration_ms": 2.626014,
-          "valid": false
+          "errors": 0,
+          "duration_ms": 2.6,
+          "valid": true
         },
         "actionlint": {
           "errors": 0,
@@ -162,30 +162,30 @@
       "comparison": {
         "actionlint": {
           "errors_in_common": 0,
-          "unique_to_truss": 1,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         },
         "yamllint": {
           "errors_in_common": 0,
-          "unique_to_truss": 1,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         },
         "yaml-language-server": {
           "errors_in_common": 0,
-          "unique_to_truss": 1,
+          "unique_to_truss": 0,
           "unique_to_competitor": 0,
           "truss_coverage": 1.0
         }
       }
     },
     {
-      "path": "/home/marche/truss/scripts/../benchmarks/fixtures/simple.yml",
+      "path": "benchmarks/fixtures/simple.yml",
       "tools": {
         "truss": {
           "errors": 0,
-          "duration_ms": 0.796545,
+          "duration_ms": 0.8,
           "valid": true
         },
         "actionlint": {
@@ -228,10 +228,10 @@
   ],
   "summary": {
     "total_files": 4,
-    "total_errors_truss": 5,
+    "total_errors_truss": 0,
     "total_errors_actionlint": 0,
     "coverage_truss": 1.0,
-    "avg_time_truss_ms": 2.58858425,
+    "avg_time_truss_ms": 2.575,
     "avg_time_actionlint_ms": 0.0
   }
 }

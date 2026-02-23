@@ -1,1 +1,13 @@
-/home/marche/truss/scripts/../competitors/yaml-language-server/capture.sh: line 122: syntax error: unexpected end of file
+[
+  {
+    "file": "benchmarks/fixtures/medium.yml",
+    "valid": true,
+    "diagnostics": [],
+    "duration_ms": 0.0,
+    "metadata": {
+      "file_size": 5641,
+      "lines": 130
+    },
+    "error": "yaml-language-server not found"
+  }
+]

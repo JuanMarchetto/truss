@@ -1,18 +1,9 @@
 [
   {
-    "file": "/home/marche/truss/scripts/../benchmarks/fixtures/medium.yml",
-    "valid": false,
-    "diagnostics": [
-      {
-        "message": "schedule event is missing required 'cron' field.",
-        "severity": "error",
-        "span": {
-          "start": 60,
-          "end": 125
-        }
-      }
-    ],
-    "duration_ms": 2.626014,
+    "file": "benchmarks/fixtures/medium.yml",
+    "valid": true,
+    "diagnostics": [],
+    "duration_ms": 2.6,
     "metadata": {
       "file_size": 5641,
       "lines": 130

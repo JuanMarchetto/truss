@@ -87,7 +87,7 @@ VALIDATE_EOF
             DIAGNOSTICS_JSON=$(echo "$OUTPUT" | tail -1 || echo "[]")
         fi
     else
-        # Output valid JSON even on error
+        # Output valid JSON even on error (use env var to avoid path injection)
         ERROR_SCRIPT=$(mktemp)
         export YAML_FILE
         cat > "$ERROR_SCRIPT" << 'ERROR_EOF'
@@ -102,14 +102,14 @@ result = {
     'metadata': {'file_size': 0, 'lines': 0},
     'error': 'python3 with yaml module not found'
 }
-print(json.dumps(result, indent=2))
+print(json.dumps([result], indent=2))
 ERROR_EOF
-        python3 "$ERROR_SCRIPT" 2>/dev/null || echo "{\"file\":\"$YAML_FILE\",\"valid\":true,\"diagnostics\":[],\"duration_ms\":0.0,\"metadata\":{\"file_size\":0,\"lines\":0},\"error\":\"python3 not available\"}"
+        python3 "$ERROR_SCRIPT" 2>/dev/null || echo "[{\"file\":\"$YAML_FILE\",\"valid\":true,\"diagnostics\":[],\"duration_ms\":0.0,\"metadata\":{\"file_size\":0,\"lines\":0},\"error\":\"python3 not available\"}]"
         rm -f "$ERROR_SCRIPT"
         exit 0
     fi
 else
-    echo "{\"file\":\"$YAML_FILE\",\"valid\":true,\"diagnostics\":[],\"duration_ms\":0.0,\"metadata\":{\"file_size\":0,\"lines\":0},\"error\":\"python3 not available\"}"
+    echo "[{\"file\":\"$YAML_FILE\",\"valid\":true,\"diagnostics\":[],\"duration_ms\":0.0,\"metadata\":{\"file_size\":0,\"lines\":0},\"error\":\"python3 not available\"}]"
     exit 0
 fi
 
@@ -147,7 +147,7 @@ result = {
     }
 }
 
-print(json.dumps(result, indent=2))
+print(json.dumps([result], indent=2))
 PYTHON_EOF
 
 export YAML_FILE VALID_PYTHON DIAGNOSTICS_JSON DURATION_MS FILE_SIZE LINES

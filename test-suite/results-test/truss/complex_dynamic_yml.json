@@ -1,34 +1,9 @@
 [
   {
-    "file": "/home/marche/truss/scripts/../benchmarks/fixtures/complex-dynamic.yml",
-    "valid": false,
-    "diagnostics": [
-      {
-        "message": "Concurrency at workflow level is missing required 'group' field.",
-        "severity": "error",
-        "span": {
-          "start": 856,
-          "end": 953
-        }
-      },
-      {
-        "message": "Invalid expression syntax: 'github'",
-        "severity": "error",
-        "span": {
-          "start": 1711,
-          "end": 1724
-        }
-      },
-      {
-        "message": "Unknown function in expression: 'fromJSON'. Valid functions are: contains, startsWith, endsWith, format, join, toJSON, hashFiles, success, failure, cancelled, always.",
-        "severity": "warning",
-        "span": {
-          "start": 12924,
-          "end": 12932
-        }
-      }
-    ],
-    "duration_ms": 3.1157559999999997,
+    "file": "benchmarks/fixtures/complex-dynamic.yml",
+    "valid": true,
+    "diagnostics": [],
+    "duration_ms": 3.1,
     "metadata": {
       "file_size": 14190,
       "lines": 335

@@ -1,9 +1,9 @@
 [
   {
-    "file": "/home/marche/truss/scripts/../benchmarks/fixtures/simple.yml",
+    "file": "benchmarks/fixtures/simple.yml",
     "valid": true,
     "diagnostics": [],
-    "duration_ms": 0.796545,
+    "duration_ms": 0.8,
     "metadata": {
       "file_size": 245,
       "lines": 14
