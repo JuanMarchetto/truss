@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::io;
-use std::path::Path;
 use std::time::Instant;
 use truss_core::TrussEngine;
 use rayon::prelude::*;
@@ -64,12 +63,6 @@ impl From<io::Error> for TrussError {
 }
 
 fn read_file(path: &str) -> Result<String, TrussError> {
-    if !Path::new(path).exists() {
-        return Err(TrussError::Io(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("File not found: {}", path),
-        )));
-    }
     fs::read_to_string(path).map_err(TrussError::Io)
 }
 

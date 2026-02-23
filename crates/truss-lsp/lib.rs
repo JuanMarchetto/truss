@@ -111,7 +111,7 @@ impl LspServer {
                     },
                     "serverInfo": {
                         "name": "truss",
-                        "version": "0.1.0"
+                        "version": env!("CARGO_PKG_VERSION")
                     }
                 });
                 Some(LspResponse {
@@ -190,7 +190,7 @@ impl LspServer {
                 }
                 if let Some(params) = notif.params {
                     if let Ok(did_close) = serde_json::from_value::<DidCloseTextDocumentParams>(params) {
-                        self.handle_did_close(did_close);
+                        self.handle_did_close(did_close, &mut notifications);
                     }
                 }
             }
@@ -273,13 +273,19 @@ impl LspServer {
         });
     }
 
-    fn handle_did_close(&mut self, params: DidCloseTextDocumentParams) {
-        let uri = &params.text_document.uri;
-        self.documents.remove(uri);
+    fn handle_did_close(&mut self, params: DidCloseTextDocumentParams, notifications: &mut Vec<LspNotification>) {
+        let uri = params.text_document.uri;
+        self.documents.remove(&uri);
 
         // Clear diagnostics for the closed document
-        // (Returning empty diagnostics is not sent here, but could be added
-        // if needed for editors that don't clear on close.)
+        notifications.push(LspNotification {
+            jsonrpc: "2.0".to_string(),
+            method: "textDocument/publishDiagnostics".to_string(),
+            params: Some(serde_json::json!({
+                "uri": uri,
+                "diagnostics": []
+            })),
+        });
     }
 
     fn convert_diagnostics(&self, diagnostics: &[CoreDiagnostic], text: &str) -> Vec<Value> {
