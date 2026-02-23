@@ -431,42 +431,37 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
                                     // Check if this is followed by .outputs
                                     let after_step_id = &after_steps[step_id_end..];
                                     
-                                    if after_step_id.starts_with(".outputs") {
+                                    if let Some(after_outputs) = after_step_id.strip_prefix(".outputs") {
                                         // Check if there's a property access after .outputs
-                                        // ".outputs" is 8 characters (., o, u, t, p, u, t, s)
-                                        // So we need to skip 8 characters to get to the character after ".outputs"
-                                        let after_outputs = if after_step_id.len() > 8 {
-                                            &after_step_id[8..]
-                                        } else {
-                                            ""
-                                        };
                                         let after_outputs_trimmed_raw = after_outputs.trim();
-                                        
+
                                         // Handle the case where we might get "s.result" instead of ".result"
                                         // This happens when the slice is off by one character
-                                        let after_outputs_trimmed = if after_outputs_trimmed_raw.starts_with("s.") && after_outputs_trimmed_raw.len() > 2 {
-                                            // Skip the "s" and use the rest
-                                            &after_outputs_trimmed_raw[1..]
+                                        let after_outputs_trimmed = if let Some(rest) = after_outputs_trimmed_raw.strip_prefix("s.") {
+                                            if !rest.is_empty() {
+                                                // Reconstruct with dot prefix
+                                                &after_outputs_trimmed_raw[1..]
+                                            } else {
+                                                after_outputs_trimmed_raw
+                                            }
                                         } else {
                                             after_outputs_trimmed_raw
                                         };
-                                        
+
                                         // Check if after .outputs we have a property access
                                         // Extract output name - handle both ".result" and "s.result" cases
                                         // After normalization, after_outputs_trimmed should start with "."
-                                        let output_name = if after_outputs_trimmed.starts_with(".") {
+                                        let output_name = if let Some(after_dot) = after_outputs_trimmed.strip_prefix('.') {
                                             // Extract output name after the dot
-                                            let after_dot = &after_outputs_trimmed[1..];
                                             let output_name_end = after_dot
-                                                .find(|c: char| c.is_whitespace() || c == '.' || c == '}' || c == ')' || c == ']' || 
+                                                .find(|c: char| c.is_whitespace() || c == '.' || c == '}' || c == ')' || c == ']' ||
                                                       c == '&' || c == '|' || c == '=' || c == '!' || c == '<' || c == '>' || c == '[')
                                                 .unwrap_or(after_dot.len());
                                             &after_dot[..output_name_end]
-                                        } else if after_outputs_trimmed.starts_with("s.") {
+                                        } else if let Some(after_s_dot) = after_outputs_trimmed.strip_prefix("s.") {
                                             // Handle the case where normalization didn't work (shouldn't happen but handle it)
-                                            let after_s_dot = &after_outputs_trimmed[2..];
                                             let output_name_end = after_s_dot
-                                                .find(|c: char| c.is_whitespace() || c == '.' || c == '}' || c == ')' || c == ']' || 
+                                                .find(|c: char| c.is_whitespace() || c == '.' || c == '}' || c == ')' || c == ']' ||
                                                       c == '&' || c == '|' || c == '=' || c == '!' || c == '<' || c == '>' || c == '[')
                                                 .unwrap_or(after_s_dot.len());
                                             &after_s_dot[..output_name_end]

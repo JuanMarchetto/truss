@@ -86,7 +86,7 @@ impl ValidationRule for RunnerLabelRule {
                                         "macos-latest-xlarge", "macos-15-xlarge", "macos-14-xlarge", "macos-13-xlarge",
                                     ];
 
-                                    let is_known = known_runners.iter().any(|&r| r == runs_on_cleaned);
+                                    let is_known = known_runners.contains(&runs_on_cleaned);
                                     let is_self_hosted = runs_on_cleaned == "self-hosted" || runs_on_cleaned.starts_with("self-hosted[");
 
                                     if !is_known && !is_self_hosted {

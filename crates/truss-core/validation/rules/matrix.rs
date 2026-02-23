@@ -58,10 +58,8 @@ impl ValidationRule for MatrixStrategyRule {
                                     end: node.end_byte(),
                                 }));
                             }
-                        } else {
-                            if let Some(value_node) = value_node_opt {
-                                find_matrix_nodes(value_node, source, matrices, depth + 1);
-                            }
+                        } else if let Some(value_node) = value_node_opt {
+                            find_matrix_nodes(value_node, source, matrices, depth + 1);
                         }
                     }
                 }
@@ -147,7 +145,7 @@ impl ValidationRule for MatrixStrategyRule {
                                 *has_matrix_keys = true;
 
                                 // Validate matrix key name format
-                                if !is_valid_matrix_key_name(&key_cleaned) {
+                                if !is_valid_matrix_key_name(key_cleaned) {
                                     diagnostics.push(Diagnostic {
                                         message: format!(
                                             "Invalid matrix key name: '{}'. Matrix keys must contain only alphanumeric characters, hyphens, and underscores.",
@@ -199,7 +197,7 @@ impl ValidationRule for MatrixStrategyRule {
                                         }
                                     } else {
                                         // Validate array elements (basic type validation)
-                                        validate_matrix_array_elements(value_to_check, source, &key_cleaned, diagnostics);
+                                        validate_matrix_array_elements(value_to_check, source, key_cleaned, diagnostics);
                                     }
                                 }
                             }
@@ -226,14 +224,14 @@ impl ValidationRule for MatrixStrategyRule {
                 });
             }
 
-            fn validate_include_exclude(node: Node, source: &str, key_name: &str, diagnostics: &mut Vec<Diagnostic>, parent_span: Span) {
+            fn validate_include_exclude(node: Node, source: &str, key_name: &str, diagnostics: &mut Vec<Diagnostic>) {
                 match node.kind() {
                     "block_mapping_pair" | "flow_pair" => {
                         if let Some(key_node) = node.child(0) {
                             let key_text = utils::node_text(key_node, source);
                             let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                                 .trim_end_matches(':');
-                            
+
                             if key_cleaned == key_name {
                                 // Get value node: last non-comment, non-":" child
                                 let value_node_opt = {
@@ -275,20 +273,20 @@ impl ValidationRule for MatrixStrategyRule {
                     "block_mapping" | "flow_mapping" => {
                         let mut cursor = node.walk();
                         for child in node.children(&mut cursor) {
-                            validate_include_exclude(child, source, key_name, diagnostics, parent_span);
+                            validate_include_exclude(child, source, key_name, diagnostics);
                         }
                     }
                     _ => {
                         let mut cursor = node.walk();
                         for child in node.children(&mut cursor) {
-                            validate_include_exclude(child, source, key_name, diagnostics, parent_span);
+                            validate_include_exclude(child, source, key_name, diagnostics);
                         }
                     }
                 }
             }
 
-            validate_include_exclude(matrix_to_check, source, "include", &mut diagnostics, span);
-            validate_include_exclude(matrix_to_check, source, "exclude", &mut diagnostics, span);
+            validate_include_exclude(matrix_to_check, source, "include", &mut diagnostics);
+            validate_include_exclude(matrix_to_check, source, "exclude", &mut diagnostics);
         }
 
         diagnostics

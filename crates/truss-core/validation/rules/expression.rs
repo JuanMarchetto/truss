@@ -66,10 +66,10 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
     // Bare context names (e.g., "github", "matrix") are valid expressions
     let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "job" | "jobs" | "steps" | "runner" | "strategy");
 
-    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context {
-        if !expr.contains('.') && !expr.contains('(') && !expr.contains('[') {
-            return false;
-        }
+    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context
+        && !expr.contains('.') && !expr.contains('(') && !expr.contains('[')
+    {
+        return false;
     }
 
     true
@@ -111,20 +111,18 @@ impl ValidationRule for ExpressionValidationRule {
                         severity: Severity::Error,
                         span: Span {
                             start: actual_start,
-                            end: end,
+                            end,
                         },
                     });
-                } else {
-                    if !is_valid_expression_syntax(inner) {
-                        diagnostics.push(Diagnostic {
-                            message: format!("Invalid expression syntax: '{}'", inner),
-                            severity: Severity::Error,
-                            span: Span {
-                                start: actual_start,
-                                end: end,
-                            },
-                        });
-                    }
+                } else if !is_valid_expression_syntax(inner) {
+                    diagnostics.push(Diagnostic {
+                        message: format!("Invalid expression syntax: '{}'", inner),
+                        severity: Severity::Error,
+                        span: Span {
+                            start: actual_start,
+                            end,
+                        },
+                    });
                 }
                 
                 if inner.contains("github.nonexistent") || inner.contains("nonexistent.property") {
@@ -133,7 +131,7 @@ impl ValidationRule for ExpressionValidationRule {
                         severity: Severity::Warning,
                         span: Span {
                             start: actual_start,
-                            end: end,
+                            end,
                         },
                     });
                 }
@@ -172,10 +170,7 @@ fn validate_expression_operators(expr: &str, start: usize, end: usize, diagnosti
                 expr
             ),
             severity: Severity::Error,
-            span: Span {
-                start,
-                end,
-            },
+            span: Span { start, end },
         });
     }
     
@@ -219,8 +214,8 @@ fn validate_expression_functions(expr: &str, start: usize, _end: usize, diagnost
         if let Some(func_start) = before_paren.rfind(|c: char| c.is_whitespace() || c == '&' || c == '|' || c == '!' || c == '(' || c == '[' || c == '.') {
             let func_name = expr[func_start + 1..actual_pos].trim();
             if !func_name.is_empty() {
-                let is_valid = valid_functions.iter().any(|&f| f == func_name)
-                    || case_insensitive_functions.iter().any(|&f| func_name.to_lowercase() == f);
+                let is_valid = valid_functions.contains(&func_name)
+                    || case_insensitive_functions.contains(&func_name.to_lowercase().as_str());
                 if !is_valid {
                     diagnostics.push(Diagnostic {
                         message: format!(

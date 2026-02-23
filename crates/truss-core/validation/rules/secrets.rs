@@ -158,9 +158,8 @@ impl SecretsValidationRule {
                 } else {
                     // Valid "secrets." reference, validate secret name format
                     search_pos = actual_pos + 7;
-                    if after_secrets.starts_with('.') {
+                    if let Some(after_dot) = after_secrets.strip_prefix('.') {
                         // Find end of secret name
-                        let after_dot = &after_secrets[1..];
                         let name_end = after_dot
                             .find(|c: char| c.is_whitespace() || c == '}' || c == ')' || c == ']' || 
                                   c == '&' || c == '|' || c == '=' || c == '!' || c == '<' || c == '>' || c == '.')

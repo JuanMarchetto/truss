@@ -29,7 +29,7 @@ impl ValidationRule for StepShellRule {
         fn process_jobs(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
-                    if let Some(key_node) = node.child(0) {
+                    if let Some(_key_node) = node.child(0) {
                         if let Some(job_value_raw) = utils::get_pair_value(node) {
                             let job_value = utils::unwrap_node(job_value_raw);
 
@@ -52,7 +52,7 @@ impl ValidationRule for StepShellRule {
                 }
             }
         }
-        
+
         fn validate_steps_in_node(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_sequence" | "flow_sequence" => {

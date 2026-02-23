@@ -272,10 +272,10 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         }
     }
 
-    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context {
-        if !expr.contains('.') && !expr.contains('(') && !expr.contains('[') {
-            return false;
-        }
+    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context
+        && !expr.contains('.') && !expr.contains('(') && !expr.contains('[')
+    {
+        return false;
     }
 
     true

@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
+use rayon::prelude::*;
+use serde_json;
 use std::fs;
 use std::io;
 use std::time::Instant;
 use truss_core::TrussEngine;
-use rayon::prelude::*;
-use serde_json;
 
 #[derive(Parser)]
 #[command(name = "truss")]
@@ -21,11 +21,11 @@ enum Commands {
         /// Path(s) to the YAML file(s) to validate
         #[arg(num_args = 1..)]
         paths: Vec<String>,
-        
+
         /// Suppress output (only exit code indicates success/failure)
         #[arg(short, long)]
         quiet: bool,
-        
+
         /// Output results as JSON
         #[arg(long)]
         json: bool,
@@ -85,55 +85,47 @@ fn validate_file(path: &str, quiet: bool, json: bool) -> Result<FileResult, Trus
     let content = read_file(path)?;
     let file_size = content.len() as u64;
     let lines = content.lines().count();
-    
+
     let start = Instant::now();
     let mut engine = TrussEngine::new();
     let result = engine.analyze(&content);
     let duration_ms = start.elapsed().as_secs_f64() * 1000.0;
-    
+
     let valid = result.is_ok();
-    
+
     if json {
         let file_result = FileResult {
             file: path.to_string(),
             valid,
             diagnostics: result.diagnostics,
             duration_ms,
-            metadata: FileMetadata {
-                file_size,
-                lines,
-            },
+            metadata: FileMetadata { file_size, lines },
         };
         return Ok(file_result);
     }
-    
+
     if valid {
         if !quiet {
             println!("✓ Valid: {}", path);
-            
+
             for diagnostic in &result.diagnostics {
                 if diagnostic.severity != truss_core::Severity::Error {
                     println!("  {}", diagnostic);
                 }
             }
         }
-    } else {
-        if !quiet {
-            for diagnostic in &result.diagnostics {
-                eprintln!("  {}", diagnostic);
-            }
+    } else if !quiet {
+        for diagnostic in &result.diagnostics {
+            eprintln!("  {}", diagnostic);
         }
     }
-    
+
     Ok(FileResult {
         file: path.to_string(),
         valid,
         diagnostics: result.diagnostics,
         duration_ms,
-        metadata: FileMetadata {
-            file_size,
-            lines,
-        },
+        metadata: FileMetadata { file_size, lines },
     })
 }
 
@@ -183,11 +175,12 @@ fn validate_files(paths: Vec<String>, quiet: bool, json: bool) -> Result<(), Tru
     }
 
     if json {
-        let json_output = serde_json::to_string_pretty(&file_results)
-            .map_err(|e| TrussError::Io(io::Error::new(
+        let json_output = serde_json::to_string_pretty(&file_results).map_err(|e| {
+            TrussError::Io(io::Error::new(
                 io::ErrorKind::Other,
                 format!("Failed to serialize JSON: {}", e),
-            )))?;
+            ))
+        })?;
         println!("{}", json_output);
     } else {
         // Print summary if multiple files and not quiet
@@ -203,7 +196,6 @@ fn validate_files(paths: Vec<String>, quiet: bool, json: bool) -> Result<(), Tru
     }
 }
 
-
 fn main() {
     let cli = Cli::parse();
 
@@ -218,4 +210,3 @@ fn main() {
         }
     }
 }
-

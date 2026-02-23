@@ -86,16 +86,17 @@ impl ValidationRule for StepEnvValidationRule {
                                     let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                                         .trim_end_matches(':');
                                     
-                                    // Validate env var name format: [A-Z_][A-Z0-9_]*
-                                    // GitHub Actions allows uppercase letters, numbers, and underscores
+                                    // Validate env var name format
+                                    // GitHub Actions allows letters (upper and lower), numbers, and underscores
+                                    // Names must start with a letter or underscore
                                     if !key_cleaned.is_empty() {
-                                        let is_valid = key_cleaned.chars().all(|c| c.is_uppercase() || c.is_ascii_digit() || c == '_');
-                                        let starts_valid = key_cleaned.chars().next().map(|c| c.is_uppercase() || c == '_').unwrap_or(false);
-                                        
+                                        let is_valid = key_cleaned.chars().all(|c| c.is_alphanumeric() || c == '_');
+                                        let starts_valid = key_cleaned.chars().next().map(|c| c.is_alphabetic() || c == '_').unwrap_or(false);
+
                                         if !is_valid || !starts_valid {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
-                                                    "Invalid environment variable name: '{}'. Environment variable names must start with an uppercase letter or underscore and contain only uppercase letters, numbers, and underscores.",
+                                                    "Invalid environment variable name: '{}'. Environment variable names must start with a letter or underscore and contain only letters, numbers, and underscores.",
                                                     key_cleaned
                                                 ),
                                                 severity: Severity::Error,

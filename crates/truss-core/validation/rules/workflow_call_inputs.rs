@@ -201,7 +201,7 @@ impl WorkflowCallInputsRule {
                                 
                                 // Basic validation - default should match input type
                                 if !default_text.starts_with("${{") {
-                                    match &*type_cleaned {
+                                    match type_cleaned {
                                         "boolean" => {
                                             let default_cleaned = default_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
                                             if default_cleaned != "true" && default_cleaned != "false" {

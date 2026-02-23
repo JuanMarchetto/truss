@@ -84,7 +84,7 @@ impl ValidationRule for WorkflowTriggerRule {
                             "pull_request_target", "workflow_call", "workflow_dispatch"
                         ];
                         
-                        if !valid_events.iter().any(|&e| e == event_type) && !event_type.is_empty() {
+                        if !valid_events.contains(&event_type.as_str()) && !event_type.is_empty() {
                             diagnostics.push(Diagnostic {
                                 message: format!(
                                     "Invalid event type: '{}'. Valid event types include: push, pull_request, workflow_dispatch, schedule, workflow_call, and others.",
@@ -114,17 +114,17 @@ impl ValidationRule for WorkflowTriggerRule {
         // Also validate simple event text if present (for backward compatibility)
         if let Some(event_text) = event_text {
             let valid_events = ["push", "pull_request", "workflow_dispatch", "schedule", "repository_dispatch", "workflow_run", "workflow_call"];
-            if !valid_events.contains(&event_text.as_str()) && !event_text.is_empty() {
-                if !event_text.contains(":") && !event_text.contains("[") {
-                    diagnostics.push(Diagnostic {
-                        message: format!("Invalid event type: '{}'", event_text),
-                        severity: Severity::Error,
-                        span: Span {
-                            start: event_node.start_byte(),
-                            end: event_node.end_byte(),
-                        },
-                    });
-                }
+            if !valid_events.contains(&event_text.as_str()) && !event_text.is_empty()
+                && !event_text.contains(':') && !event_text.contains('[')
+            {
+                diagnostics.push(Diagnostic {
+                    message: format!("Invalid event type: '{}'", event_text),
+                    severity: Severity::Error,
+                    span: Span {
+                        start: event_node.start_byte(),
+                        end: event_node.end_byte(),
+                    },
+                });
             }
         }
 

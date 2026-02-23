@@ -121,10 +121,8 @@ impl ValidationRule for JobNeedsRule {
                                     }
                                 }
                             }
-                        } else {
-                            if let Some(value_node) = utils::get_pair_value(node) {
-                                find_needs_references(value_node, source, job_name, all_job_names, diagnostics);
-                            }
+                        } else if let Some(value_node) = utils::get_pair_value(node) {
+                            find_needs_references(value_node, source, job_name, all_job_names, diagnostics);
                         }
                     }
                 }
@@ -193,10 +191,8 @@ impl ValidationRule for JobNeedsRule {
                                 let needs_values = extract_needs_values(value_node, source);
                                 deps.insert(job_name.to_string(), needs_values);
                             }
-                        } else {
-                            if let Some(value_node) = utils::get_pair_value(node) {
-                                collect_dependencies(value_node, source, job_name, deps);
-                            }
+                        } else if let Some(value_node) = utils::get_pair_value(node) {
+                            collect_dependencies(value_node, source, job_name, deps);
                         }
                     }
                 }

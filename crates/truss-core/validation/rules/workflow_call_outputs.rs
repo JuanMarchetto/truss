@@ -277,17 +277,11 @@ fn find_job_output_references(outputs_node: Node, source: &str) -> Vec<(String, 
                             let after_job = &after_jobs[job_name_end..];
                             
                             // Check if followed by .outputs.
-                            if after_job.starts_with(".outputs") {
-                                let after_outputs = if after_job.len() > 8 {
-                                    &after_job[8..]  // Skip ".outputs"
-                                } else {
-                                    ""
-                                };
+                            if let Some(after_outputs) = after_job.strip_prefix(".outputs") {
                                 let after_outputs_trimmed = after_outputs.trim();
-                                
+
                                 // Extract output name after .outputs.
-                                if after_outputs_trimmed.starts_with(".") {
-                                    let output_name = &after_outputs_trimmed[1..];
+                                if let Some(output_name) = after_outputs_trimmed.strip_prefix('.') {
                                     let output_name_end = output_name
                                         .find(|c: char| c.is_whitespace() || c == '.' || c == '}' || c == ')' || c == ']' || 
                                               c == '&' || c == '|' || c == '=' || c == '!' || c == '<' || c == '>' || c == '[')

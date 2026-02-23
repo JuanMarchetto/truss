@@ -65,24 +65,19 @@ pub(crate) fn is_github_actions_workflow(tree: &Tree, source: &str) -> bool {
 /// actual content (block_mapping, block_sequence, block_scalar, etc.).
 pub(crate) fn unwrap_node<'a>(node: Node<'a>) -> Node<'a> {
     let mut current = node;
-    loop {
-        match current.kind() {
-            "block_node" | "flow_node" => {
-                let mut found_inner = false;
-                for i in 0..current.child_count() {
-                    if let Some(child) = current.child(i) {
-                        if child.kind() != "comment" {
-                            current = child;
-                            found_inner = true;
-                            break;
-                        }
-                    }
-                }
-                if !found_inner {
+    while let "block_node" | "flow_node" = current.kind() {
+        let mut found_inner = false;
+        for i in 0..current.child_count() {
+            if let Some(child) = current.child(i) {
+                if child.kind() != "comment" {
+                    current = child;
+                    found_inner = true;
                     break;
                 }
             }
-            _ => break,
+        }
+        if !found_inner {
+            break;
         }
     }
     current
@@ -136,19 +131,6 @@ pub(crate) fn get_pair_value<'a>(node: Node<'a>) -> Option<Node<'a>> {
             if kind != "comment" && kind != ":" {
                 return Some(child);
             }
-        }
-    }
-    None
-}
-
-/// Extract the key text from a block_mapping_pair or flow_pair, cleaned of quotes and colons.
-pub(crate) fn get_pair_key_text(node: Node, source: &str) -> Option<String> {
-    if let Some(key_node) = node.child(0) {
-        let key_text = &source[key_node.start_byte()..key_node.end_byte()];
-        let cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-            .trim_end_matches(':');
-        if !cleaned.is_empty() {
-            return Some(cleaned.to_string());
         }
     }
     None

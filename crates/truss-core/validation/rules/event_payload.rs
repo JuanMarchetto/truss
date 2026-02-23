@@ -110,7 +110,7 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
                     let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
                     
-                    if !valid_fields.iter().any(|&f| f == key_cleaned) {
+                    if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
                                 "Invalid field '{}' for push event. Valid fields are: {}",
@@ -152,7 +152,7 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
                     let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
                     
-                    if !valid_fields.iter().any(|&f| f == key_cleaned) {
+                    if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
                                 "Invalid field '{}' for pull_request event. Valid fields are: {}",
@@ -195,7 +195,7 @@ fn validate_pr_types(types_node: Node, source: &str, diagnostics: &mut Vec<Diagn
             "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
                 let type_text = utils::node_text(node, source);
                 let type_cleaned = type_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                if !valid_types.iter().any(|&t| t == type_cleaned) {
+                if !valid_types.contains(&type_cleaned) {
                     diagnostics.push(Diagnostic {
                         message: format!(
                             "Invalid pull_request type: '{}'. Valid types are: {}",
@@ -318,7 +318,7 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
                     let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
                     
-                    if !valid_fields.iter().any(|&f| f == key_cleaned) {
+                    if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
                                 "Invalid field '{}' for schedule event. Valid fields are: {}",
@@ -359,7 +359,7 @@ fn validate_workflow_dispatch_event(wd_node: Node, source: &str, diagnostics: &m
                     let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
                     
-                    if !valid_fields.iter().any(|&f| f == key_cleaned) {
+                    if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
                                 "Invalid field '{}' for workflow_dispatch event. Valid fields are: {}",
@@ -400,7 +400,7 @@ fn validate_workflow_call_event(wc_node: Node, source: &str, diagnostics: &mut V
                     let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
                     
-                    if !valid_fields.iter().any(|&f| f == key_cleaned) {
+                    if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
                                 "Invalid field '{}' for workflow_call event. Valid fields are: {}",
@@ -442,7 +442,7 @@ fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<
                     let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                         .trim_end_matches(':');
                     
-                    if !valid_fields.iter().any(|&f| f == key_cleaned) {
+                    if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
                             message: format!(
                                 "Invalid field '{}' for issues event. Valid fields are: {}",
@@ -485,7 +485,7 @@ fn validate_issues_types(types_node: Node, source: &str, diagnostics: &mut Vec<D
             "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
                 let type_text = utils::node_text(node, source);
                 let type_cleaned = type_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                if !valid_types.iter().any(|&t| t == type_cleaned) {
+                if !valid_types.contains(&type_cleaned) {
                     diagnostics.push(Diagnostic {
                         message: format!(
                             "Invalid issues activity type: '{}'. Valid types are: {}",

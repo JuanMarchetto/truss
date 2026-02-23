@@ -55,7 +55,7 @@ impl ValidationRule for PermissionsRule {
                                 let scope = utils::node_text(key_node, source);
                                 let scope_cleaned = scope.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                                     .trim_end_matches(':');
-                                if !valid_scopes.iter().any(|&s| s == scope_cleaned) {
+                                if !valid_scopes.contains(&scope_cleaned) {
                                     diagnostics.push(Diagnostic {
                                         message: format!("Invalid permission scope: '{}'", scope_cleaned),
                                         severity: Severity::Error,
@@ -70,7 +70,7 @@ impl ValidationRule for PermissionsRule {
                                     let value_node = utils::unwrap_node(value_node_raw);
                                     let value_text = utils::node_text(value_node, source);
                                     let value_cleaned = value_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                    if !valid_values.iter().any(|&v| v == value_cleaned) {
+                                    if !valid_values.contains(&value_cleaned) {
                                         diagnostics.push(Diagnostic {
                                             message: format!("Invalid permission value: '{}' (must be 'read', 'write', or 'none')", value_cleaned),
                                             severity: Severity::Error,

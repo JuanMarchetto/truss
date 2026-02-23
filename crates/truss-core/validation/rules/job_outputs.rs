@@ -151,6 +151,7 @@ fn collect_step_ids(job_node: Node, source: &str) -> HashSet<String> {
     step_ids
 }
 
+#[allow(clippy::type_complexity)]
 fn find_output_expressions(outputs_node: Node, source: &str) -> (Vec<(String, Span)>, Vec<(Span, String)>) {
     let mut references = Vec::new();
     let mut incomplete_refs = Vec::new();
@@ -250,8 +251,8 @@ fn find_output_expressions(outputs_node: Node, source: &str) -> (Vec<(String, Sp
                                 // Check if it's incomplete (empty or only whitespace/closing braces)
                                 // The expression text doesn't include the closing }}, so if after .outputs
                                 // we only have whitespace or nothing, it's incomplete
-                                let is_incomplete = after_outputs_trimmed.is_empty() || 
-                                                   (after_outputs_trimmed.len() > 0 && 
+                                let is_incomplete = after_outputs_trimmed.is_empty() ||
+                                                   (!after_outputs_trimmed.is_empty() &&
                                                     after_outputs_trimmed.chars().all(|c| c.is_whitespace() || c == '}' || c == ')' || c == ']'));
                                 
                                 

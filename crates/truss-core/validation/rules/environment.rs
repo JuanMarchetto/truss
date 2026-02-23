@@ -40,7 +40,7 @@ impl ValidationRule for EnvironmentRule {
                                         "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
                                             let env_name = utils::node_text(actual_env_value, source);
                                             let env_name_cleaned = env_name.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                            if env_name_cleaned.contains(' ') {
+                                            if env_name_cleaned.contains(' ') && !env_name_cleaned.contains("${{") {
                                                 diagnostics.push(Diagnostic {
                                                     message: format!("Invalid environment name format: '{}' (contains spaces)", env_name_cleaned),
                                                     severity: Severity::Error,
@@ -78,7 +78,7 @@ impl ValidationRule for EnvironmentRule {
                                                             if let Some(name_value) = field_value_node {
                                                                 let name_text = utils::node_text(name_value, source);
                                                                 let name_cleaned = name_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                                                                if name_cleaned.contains(' ') {
+                                                                if name_cleaned.contains(' ') && !name_cleaned.contains("${{") {
                                                                     diagnostics.push(Diagnostic {
                                                                         message: format!("Invalid environment name format: '{}' (contains spaces)", name_cleaned),
                                                                         severity: Severity::Error,

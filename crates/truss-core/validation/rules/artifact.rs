@@ -127,7 +127,7 @@ impl ValidationRule for ArtifactValidationRule {
                                         });
                                     } else {
                                         // Validate artifact name format (basic validation)
-                                        if !is_valid_artifact_name_format(&name_cleaned) {
+                                        if !is_valid_artifact_name_format(name_cleaned) {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
                                                     "Artifact action '{}' has invalid name format: '{}'. Artifact names should contain only alphanumeric characters, hyphens, underscores, and dots.",
@@ -176,7 +176,7 @@ impl ValidationRule for ArtifactValidationRule {
                                 if !retention_cleaned.starts_with("${{") {
                                     match retention_cleaned.parse::<i64>() {
                                         Ok(value) => {
-                                            if value < 1 || value > 90 {
+                                            if !(1..=90).contains(&value) {
                                                 diagnostics.push(Diagnostic {
                                                     message: format!(
                                                         "Artifact action '{}' has invalid retention-days: '{}'. retention-days must be between 1 and 90.",
@@ -220,7 +220,7 @@ impl ValidationRule for ArtifactValidationRule {
                                     if !is_valid_string {
                                         match compression_cleaned.parse::<i64>() {
                                             Ok(value) => {
-                                                if value < 0 || value > 9 {
+                                                if !(0..=9).contains(&value) {
                                                     diagnostics.push(Diagnostic {
                                                         message: format!(
                                                             "Artifact action '{}' has invalid compression-level: '{}'. compression-level must be between 0 and 9, or one of: fastest, fast, default, best.",
