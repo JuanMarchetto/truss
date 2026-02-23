@@ -94,7 +94,8 @@ jobs:
 }
 
 #[test]
-fn test_job_if_expression_error_missing_wrapper() {
+fn test_job_if_expression_valid_bare_expression() {
+    // GitHub Actions auto-wraps if: conditions in ${{ }}, so bare expressions are valid
     let mut engine = TrussEngine::new();
     let yaml = r#"
 on: push
@@ -105,18 +106,19 @@ jobs:
     steps:
       - run: echo "Deploy"
 "#;
-    
+
     let result = engine.analyze(yaml);
     let if_errors: Vec<_> = result.diagnostics
         .iter()
-        .filter(|d| (d.message.contains("if") || d.message.contains("job")) && 
+        .filter(|d| (d.message.contains("if") || d.message.contains("job")) &&
                 (d.message.contains("expression") || d.message.contains("${{") || d.message.contains("wrapper") || d.message.contains("invalid")) &&
                 d.severity == Severity::Error)
         .collect();
-    
+
     assert!(
-        !if_errors.is_empty(),
-        "Job if condition missing ${{ }} wrapper should produce error"
+        if_errors.is_empty(),
+        "Bare job if condition should be valid (GitHub Actions auto-wraps). Got errors: {:?}",
+        if_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
     );
 }
 

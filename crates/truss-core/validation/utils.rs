@@ -58,6 +58,36 @@ pub(crate) fn is_github_actions_workflow(tree: &Tree, source: &str) -> bool {
     })
 }
 
+/// Unwrap a block_node or flow_node to get its content child, skipping comments.
+///
+/// In tree-sitter-yaml, comments are extras that can appear as children of any node.
+/// When unwrapping block_node/flow_node, we must skip comment children to find the
+/// actual content (block_mapping, block_sequence, block_scalar, etc.).
+pub(crate) fn unwrap_node<'a>(node: Node<'a>) -> Node<'a> {
+    let mut current = node;
+    loop {
+        match current.kind() {
+            "block_node" | "flow_node" => {
+                let mut found_inner = false;
+                for i in 0..current.child_count() {
+                    if let Some(child) = current.child(i) {
+                        if child.kind() != "comment" {
+                            current = child;
+                            found_inner = true;
+                            break;
+                        }
+                    }
+                }
+                if !found_inner {
+                    break;
+                }
+            }
+            _ => break,
+        }
+    }
+    current
+}
+
 /// Helper function to find a value node for a given key in the AST
 pub(crate) fn find_value_for_key<'a>(node: Node<'a>, source: &'a str, target_key: &str) -> Option<Node<'a>> {
     match node.kind() {
@@ -67,10 +97,15 @@ pub(crate) fn find_value_for_key<'a>(node: Node<'a>, source: &'a str, target_key
                 let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                     .trim_end_matches(':');
                 if key_cleaned == target_key {
-                    if let Some(value) = node.child(2) {
-                        return Some(value);
+                    // Find value node: iterate from end, skip comments and ":"
+                    for i in (1..node.child_count()).rev() {
+                        if let Some(child) = node.child(i) {
+                            let kind = child.kind();
+                            if kind != "comment" && kind != ":" {
+                                return Some(child);
+                            }
+                        }
                     }
-                    return node.child(1);
                 }
             }
         }

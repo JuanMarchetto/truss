@@ -24,12 +24,7 @@ impl ValidationRule for EventPayloadValidationRule {
             None => return diagnostics,
         };
 
-        let mut on_to_check = on_value;
-        if on_to_check.kind() == "block_node" {
-            if let Some(inner) = on_to_check.child(0) {
-                on_to_check = inner;
-            }
-        }
+        let on_to_check = utils::unwrap_node(on_value);
 
         // Validate push event fields
         let push_value = utils::find_value_for_key(on_to_check, source, "push");
@@ -72,12 +67,7 @@ impl ValidationRule for EventPayloadValidationRule {
 }
 
 fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let mut push_to_check = push_node;
-    if push_to_check.kind() == "block_node" {
-        if let Some(inner) = push_to_check.child(0) {
-            push_to_check = inner;
-        }
-    }
+    let push_to_check = utils::unwrap_node(push_node);
 
     // Valid fields for push: branches, branches-ignore, paths, paths-ignore, tags, tags-ignore
     // Note: tags and branches are mutually exclusive
@@ -149,12 +139,7 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
 }
 
 fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let mut pr_to_check = pr_node;
-    if pr_to_check.kind() == "block_node" {
-        if let Some(inner) = pr_to_check.child(0) {
-            pr_to_check = inner;
-        }
-    }
+    let pr_to_check = utils::unwrap_node(pr_node);
 
     // Valid fields for pull_request: types, branches, branches-ignore, paths, paths-ignore
     let valid_fields = ["types", "branches", "branches-ignore", "paths", "paths-ignore"];
@@ -243,14 +228,57 @@ fn validate_pr_types(types_node: Node, source: &str, diagnostics: &mut Vec<Diagn
 }
 
 fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let mut schedule_to_check = schedule_node;
-    if schedule_to_check.kind() == "block_node" {
-        if let Some(inner) = schedule_to_check.child(0) {
-            schedule_to_check = inner;
+    let schedule_to_check = utils::unwrap_node(schedule_node);
+
+    // GitHub Actions schedule is a list of objects: [{cron: '...'}, {cron: '...'}]
+    // Check if it's a sequence and validate each item has a cron field
+    if schedule_to_check.kind() == "block_sequence" || schedule_to_check.kind() == "flow_sequence" {
+        let mut cursor = schedule_to_check.walk();
+        let mut found_any_cron = false;
+        for item in schedule_to_check.children(&mut cursor) {
+            let item_content = utils::unwrap_node(item);
+            // block_sequence_item children: "-" token, then content
+            let actual_content = if item_content.kind() == "block_sequence_item" {
+                item_content.child(1).map(|c| utils::unwrap_node(c)).unwrap_or(item_content)
+            } else {
+                item_content
+            };
+
+            if actual_content.kind() == "block_mapping" || actual_content.kind() == "flow_mapping" {
+                let cron_in_item = utils::find_value_for_key(actual_content, source, "cron");
+                if cron_in_item.is_some() {
+                    found_any_cron = true;
+                }
+            }
+        }
+        if found_any_cron {
+            // Validate the first cron expression we can find
+            if let Some(cron_node) = utils::find_value_for_key(schedule_to_check, source, "cron") {
+                let cron_text = utils::node_text(cron_node, source);
+                let cron_cleaned = cron_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
+                if !cron_cleaned.starts_with("${{") {
+                    let parts: Vec<&str> = cron_cleaned.split_whitespace().collect();
+                    if parts.len() != 5 {
+                        diagnostics.push(Diagnostic {
+                            message: format!(
+                                "Invalid cron expression: '{}'. Cron expression must have 5 space-separated fields (minute hour day month weekday).",
+                                cron_cleaned
+                            ),
+                            severity: Severity::Error,
+                            span: Span {
+                                start: cron_node.start_byte(),
+                                end: cron_node.end_byte(),
+                            },
+                        });
+                    }
+                }
+            }
+            return;
         }
     }
 
-    // Schedule event should have cron field
+    // Fallback: try to find cron directly (for non-sequence structures)
     let cron_value = utils::find_value_for_key(schedule_to_check, source, "cron");
     if cron_value.is_none() {
         diagnostics.push(Diagnostic {
@@ -324,12 +352,7 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
 }
 
 fn validate_workflow_dispatch_event(wd_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let mut wd_to_check = wd_node;
-    if wd_to_check.kind() == "block_node" {
-        if let Some(inner) = wd_to_check.child(0) {
-            wd_to_check = inner;
-        }
-    }
+    let wd_to_check = utils::unwrap_node(wd_node);
 
     // Valid fields for workflow_dispatch: inputs
     let valid_fields = ["inputs"];
@@ -370,12 +393,7 @@ fn validate_workflow_dispatch_event(wd_node: Node, source: &str, diagnostics: &m
 }
 
 fn validate_workflow_call_event(wc_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let mut wc_to_check = wc_node;
-    if wc_to_check.kind() == "block_node" {
-        if let Some(inner) = wc_to_check.child(0) {
-            wc_to_check = inner;
-        }
-    }
+    let wc_to_check = utils::unwrap_node(wc_node);
 
     // Valid fields for workflow_call: inputs, secrets, outputs
     let valid_fields = ["inputs", "secrets", "outputs"];
@@ -416,12 +434,7 @@ fn validate_workflow_call_event(wc_node: Node, source: &str, diagnostics: &mut V
 }
 
 fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let mut issues_to_check = issues_node;
-    if issues_to_check.kind() == "block_node" {
-        if let Some(inner) = issues_to_check.child(0) {
-            issues_to_check = inner;
-        }
-    }
+    let issues_to_check = utils::unwrap_node(issues_node);
 
     // Valid fields for issues: types
     let valid_fields = ["types"];

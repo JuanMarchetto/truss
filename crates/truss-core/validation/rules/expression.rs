@@ -21,27 +21,32 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         return false;
     }
     
-    let has_context = expr.starts_with("github.") 
+    let has_context = expr.starts_with("github.")
         || expr.starts_with("matrix.")
         || expr.starts_with("secrets.")
         || expr.starts_with("vars.")
         || expr.starts_with("needs.")
         || expr.starts_with("inputs.")
-        || expr.starts_with("env.");
-    
+        || expr.starts_with("env.")
+        || expr.starts_with("steps.")
+        || expr.starts_with("jobs.")
+        || expr.starts_with("runner.")
+        || expr.starts_with("strategy.");
+
     let has_function = expr.contains("contains(")
         || expr.contains("startsWith(")
         || expr.contains("endsWith(")
         || expr.contains("format(")
         || expr.contains("join(")
         || expr.contains("toJSON(")
+        || expr.contains("fromJSON(")
         || expr.contains("hashFiles(")
         || expr.contains("success()")
         || expr.contains("failure()")
         || expr.contains("cancelled()")
         || expr.contains("always()");
-    
-    let has_operator = expr.contains("==") 
+
+    let has_operator = expr.contains("==")
         || expr.contains("!=")
         || expr.contains("&&")
         || expr.contains("||")
@@ -50,18 +55,21 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         || expr.contains(">")
         || expr.contains("<=")
         || expr.contains(">=");
-    
+
     let is_literal = (expr.starts_with("'") && expr.ends_with("'"))
         || (expr.starts_with("\"") && expr.ends_with("\""))
         || expr.parse::<f64>().is_ok()
         || expr == "true" || expr == "false";
-    
-    if !has_context && !has_function && !has_operator && !is_literal {
+
+    // Bare context names (e.g., "github", "matrix") are valid expressions
+    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps" | "runner" | "strategy");
+
+    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context {
         if !expr.contains('.') && !expr.contains('(') && !expr.contains('[') {
             return false;
         }
     }
-    
+
     true
 }
 
@@ -81,7 +89,15 @@ impl ValidationRule for ExpressionValidationRule {
         while let Some(start) = source[pos..].find("${{") {
             let actual_start = pos + start;
             let after_start = actual_start + 3;
-            
+
+            // Skip expressions inside YAML comments (# ... ${{ expr }})
+            let line_start = source[..actual_start].rfind('\n').map(|i| i + 1).unwrap_or(0);
+            let line_before = &source[line_start..actual_start];
+            if line_before.trim_start().starts_with('#') {
+                pos = after_start;
+                continue;
+            }
+
             if let Some(end_offset) = source[after_start..].find("}}") {
                 let end = after_start + end_offset + 2;
                 let expr = &source[actual_start..end];
@@ -183,8 +199,9 @@ fn validate_expression_operators(expr: &str, start: usize, end: usize, diagnosti
 /// Validates expression function calls
 fn validate_expression_functions(expr: &str, start: usize, _end: usize, diagnostics: &mut Vec<Diagnostic>) {
     let valid_functions = [
-        "contains", "startsWith", "endsWith", "format", "join", "toJSON",
-        "hashFiles", "success", "failure", "cancelled", "always"
+        "contains", "startsWith", "endsWith", "format", "join",
+        "toJSON", "fromJSON", "hashFiles",
+        "success", "failure", "cancelled", "always"
     ];
     
     // Find function calls in expression

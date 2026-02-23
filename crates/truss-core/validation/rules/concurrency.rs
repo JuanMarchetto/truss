@@ -32,12 +32,7 @@ impl ValidationRule for ConcurrencyRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn process_jobs(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
@@ -47,20 +42,21 @@ impl ValidationRule for ConcurrencyRule {
                         let job_name = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':')
                             .to_string();
-                        
-                        let job_value = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        
-                        if let Some(mut job_value) = job_value {
-                            if job_value.kind() == "block_node" {
-                                if let Some(inner) = job_value.child(0) {
-                                    job_value = inner;
+
+                        // Get value node: last non-comment, non-":" child after the key
+                        let mut job_value_opt = None;
+                        for i in (1..node.child_count()).rev() {
+                            if let Some(child) = node.child(i) {
+                                if child.kind() != "comment" && child.kind() != ":" {
+                                    job_value_opt = Some(child);
+                                    break;
                                 }
                             }
-                            
+                        }
+
+                        if let Some(job_value_raw) = job_value_opt {
+                            let job_value = utils::unwrap_node(job_value_raw);
+
                             if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                                 let concurrency_node = utils::find_value_for_key(job_value, source, "concurrency");
                                 if let Some(concurrency) = concurrency_node {
@@ -86,12 +82,7 @@ impl ValidationRule for ConcurrencyRule {
 }
 
 fn validate_concurrency_node(concurrency_node: Node, source: &str, context: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let mut concurrency_to_check = concurrency_node;
-    if concurrency_to_check.kind() == "block_node" {
-        if let Some(inner) = concurrency_to_check.child(0) {
-            concurrency_to_check = inner;
-        }
-    }
+    let concurrency_to_check = utils::unwrap_node(concurrency_node);
     
     // Check if group is present and valid
     let group_value = utils::find_value_for_key(concurrency_to_check, source, "group");

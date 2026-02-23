@@ -104,26 +104,18 @@ impl ValidationRule for StepIfExpressionRule {
                 if let Some(if_node) = if_value {
                     let if_text = utils::node_text(if_node, source);
                     let if_cleaned = if_text.trim();
-                    
-                    // Check if expression has ${{ }} wrapper
-                    if !if_cleaned.starts_with("${{") || !if_cleaned.ends_with("}}") {
-                        // Build message - use variable to avoid format string brace escaping
-                        let expr_wrapper = "${{ }}";
-                        let error_message = format!(
-                            "Step 'if' condition must be wrapped in {} wrapper. Found: '{}'",
-                            expr_wrapper, if_cleaned
-                        );
-                        diagnostics.push(Diagnostic {
-                            message: error_message,
-                            severity: Severity::Error,
-                            span: Span {
-                                start: if_node.start_byte(),
-                                end: if_node.end_byte(),
-                            },
-                        });
+
+                    // GitHub Actions auto-wraps if: conditions in ${{ }}.
+                    // Both bare expressions and explicitly wrapped ones are valid.
+                    let inner = if if_cleaned.starts_with("${{") && if_cleaned.ends_with("}}") {
+                        // Explicitly wrapped: extract inner expression
+                        if_cleaned[3..if_cleaned.len()-2].trim()
                     } else {
-                        // Extract inner expression
-                        let inner = if_cleaned[3..if_cleaned.len()-2].trim();
+                        // Bare expression: GitHub Actions auto-wraps this
+                        if_cleaned
+                    };
+
+                    {
                         
                         // Validate expression syntax
                         if !is_valid_expression_syntax(inner) {
@@ -219,13 +211,14 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         || expr.contains("format(")
         || expr.contains("join(")
         || expr.contains("toJSON(")
+        || expr.contains("fromJSON(")
         || expr.contains("hashFiles(")
         || expr.contains("success()")
         || expr.contains("failure()")
         || expr.contains("cancelled()")
         || expr.contains("always()");
-    
-    let has_operator = expr.contains("==") 
+
+    let has_operator = expr.contains("==")
         || expr.contains("!=")
         || expr.contains("&&")
         || expr.contains("||")
@@ -234,12 +227,15 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         || expr.contains(">")
         || expr.contains("<=")
         || expr.contains(">=");
-    
+
     let is_literal = (expr.starts_with("'") && expr.ends_with("'"))
         || (expr.starts_with("\"") && expr.ends_with("\""))
         || expr.parse::<f64>().is_ok()
         || expr == "true" || expr == "false";
-    
+
+    // Bare context names (e.g., "github", "matrix") are valid expressions
+    let is_bare_context = matches!(expr, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps" | "runner" | "strategy");
+
     // Check if expression contains a dot but doesn't start with a known context
     // (e.g., "invalid.expression" should be rejected)
     if expr.contains('.') && !has_context {
@@ -247,19 +243,19 @@ fn is_valid_expression_syntax(expr: &str) -> bool {
         let first_token = expr.split(|c: char| c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')).next().unwrap_or("");
         if first_token.contains('.') {
             let context_name = first_token.split('.').next().unwrap_or("");
-            if !matches!(context_name, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps") {
+            if !matches!(context_name, "github" | "matrix" | "secrets" | "vars" | "needs" | "inputs" | "env" | "jobs" | "steps" | "runner" | "strategy") {
                 // Unknown context reference - reject it
                 return false;
             }
         }
     }
-    
-    if !has_context && !has_function && !has_operator && !is_literal {
+
+    if !has_context && !has_function && !has_operator && !is_literal && !is_bare_context {
         if !expr.contains('.') && !expr.contains('(') && !expr.contains('[') {
             return false;
         }
     }
-    
+
     true
 }
 
