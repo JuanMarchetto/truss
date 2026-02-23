@@ -1,5 +1,6 @@
 [package]
 name = "truss-core"
+description = "Core validation engine for GitHub Actions workflows"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
