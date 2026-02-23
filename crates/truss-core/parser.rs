@@ -82,15 +82,3 @@ impl std::fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
-/// Convert tree-sitter node to a span.
-///
-/// This is a utility function for future use in validation rules
-/// that need to report diagnostics with precise source locations.
-#[allow(dead_code)]
-pub fn node_to_span(node: &tree_sitter::Node) -> crate::Span {
-    crate::Span {
-        start: node.start_byte(),
-        end: node.end_byte(),
-    }
-}
-
