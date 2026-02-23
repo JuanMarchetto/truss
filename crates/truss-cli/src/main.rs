@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 use rayon::prelude::*;
-use serde_json;
 use std::fs;
 use std::io;
 use std::time::Instant;
@@ -176,10 +175,7 @@ fn validate_files(paths: Vec<String>, quiet: bool, json: bool) -> Result<(), Tru
 
     if json {
         let json_output = serde_json::to_string_pretty(&file_results).map_err(|e| {
-            TrussError::Io(io::Error::new(
-                io::ErrorKind::Other,
-                format!("Failed to serialize JSON: {}", e),
-            ))
+            TrussError::Io(io::Error::other(format!("Failed to serialize JSON: {}", e)))
         })?;
         println!("{}", json_output);
     } else {

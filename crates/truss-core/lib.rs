@@ -6,21 +6,20 @@
 mod parser;
 mod validation;
 
-use std::fmt;
-use serde::{Deserialize, Serialize};
 use parser::YamlParser;
+use serde::{Deserialize, Serialize};
+use std::fmt;
 use validation::{
-    RuleSet, ValidationRule, NonEmptyRule, GitHubActionsSchemaRule, SyntaxRule,
-    WorkflowTriggerRule, JobNameRule, JobNeedsRule, StepValidationRule,
-    ExpressionValidationRule, PermissionsRule, EnvironmentRule, WorkflowNameRule,
-    MatrixStrategyRule, RunsOnRequiredRule, SecretsValidationRule, TimeoutRule,
-    WorkflowInputsRule, JobOutputsRule, ConcurrencyRule, ActionReferenceRule,
-    StepIdUniquenessRule, StepOutputReferenceRule, JobStrategyValidationRule,
-    StepIfExpressionRule, JobIfExpressionRule, WorkflowCallInputsRule,
-    WorkflowCallSecretsRule, ReusableWorkflowCallRule, WorkflowCallOutputsRule,
-    StepContinueOnErrorRule, StepTimeoutRule, StepShellRule, StepWorkingDirectoryRule,
-    ArtifactValidationRule, EventPayloadValidationRule, RunnerLabelRule,
-    StepEnvValidationRule, JobContainerRule, StepNameRule, DefaultsValidationRule,
+    ActionReferenceRule, ArtifactValidationRule, ConcurrencyRule, DefaultsValidationRule,
+    EnvironmentRule, EventPayloadValidationRule, ExpressionValidationRule,
+    GitHubActionsSchemaRule, JobContainerRule, JobIfExpressionRule, JobNameRule, JobNeedsRule,
+    JobOutputsRule, JobStrategyValidationRule, MatrixStrategyRule, NonEmptyRule, PermissionsRule,
+    ReusableWorkflowCallRule, RuleSet, RunnerLabelRule, RunsOnRequiredRule,
+    SecretsValidationRule, StepContinueOnErrorRule, StepEnvValidationRule,
+    StepIdUniquenessRule, StepIfExpressionRule, StepNameRule, StepOutputReferenceRule,
+    StepShellRule, StepTimeoutRule, StepValidationRule, StepWorkingDirectoryRule, SyntaxRule,
+    TimeoutRule, ValidationRule, WorkflowCallInputsRule, WorkflowCallOutputsRule,
+    WorkflowCallSecretsRule, WorkflowInputsRule, WorkflowNameRule, WorkflowTriggerRule,
 };
 
 /// Entry point for the Truss validation engine.
@@ -161,7 +160,7 @@ impl TrussEngine {
                 };
                 // Parsing empty string should never fail with a valid parser
                 let dummy_tree = self.parser.parse("").expect(
-                    "BUG: tree-sitter failed to parse empty string; parser may be misconfigured"
+                    "BUG: tree-sitter failed to parse empty string; parser may be misconfigured",
                 );
                 return (result, dummy_tree);
             }
@@ -200,7 +199,7 @@ impl TrussEngine {
                 };
                 // Parsing empty string should never fail with a valid parser
                 let dummy_tree = self.parser.parse("").expect(
-                    "BUG: tree-sitter failed to parse empty string; parser may be misconfigured"
+                    "BUG: tree-sitter failed to parse empty string; parser may be misconfigured",
                 );
                 return (result, dummy_tree);
             }
@@ -271,7 +270,6 @@ impl fmt::Display for Diagnostic {
         )
     }
 }
-
 
 #[cfg(test)]
 mod tests {

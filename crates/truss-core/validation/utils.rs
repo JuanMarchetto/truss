@@ -136,6 +136,33 @@ pub(crate) fn get_pair_value<'a>(node: Node<'a>) -> Option<Node<'a>> {
     None
 }
 
+/// Check if a key exists in a mapping node, regardless of whether it has a value.
+pub(crate) fn key_exists(node: Node, source: &str, target_key: &str) -> bool {
+    match node.kind() {
+        "block_mapping_pair" | "flow_pair" => {
+            if let Some(key_node) = node.child(0) {
+                let key_text = &source[key_node.start_byte()..key_node.end_byte()];
+                let key_cleaned = key_text
+                    .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                    .trim_end_matches(':');
+                if key_cleaned == target_key {
+                    return true;
+                }
+            }
+            false
+        }
+        _ => {
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                if key_exists(child, source, target_key) {
+                    return true;
+                }
+            }
+            false
+        }
+    }
+}
+
 /// Helper to extract text from a node
 pub(crate) fn node_text(node: Node, source: &str) -> String {
     source[node.start_byte()..node.end_byte()].to_string()

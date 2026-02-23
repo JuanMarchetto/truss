@@ -27,33 +27,25 @@ impl ValidationRule for WorkflowCallSecretsRule {
 
         let on_to_check = utils::unwrap_node(on_value);
 
-        // Find workflow_call
-        let workflow_call_value = utils::find_value_for_key(on_to_check, source, "workflow_call");
-        
         // Only validate secrets for reusable workflows (with workflow_call)
         // Regular workflows can use secrets.GITHUB_TOKEN, secrets.MY_SECRET, etc. without errors
-        if workflow_call_value.is_none() {
+        if !utils::key_exists(on_to_check, source, "workflow_call") {
             return diagnostics;
         }
 
-        let workflow_call = workflow_call_value.unwrap();
-        let call_to_check = utils::unwrap_node(workflow_call);
-
-        // Extract defined secrets
-        let secrets_value = utils::find_value_for_key(call_to_check, source, "secrets");
-        
+        // Extract defined secrets (workflow_call may exist with or without a value)
         let mut defined_secrets: HashSet<String> = HashSet::new();
-        
-        if let Some(secrets_node) = secrets_value {
-            let secrets_to_check = utils::unwrap_node(secrets_node);
 
-            self.collect_secret_definitions(secrets_to_check, source, &mut defined_secrets);
-        }
+        if let Some(workflow_call) = utils::find_value_for_key(on_to_check, source, "workflow_call")
+        {
+            let call_to_check = utils::unwrap_node(workflow_call);
+            let secrets_value = utils::find_value_for_key(call_to_check, source, "secrets");
 
-        // Validate secret properties (required, description)
-        if let Some(secrets_node) = secrets_value {
-            let secrets_to_check = utils::unwrap_node(secrets_node);
-            self.validate_secret_properties(secrets_to_check, source, &mut diagnostics);
+            if let Some(secrets_node) = secrets_value {
+                let secrets_to_check = utils::unwrap_node(secrets_node);
+                self.collect_secret_definitions(secrets_to_check, source, &mut defined_secrets);
+                self.validate_secret_properties(secrets_to_check, source, &mut diagnostics);
+            }
         }
         
         // Find all secrets.* references in expressions
