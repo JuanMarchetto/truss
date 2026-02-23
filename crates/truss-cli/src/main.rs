@@ -34,6 +34,7 @@ enum Commands {
 #[derive(Debug)]
 enum TrussError {
     Io(io::Error),
+    Usage(String),
     ValidationFailed,
 }
 
@@ -41,6 +42,7 @@ impl std::fmt::Display for TrussError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TrussError::Io(e) => write!(f, "I/O error: {}", e),
+            TrussError::Usage(msg) => write!(f, "{}", msg),
             TrussError::ValidationFailed => write!(f, "Validation failed"),
         }
     }
@@ -50,6 +52,7 @@ impl std::error::Error for TrussError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             TrussError::Io(e) => Some(e),
+            TrussError::Usage(_) => None,
             TrussError::ValidationFailed => None,
         }
     }
@@ -130,10 +133,9 @@ fn validate_file(path: &str, quiet: bool, json: bool) -> Result<FileResult, Trus
 
 fn validate_files(paths: Vec<String>, quiet: bool, json: bool) -> Result<(), TrussError> {
     if paths.is_empty() {
-        return Err(TrussError::Io(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "No files provided",
-        )));
+        return Err(TrussError::Usage(
+            "No files provided. Run 'truss validate --help' for usage.".to_string(),
+        ));
     }
 
     // Process files in parallel

@@ -31,6 +31,9 @@ benchmarks/hyperfine/*.md
 .env
 .env.local
 
+# AI assistant instructions (may contain credentials)
+CLAUDE.md
+
 # OS files
 Thumbs.db
 .DS_Store

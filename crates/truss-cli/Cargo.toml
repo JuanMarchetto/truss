@@ -1,5 +1,6 @@
 [package]
 name = "truss-cli"
+description = "CLI tool for validating GitHub Actions workflows"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

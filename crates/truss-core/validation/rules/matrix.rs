@@ -390,6 +390,26 @@ fn validate_matrix_array_elements(
             }
         }
 
+        // Unwrap block_sequence_item to get its content (skip "-" and comments)
+        if element_to_check.kind() == "block_sequence_item" {
+            for i in 0..element_to_check.child_count() {
+                if let Some(seq_child) = element_to_check.child(i) {
+                    if seq_child.kind() != "-" && seq_child.kind() != "comment" {
+                        element_to_check = seq_child;
+                        break;
+                    }
+                }
+            }
+            // Continue unwrapping block_node/flow_node after sequence item
+            while matches!(element_to_check.kind(), "block_node" | "flow_node") {
+                if let Some(inner) = element_to_check.child(0) {
+                    element_to_check = inner;
+                } else {
+                    break;
+                }
+            }
+        }
+
         match element_to_check.kind() {
             "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" | "block_scalar" => {
                 // Scalar values are valid

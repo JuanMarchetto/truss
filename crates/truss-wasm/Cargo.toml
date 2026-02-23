@@ -1,5 +1,6 @@
 [package]
 name = "truss-wasm"
+description = "WebAssembly bindings for GitHub Actions workflow validation"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

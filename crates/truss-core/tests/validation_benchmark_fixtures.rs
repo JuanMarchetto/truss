@@ -267,7 +267,6 @@ fn fixture_all_diagnostic_summary() {
     ];
 
     let mut total_errors = 0;
-    let mut total_warnings = 0;
 
     for (name, content) in &fixtures {
         let result = engine.analyze(content);
@@ -282,7 +281,6 @@ fn fixture_all_diagnostic_summary() {
             .filter(|d| d.severity == Severity::Warning)
             .count();
         total_errors += errors;
-        total_warnings += warnings;
 
         // Print summary for each fixture (visible with `cargo test -- --nocapture`)
         eprintln!(
