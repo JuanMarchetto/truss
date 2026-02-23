@@ -100,15 +100,13 @@ impl LspServer {
     fn handle_request(&mut self, req: LspRequest) -> Option<LspResponse> {
         match req.method.as_str() {
             "initialize" => {
+                self.initialized = true;
                 let result = serde_json::json!({
                     "capabilities": {
                         "textDocumentSync": {
                             "openClose": true,
-                            "change": 1, // Incremental
+                            "change": 1, // TextDocumentSyncKind.Full
                             "save": false
-                        },
-                        "publishDiagnostics": {
-                            "relatedInformation": false
                         }
                     },
                     "serverInfo": {
@@ -133,6 +131,18 @@ impl LspServer {
                 })
             }
             _ => {
+                if !self.initialized {
+                    return Some(LspResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(LspError {
+                            code: -32002, // ServerNotInitialized
+                            message: "Server not initialized".to_string(),
+                            data: None,
+                        }),
+                    });
+                }
                 Some(LspResponse {
                     jsonrpc: "2.0".to_string(),
                     id: req.id,
@@ -152,9 +162,12 @@ impl LspServer {
 
         match notif.method.as_str() {
             "initialized" => {
-                self.initialized = true;
+                // Client confirms initialization complete
             }
             "textDocument/didOpen" => {
+                if !self.initialized {
+                    return notifications;
+                }
                 if let Some(params) = notif.params {
                     if let Ok(did_open) = serde_json::from_value::<DidOpenTextDocumentParams>(params) {
                         self.handle_did_open(did_open, &mut notifications);
@@ -162,6 +175,9 @@ impl LspServer {
                 }
             }
             "textDocument/didChange" => {
+                if !self.initialized {
+                    return notifications;
+                }
                 if let Some(params) = notif.params {
                     if let Ok(did_change) = serde_json::from_value::<DidChangeTextDocumentParams>(params) {
                         self.handle_did_change(did_change, &mut notifications);
@@ -169,6 +185,9 @@ impl LspServer {
                 }
             }
             "textDocument/didClose" => {
+                if !self.initialized {
+                    return notifications;
+                }
                 if let Some(params) = notif.params {
                     if let Ok(did_close) = serde_json::from_value::<DidCloseTextDocumentParams>(params) {
                         self.handle_did_close(did_close);
@@ -191,7 +210,7 @@ impl LspServer {
 
         let text_for_diagnostics = text.clone();
         let (result, tree) = self.engine.analyze_with_tree(&text);
-        
+
         self.documents.insert(uri.clone(), DocumentState {
             text,
             version,
@@ -211,19 +230,16 @@ impl LspServer {
 
     fn handle_did_change(&mut self, params: DidChangeTextDocumentParams, notifications: &mut Vec<LspNotification>) {
         let uri = params.text_document.uri;
-        
-        let new_text = if let Some(changes) = params.content_changes.first() {
-            if changes.range.is_none() {
-                changes.text.clone()
-            } else {
-                changes.text.clone()
-            }
-        } else {
-            return;
+
+        // We advertise TextDocumentSyncKind.Full (1), so the client always
+        // sends the full document content in each change event.
+        let new_text = match params.content_changes.into_iter().last() {
+            Some(change) => change.text,
+            None => return,
         };
 
         let version = params.text_document.version;
-        
+
         let old_tree = self.documents.get(&uri)
             .and_then(|doc| doc.tree.as_ref());
 
@@ -258,14 +274,19 @@ impl LspServer {
     }
 
     fn handle_did_close(&mut self, params: DidCloseTextDocumentParams) {
-        self.documents.remove(&params.text_document.uri);
+        let uri = &params.text_document.uri;
+        self.documents.remove(uri);
+
+        // Clear diagnostics for the closed document
+        // (Returning empty diagnostics is not sent here, but could be added
+        // if needed for editors that don't clear on close.)
     }
 
     fn convert_diagnostics(&self, diagnostics: &[CoreDiagnostic], text: &str) -> Vec<Value> {
         diagnostics.iter().map(|d| {
-            let (start_line, start_char) = byte_to_line_char(d.span.start, text);
-            let (end_line, end_char) = byte_to_line_char(d.span.end, text);
-            
+            let (start_line, start_char) = byte_to_lsp_position(d.span.start, text);
+            let (end_line, end_char) = byte_to_lsp_position(d.span.end, text);
+
             serde_json::json!({
                 "range": {
                     "start": {
@@ -289,11 +310,23 @@ impl LspServer {
     }
 }
 
-fn byte_to_line_char(byte_offset: usize, text: &str) -> (u32, u32) {
-    let bytes_before = &text[..byte_offset.min(text.len())];
+/// Convert a byte offset in `text` to an LSP position (line, character).
+///
+/// LSP positions use zero-based line numbers and character offsets measured
+/// in UTF-16 code units. For ASCII text, UTF-16 code units equal byte offsets
+/// within the line. For non-ASCII text, we must count UTF-16 code units properly.
+fn byte_to_lsp_position(byte_offset: usize, text: &str) -> (u32, u32) {
+    let clamped = byte_offset.min(text.len());
+    let bytes_before = &text[..clamped];
     let line = bytes_before.matches('\n').count() as u32;
     let last_newline = bytes_before.rfind('\n').map(|i| i + 1).unwrap_or(0);
-    let character = (byte_offset - last_newline) as u32;
+
+    // Count UTF-16 code units from last_newline to byte_offset
+    let line_bytes = &text[last_newline..clamped];
+    let character = line_bytes.chars()
+        .map(|c| c.len_utf16() as u32)
+        .sum::<u32>();
+
     (line, character)
 }
 
@@ -316,7 +349,7 @@ struct DidCloseTextDocumentParams {
 #[derive(Debug, Deserialize)]
 struct TextDocumentItem {
     uri: String,
-    #[allow(dead_code)] // Required by LSP spec but not used in our implementation
+    #[allow(dead_code)]
     language_id: String,
     version: i32,
     text: String,
@@ -335,15 +368,10 @@ struct TextDocumentIdentifier {
 
 #[derive(Debug, Deserialize)]
 struct TextDocumentContentChangeEvent {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    range: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[allow(dead_code)] // Required by LSP spec but not used in our implementation
-    range_length: Option<Value>,
     text: String,
 }
 
-/// Run the LSP server
+/// Run the LSP server on stdin/stdout.
 pub fn run() -> io::Result<()> {
     let stdin = io::stdin();
     let mut reader = BufReader::new(stdin.lock());
@@ -351,40 +379,58 @@ pub fn run() -> io::Result<()> {
     let mut server = LspServer::new();
 
     loop {
-        let mut content_length = 0;
+        // Read headers until empty line
+        let mut content_length: Option<usize> = None;
         loop {
             let mut line = String::new();
             reader.read_line(&mut line)?;
-            
-            if line.trim().is_empty() {
+
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
                 break;
             }
-            
-            if line.starts_with("Content-Length:") {
-                let len_str = line.trim_start_matches("Content-Length:").trim();
-                if let Ok(len) = len_str.parse::<usize>() {
-                    content_length = len;
+
+            if let Some(value) = trimmed.strip_prefix("Content-Length:") {
+                if let Ok(len) = value.trim().parse::<usize>() {
+                    content_length = Some(len);
                 }
             }
         }
 
-        if content_length == 0 {
-            continue;
-        }
+        let content_length = match content_length {
+            Some(len) if len > 0 => len,
+            _ => continue,
+        };
 
+        // Read exactly content_length bytes
         let mut content = vec![0u8; content_length];
         reader.read_exact(&mut content)?;
 
         if let Ok(message) = serde_json::from_slice::<LspMessage>(&content) {
             let responses = server.handle_message(message);
-            
+
             for response in responses {
                 let json = serde_json::to_string(&response)?;
-                writeln!(stdout, "Content-Length: {}\r\n\r\n{}", json.len(), json)?;
+                let header = format!("Content-Length: {}\r\n\r\n", json.len());
+                write!(stdout, "{}{}", header, json)?;
                 stdout.flush()?;
             }
+        } else {
+            // Send parse error response for malformed JSON
+            let error_response = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": null,
+                "error": {
+                    "code": -32700,
+                    "message": "Parse error: invalid JSON"
+                }
+            });
+            let json = serde_json::to_string(&error_response)?;
+            let header = format!("Content-Length: {}\r\n\r\n", json.len());
+            write!(stdout, "{}{}", header, json)?;
+            stdout.flush()?;
         }
-        
+
         if server.shutdown {
             break;
         }
