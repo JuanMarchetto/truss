@@ -27,18 +27,18 @@ elif [ -n "${GOBIN:-}" ] && [ -f "${GOBIN}/actionlint" ]; then
 fi
 
 if [ -z "$ACTIONLINT_CMD" ]; then
-    # Output valid JSON even on error
-    python3 -c "
-import json
+    # Output valid JSON even on error (use env var to avoid path injection)
+    YAML_FILE="$YAML_FILE" python3 -c "
+import json, os
 result = {
-    'file': '$YAML_FILE',
+    'file': os.environ['YAML_FILE'],
     'valid': True,
     'diagnostics': [],
     'duration_ms': 0.0,
     'metadata': {'file_size': 0, 'lines': 0},
     'error': 'actionlint not found'
 }
-print(json.dumps(result, indent=2))
+print(json.dumps([result], indent=2))
 "
     exit 0
 fi
@@ -123,7 +123,7 @@ result = {
     }
 }
 
-print(json.dumps(result, indent=2))
+print(json.dumps([result], indent=2))
 PYTHON_EOF
 
 python3 "$TMP_SCRIPT"

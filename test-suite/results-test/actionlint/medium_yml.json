@@ -1,5 +1,13 @@
-Traceback (most recent call last):
-  File "<string>", line 7, in <module>
-    'valid': true,
-             ^^^^
-NameError: name 'true' is not defined. Did you mean: 'True'?
+[
+  {
+    "file": "benchmarks/fixtures/medium.yml",
+    "valid": true,
+    "diagnostics": [],
+    "duration_ms": 0.0,
+    "metadata": {
+      "file_size": 5641,
+      "lines": 130
+    },
+    "error": "actionlint not found"
+  }
+]
