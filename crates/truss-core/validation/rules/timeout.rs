@@ -34,20 +34,11 @@ impl ValidationRule for TimeoutRule {
                             .trim_end_matches(':');
                         
                         // Get the job value node
-                        let job_value = if node.kind() == "block_mapping_pair" {
-                            node.child(2)  // block_mapping_pair: child(0)=key, child(1)=colon, child(2)=value
-                        } else {
-                            node.child(1)  // flow_pair: child(0)=key, child(1)=value
-                        };
-                        
-                        if let Some(mut job_value) = job_value {
-                            // Handle block_node wrapper
-                            if job_value.kind() == "block_node" {
-                                if let Some(inner) = job_value.child(0) {
-                                    job_value = inner;
-                                }
-                            }
-                            
+                        let job_value = utils::get_pair_value(node);
+
+                        if let Some(job_value_raw) = job_value {
+                            let job_value = utils::unwrap_node(job_value_raw);
+
                             // Only consider it a job if the value is a mapping (job definition)
                             if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                                 // Check for timeout-minutes in this job
@@ -143,12 +134,7 @@ impl ValidationRule for TimeoutRule {
             }
         }
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         check_job_timeout(jobs_to_process, source, &mut diagnostics);
 

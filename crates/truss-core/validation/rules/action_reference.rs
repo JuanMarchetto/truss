@@ -24,12 +24,7 @@ impl ValidationRule for ActionReferenceRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn find_steps_with_uses(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
@@ -40,18 +35,10 @@ impl ValidationRule for ActionReferenceRule {
                             .trim_end_matches(':');
 
                         if key_cleaned == "steps" {
-                            let steps_value = if node.kind() == "block_mapping_pair" {
-                                node.child(2)
-                            } else {
-                                node.child(1)
-                            };
+                            let steps_value = utils::get_pair_value(node);
 
-                            if let Some(mut steps_value) = steps_value {
-                                if steps_value.kind() == "block_node" {
-                                    if let Some(inner) = steps_value.child(0) {
-                                        steps_value = inner;
-                                    }
-                                }
+                            if let Some(steps_value_raw) = steps_value {
+                                let steps_value = utils::unwrap_node(steps_value_raw);
                                 fn process_steps_sequence(seq_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
                                     let mut cursor = seq_node.walk();
                                     for step_item in seq_node.children(&mut cursor) {
@@ -71,11 +58,7 @@ impl ValidationRule for ActionReferenceRule {
                                 }
                             }
                         } else {
-                            let value_node = if node.kind() == "block_mapping_pair" {
-                                node.child(2)
-                            } else {
-                                node.child(1)
-                            };
+                            let value_node = utils::get_pair_value(node);
 
                             if let Some(value_node) = value_node {
                                 find_steps_with_uses(value_node, source, diagnostics);

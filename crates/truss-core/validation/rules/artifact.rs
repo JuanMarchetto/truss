@@ -24,12 +24,7 @@ impl ValidationRule for ArtifactValidationRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn find_steps(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
@@ -39,17 +34,9 @@ impl ValidationRule for ArtifactValidationRule {
                         let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "steps" {
-                            let steps_value = if node.kind() == "block_mapping_pair" {
-                                node.child(2)
-                            } else {
-                                node.child(1)
-                            };
-                            if let Some(mut steps_value) = steps_value {
-                                if steps_value.kind() == "block_node" {
-                                    if let Some(inner) = steps_value.child(0) {
-                                        steps_value = inner;
-                                    }
-                                }
+                            let steps_value = utils::get_pair_value(node);
+                            if let Some(steps_value) = steps_value {
+                                let steps_value = utils::unwrap_node(steps_value);
                                 if steps_value.kind() == "block_sequence" || steps_value.kind() == "flow_sequence" {
                                     let mut cursor = steps_value.walk();
                                     for step_node in steps_value.children(&mut cursor) {
@@ -58,12 +45,7 @@ impl ValidationRule for ArtifactValidationRule {
                                 }
                             }
                         }
-                        let value_node = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        if let Some(value_node) = value_node {
+                        if let Some(value_node) = utils::get_pair_value(node) {
                             find_steps(value_node, source, diagnostics);
                         }
                     }
@@ -78,28 +60,15 @@ impl ValidationRule for ArtifactValidationRule {
         }
 
         fn validate_artifact_step(step_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
-            let mut step_to_check = step_node;
-            
-            // Unwrap block_node if present
-            if step_to_check.kind() == "block_node" {
-                if let Some(inner) = step_to_check.child(0) {
-                    step_to_check = inner;
-                }
-            }
-            
+            let mut step_to_check = utils::unwrap_node(step_node);
+
             // Handle block_sequence_item - the mapping is a child
             // In YAML, block_sequence_item has children: ["-", block_node] where block_node contains the mapping
             if step_to_check.kind() == "block_sequence_item" {
                 // Try to find the mapping - it could be at different child indices
                 for i in 0..step_to_check.child_count() {
                     if let Some(child) = step_to_check.child(i) {
-                        let mut candidate = child;
-                        // Unwrap block_node if present
-                        if candidate.kind() == "block_node" {
-                            if let Some(inner) = candidate.child(0) {
-                                candidate = inner;
-                            }
-                        }
+                        let candidate = utils::unwrap_node(child);
                         if candidate.kind() == "block_mapping" || candidate.kind() == "flow_mapping" {
                             step_to_check = candidate;
                             break;
@@ -120,24 +89,14 @@ impl ValidationRule for ArtifactValidationRule {
                         // Check for name field in with mapping
                         let with_value = utils::find_value_for_key(step_to_check, source, "with");
                         
-                        if let Some(mut with_node) = with_value {
-                            // Unwrap block_node if present
-                            if with_node.kind() == "block_node" {
-                                if let Some(inner) = with_node.child(0) {
-                                    with_node = inner;
-                                }
-                            }
+                        if let Some(with_value) = with_value {
+                            let with_node = utils::unwrap_node(with_value);
                             
                             // Find name field - search recursively in the with mapping
                             let name_node = utils::find_value_for_key(with_node, source, "name");
                             
-                            if let Some(mut name_node) = name_node {
-                                // Unwrap block_node if present
-                                if name_node.kind() == "block_node" {
-                                    if let Some(inner) = name_node.child(0) {
-                                        name_node = inner;
-                                    }
-                                }
+                            if let Some(name_value) = name_node {
+                                let name_node = utils::unwrap_node(name_value);
                                 
                                 // Get name text
                                 let name_text = utils::node_text(name_node, source);

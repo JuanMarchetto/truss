@@ -24,12 +24,7 @@ impl ValidationRule for JobStrategyValidationRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn check_job_strategy(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
@@ -40,29 +35,17 @@ impl ValidationRule for JobStrategyValidationRule {
                             .trim_end_matches(':')
                             .to_string();
                         
-                        let job_value = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        
-                        if let Some(mut job_value) = job_value {
-                            if job_value.kind() == "block_node" {
-                                if let Some(inner) = job_value.child(0) {
-                                    job_value = inner;
-                                }
-                            }
+                        let job_value = utils::get_pair_value(node);
+
+                        if let Some(job_value) = job_value {
+                            let job_value = utils::unwrap_node(job_value);
                             
                             if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                                 // Check for strategy in this job
                                 let strategy_value = utils::find_value_for_key(job_value, source, "strategy");
                                 
-                                if let Some(mut strategy_node) = strategy_value {
-                                    if strategy_node.kind() == "block_node" {
-                                        if let Some(inner) = strategy_node.child(0) {
-                                            strategy_node = inner;
-                                        }
-                                    }
+                                if let Some(strategy_value) = strategy_value {
+                                    let strategy_node = utils::unwrap_node(strategy_value);
                                     
                                     // Validate strategy structure: if strategy is defined, matrix should exist
                                     let matrix_value = utils::find_value_for_key(strategy_node, source, "matrix");

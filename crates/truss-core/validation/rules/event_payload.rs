@@ -169,12 +169,7 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
                     
                     // Validate types field values
                     if key_cleaned == "types" {
-                        let value_node = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        if let Some(value_node) = value_node {
+                        if let Some(value_node) = utils::get_pair_value(node) {
                             validate_pr_types(value_node, source, diagnostics);
                         }
                     }
@@ -464,12 +459,7 @@ fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<
                     
                     // Validate types field values
                     if key_cleaned == "types" {
-                        let value_node = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        if let Some(value_node) = value_node {
+                        if let Some(value_node) = utils::get_pair_value(node) {
                             validate_issues_types(value_node, source, diagnostics);
                         }
                     }

@@ -32,15 +32,10 @@ impl ValidationRule for EnvironmentRule {
                         let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         if key_cleaned == "environment" {
-                            let env_value = node.child(2).or_else(|| node.child(1));
-                            if let Some(env_value) = env_value {
-                                let actual_env_value = if env_value.kind() == "block_node" {
-                                    env_value.child(0)
-                                } else {
-                                    Some(env_value)
-                                };
-                                
-                                if let Some(actual_env_value) = actual_env_value {
+                            let env_value = utils::get_pair_value(node);
+                            if let Some(env_value_raw) = env_value {
+                                let actual_env_value = utils::unwrap_node(env_value_raw);
+                                {
                                     match actual_env_value.kind() {
                                         "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
                                             let env_name = utils::node_text(actual_env_value, source);
@@ -61,7 +56,7 @@ impl ValidationRule for EnvironmentRule {
                                             for child in actual_env_value.children(&mut cursor) {
                                                 if child.kind() == "block_mapping_pair" || child.kind() == "flow_pair" {
                                                     let field_key_node = child.child(0);
-                                                    let field_value_node = child.child(2).or_else(|| child.child(1));
+                                                    let field_value_node = utils::get_pair_value(child);
                                                     
                                                     if let Some(field_key_node) = field_key_node {
                                                         let field_name = utils::node_text(field_key_node, source);
@@ -104,9 +99,7 @@ impl ValidationRule for EnvironmentRule {
                                 }
                             }
                         }
-                        if let Some(value_node) = node.child(2) {
-                            find_environment_refs(value_node, source, diagnostics);
-                        } else if let Some(value_node) = node.child(1) {
+                        if let Some(value_node) = utils::get_pair_value(node) {
                             find_environment_refs(value_node, source, diagnostics);
                         }
                     } else {

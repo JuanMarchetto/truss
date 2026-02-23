@@ -25,12 +25,7 @@ impl ValidationRule for JobOutputsRule {
             None => return diagnostics,
         };
 
-        let mut jobs_to_process = jobs_value;
-        if jobs_to_process.kind() == "block_node" {
-            if let Some(inner) = jobs_to_process.child(0) {
-                jobs_to_process = inner;
-            }
-        }
+        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         // Process each job
         fn process_jobs(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
@@ -42,18 +37,10 @@ impl ValidationRule for JobOutputsRule {
                             .trim_end_matches(':')
                             .to_string();
                         
-                        let job_value = if node.kind() == "block_mapping_pair" {
-                            node.child(2)
-                        } else {
-                            node.child(1)
-                        };
-                        
-                        if let Some(mut job_value) = job_value {
-                            if job_value.kind() == "block_node" {
-                                if let Some(inner) = job_value.child(0) {
-                                    job_value = inner;
-                                }
-                            }
+                        let job_value = utils::get_pair_value(node);
+
+                        if let Some(job_value) = job_value {
+                            let job_value = utils::unwrap_node(job_value);
                             
                             if job_value.kind() == "block_mapping" || job_value.kind() == "flow_mapping" {
                                 // Collect step IDs from this job
@@ -63,12 +50,7 @@ impl ValidationRule for JobOutputsRule {
                                 let outputs_value = utils::find_value_for_key(job_value, source, "outputs");
                                 
                                 if let Some(outputs_node) = outputs_value {
-                                    let mut outputs_to_check = outputs_node;
-                                    if outputs_to_check.kind() == "block_node" {
-                                        if let Some(inner) = outputs_to_check.child(0) {
-                                            outputs_to_check = inner;
-                                        }
-                                    }
+                                    let outputs_to_check = utils::unwrap_node(outputs_node);
                                     
                                     // Find all step references in output expressions
                                     let (output_expressions, incomplete_refs) = find_output_expressions(outputs_to_check, source);
@@ -131,12 +113,8 @@ fn collect_step_ids(job_node: Node, source: &str) -> HashSet<String> {
     // Find steps in this job
     let steps_value = utils::find_value_for_key(job_node, source, "steps");
     
-    if let Some(mut steps_node) = steps_value {
-        if steps_node.kind() == "block_node" {
-            if let Some(inner) = steps_node.child(0) {
-                steps_node = inner;
-            }
-        }
+    if let Some(steps_value) = steps_value {
+        let steps_node = utils::unwrap_node(steps_value);
         
         // Traverse steps to find step IDs
         fn collect_from_steps(node: Node, source: &str, step_ids: &mut HashSet<String>) {
