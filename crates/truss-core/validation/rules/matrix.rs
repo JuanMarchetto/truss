@@ -37,15 +37,29 @@ impl ValidationRule for MatrixStrategyRule {
                         let key_cleaned = key_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                             .trim_end_matches(':');
                         
+                        // Get value: last non-comment, non-":" child
+                        let value_node_opt = {
+                            let mut found = None;
+                            for i in (1..node.child_count()).rev() {
+                                if let Some(child) = node.child(i) {
+                                    if child.kind() != "comment" && child.kind() != ":" {
+                                        found = Some(child);
+                                        break;
+                                    }
+                                }
+                            }
+                            found
+                        };
+
                         if key_cleaned == "matrix" {
-                            if let Some(value_node) = node.child(2).or_else(|| node.child(1)) {
+                            if let Some(value_node) = value_node_opt {
                                 matrices.push((value_node, Span {
                                     start: node.start_byte(),
                                     end: node.end_byte(),
                                 }));
                             }
                         } else {
-                            if let Some(value_node) = node.child(2).or_else(|| node.child(1)) {
+                            if let Some(value_node) = value_node_opt {
                                 find_matrix_nodes(value_node, source, matrices, depth + 1);
                             }
                         }
@@ -64,14 +78,7 @@ impl ValidationRule for MatrixStrategyRule {
         find_matrix_nodes(jobs_value, source, &mut matrix_nodes, 0);
 
         for (matrix_node, span) in matrix_nodes {
-            let mut matrix_to_check = matrix_node;
-            while matches!(matrix_to_check.kind(), "block_node" | "flow_node") {
-                if let Some(inner) = matrix_to_check.child(0) {
-                    matrix_to_check = inner;
-                } else {
-                    break;
-                }
-            }
+            let matrix_to_check = utils::unwrap_node(matrix_node);
 
             let is_empty = {
                 let node_kind = matrix_to_check.kind();
@@ -154,18 +161,24 @@ impl ValidationRule for MatrixStrategyRule {
                                     });
                                 }
 
-                                // Validate matrix value must be an array (not a scalar)
-                                if let Some(value_node) = node.child(2).or_else(|| node.child(1)) {
-                                    let mut value_to_check = value_node;
-                                    // Unwrap block_node and flow_node to get to the actual sequence
-                                    while matches!(value_to_check.kind(), "block_node" | "flow_node") {
-                                        if let Some(inner) = value_to_check.child(0) {
-                                            value_to_check = inner;
-                                        } else {
-                                            break;
+                                // Get value node: last non-comment, non-":" child after key
+                                let value_node_opt = {
+                                    let mut found = None;
+                                    for i in (1..node.child_count()).rev() {
+                                        if let Some(child) = node.child(i) {
+                                            if child.kind() != "comment" && child.kind() != ":" {
+                                                found = Some(child);
+                                                break;
+                                            }
                                         }
                                     }
-                                    
+                                    found
+                                };
+
+                                // Validate matrix value must be an array (not a scalar)
+                                if let Some(value_node) = value_node_opt {
+                                    let value_to_check = utils::unwrap_node(value_node);
+
                                     let value_kind = value_to_check.kind();
                                     let is_array = value_kind == "block_sequence" || value_kind == "flow_sequence";
                                     
@@ -222,15 +235,22 @@ impl ValidationRule for MatrixStrategyRule {
                                 .trim_end_matches(':');
                             
                             if key_cleaned == key_name {
-                                if let Some(value_node) = node.child(2).or_else(|| node.child(1)) {
-                                    let mut value_to_check = value_node;
-                                    while value_to_check.kind() == "block_node" {
-                                        if let Some(inner) = value_to_check.child(0) {
-                                            value_to_check = inner;
-                                        } else {
-                                            break;
+                                // Get value node: last non-comment, non-":" child
+                                let value_node_opt = {
+                                    let mut found = None;
+                                    for i in (1..node.child_count()).rev() {
+                                        if let Some(child) = node.child(i) {
+                                            if child.kind() != "comment" && child.kind() != ":" {
+                                                found = Some(child);
+                                                break;
+                                            }
                                         }
                                     }
+                                    found
+                                };
+
+                                if let Some(value_node) = value_node_opt {
+                                    let value_to_check = utils::unwrap_node(value_node);
 
                                     let value_kind = value_to_check.kind();
                                     let is_array = value_kind == "block_sequence" || value_kind == "flow_sequence";
