@@ -57,27 +57,50 @@ crates/truss-core/
 │       ├── syntax.rs
 │       ├── non_empty.rs
 │       ├── schema.rs
-│       └── ... (all 19 rules)
+│       └── ... (all 39 rules)
 └── tests/
-    ├── validation_syntax.rs       (SyntaxRule tests)
-    ├── validation_non_empty.rs    (NonEmptyRule tests)
-    ├── validation_schema.rs       (GitHubActionsSchemaRule tests)
+    ├── validation_syntax.rs
+    ├── validation_non_empty.rs
+    ├── validation_schema.rs
     ├── validation_workflow_trigger.rs
     ├── validation_job_name.rs
     ├── validation_job_needs.rs
+    ├── validation_job_if_expression.rs
+    ├── validation_job_outputs.rs
+    ├── validation_job_container.rs
+    ├── validation_job_strategy.rs
     ├── validation_step.rs
+    ├── validation_step_name.rs
+    ├── validation_step_id_uniqueness.rs
+    ├── validation_step_if_expression.rs
+    ├── validation_step_output_reference.rs
+    ├── validation_step_continue_on_error.rs
+    ├── validation_step_timeout.rs
+    ├── validation_step_shell.rs
+    ├── validation_step_working_directory.rs
+    ├── validation_step_env.rs
     ├── validation_expression.rs
+    ├── validation_expression_edge_cases.rs
     ├── validation_permissions.rs
     ├── validation_environment.rs
     ├── validation_workflow_name.rs
+    ├── validation_workflow_inputs.rs
+    ├── validation_workflow_call_inputs.rs
+    ├── validation_workflow_call_secrets.rs
+    ├── validation_workflow_call_outputs.rs
+    ├── validation_reusable_workflow_call.rs
     ├── validation_matrix.rs
     ├── validation_runs_on.rs
+    ├── validation_runner_label.rs
     ├── validation_secrets.rs
     ├── validation_timeout.rs
-    ├── validation_workflow_inputs.rs
-    ├── validation_job_outputs.rs
     ├── validation_concurrency.rs
-    └── validation_action_reference.rs
+    ├── validation_defaults.rs
+    ├── validation_action_reference.rs
+    ├── validation_artifact.rs
+    ├── validation_event_payload.rs
+    ├── validation_comment_handling.rs
+    └── validation_benchmark_fixtures.rs
 ```
 
 ## Test Structure for Each Rule

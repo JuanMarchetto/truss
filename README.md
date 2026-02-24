@@ -57,24 +57,66 @@ just test
 
 ```bash
 # Validate a GitHub Actions workflow file
-./target/release/truss validate path/to/workflow.yml
+truss validate path/to/workflow.yml
 
 # Validate multiple files (processed in parallel)
-./target/release/truss validate file1.yml file2.yml
+truss validate file1.yml file2.yml
+
+# Validate an entire directory (recursively finds *.yml and *.yaml)
+truss validate .github/workflows/
+
+# Validate with glob patterns
+truss validate '.github/workflows/*.yml'
+
+# Read from stdin
+cat workflow.yml | truss validate -
+
+# Show only errors (suppress warnings and info)
+truss validate --severity error path/to/workflow.yml
 
 # JSON output (includes timing and metadata)
-./target/release/truss validate --json path/to/workflow.yml
+truss validate --json path/to/workflow.yml
 
 # Quiet mode (suppress output, only exit code)
-./target/release/truss validate --quiet path/to/workflow.yml
+truss validate --quiet path/to/workflow.yml
+
+# Show version
+truss --version
 ```
 
-#### LSP Server
+#### Exit Codes
 
-The Truss LSP server provides real-time diagnostics for GitHub Actions workflows in editors that support the Language Server Protocol.
+| Code | Meaning |
+|------|---------|
+| 0 | All files valid |
+| 1 | Validation errors found |
+| 2 | Usage error (no files, bad arguments) |
+| 3 | I/O error (file not found, permission denied) |
+
+#### VS Code Extension
+
+A VS Code extension is available in `editors/vscode/` for real-time diagnostics:
 
 ```bash
-# Run the LSP server (typically configured in your editor)
+# Build the LSP server
+cargo build --release -p truss-lsp
+
+# Install the extension (requires Node.js)
+cd editors/vscode
+npm install
+npm run compile
+npx vsce package
+code --install-extension truss-validator-0.1.0.vsix
+```
+
+The extension activates automatically for `.github/workflows/*.yml` files and provides inline diagnostics via the Truss LSP server. See [editors/vscode/README.md](editors/vscode/README.md) for configuration options.
+
+#### LSP Server (Manual Setup)
+
+For editors other than VS Code, configure the Truss LSP server directly:
+
+```bash
+# Run the LSP server (communicates over stdio)
 ./target/release/truss-lsp
 ```
 
@@ -84,7 +126,7 @@ The LSP server supports:
 - Diagnostics for all 39 validation rules
 - UTF-16 position handling for LSP compatibility
 
-To use with your editor, configure it to use `truss-lsp` as the language server for YAML files (or specifically `.github/workflows/*.yml` files).
+Configure your editor to use `truss-lsp` as the language server for `.github/workflows/*.yml` files.
 
 ## Validation Rules
 
@@ -199,11 +241,13 @@ truss/
 │   │   ├── lib.rs        # Engine entry point with 39 registered rules
 │   │   ├── parser.rs     # tree-sitter YAML parser with incremental support
 │   │   ├── validation/   # Validation framework and 39 rule implementations
-│   │   ├── tests/        # 40 integration test files (257+ tests)
+│   │   ├── tests/        # 40 integration test files (294 tests)
 │   │   └── benches/      # Criterion benchmarks
-│   ├── truss-cli/        # Command-line interface (parallel file processing)
+│   ├── truss-cli/        # CLI (parallel processing, globs, stdin, severity filtering)
 │   ├── truss-lsp/        # Language Server Protocol adapter
 │   └── truss-wasm/       # WebAssembly bindings (placeholder)
+├── editors/
+│   └── vscode/           # VS Code extension (LSP client)
 ├── benchmarks/           # Benchmark fixtures and Hyperfine results
 ├── competitors/          # Comparison benchmark scripts
 ├── test-suite/           # Multi-repo comparison testing framework
@@ -261,7 +305,7 @@ just build
 ### Testing
 
 ```bash
-# Run all tests (257+ tests across 40 test files)
+# Run all tests (294 tests across 40 test files)
 just test
 # or: cargo test --workspace
 
@@ -274,7 +318,7 @@ just test-core
 
 The project uses GitHub Actions CI with 4 jobs:
 - **Check** - `cargo check --workspace`
-- **Test** - `cargo test --workspace` (257+ tests)
+- **Test** - `cargo test --workspace` (294 tests)
 - **Clippy** - `cargo clippy --workspace -- -D warnings`
 - **Format** - `cargo fmt --all -- --check`
 
@@ -299,9 +343,11 @@ For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECT
 
 **MVP Complete:**
 - 39 validation rules implemented and tested
-- 257+ tests across 40 test files (all passing)
+- 294 tests across 40 test files (all passing)
 - LSP server with real-time diagnostics and incremental parsing
-- CLI tool with parallel file processing and JSON output
+- VS Code extension for one-click editor integration
+- CLI tool with parallel file processing, glob/directory scanning, stdin, severity filtering, and JSON output
+- `--version` flag and distinct exit codes (0/1/2/3)
 - 15-35x faster than competitors
 - Comprehensive benchmarking infrastructure
 - Clean architecture (Core + adapters)
@@ -310,8 +356,8 @@ For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECT
 **Planned:**
 - Contextual autocomplete
 - WASM bindings (structure in place)
-- `--version` flag and severity filtering
-- Directory/glob scanning support
+- `cargo install truss-cli` (crates.io publishing)
+- Neovim / other editor integrations
 
 **Not Included (for now):**
 - Azure Pipelines / GitLab CI support
