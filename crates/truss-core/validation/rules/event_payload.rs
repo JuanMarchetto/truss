@@ -112,6 +112,56 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
         }
     }
 
+    // Check for branches + branches-ignore conflict
+    let has_branches_plain = utils::find_value_for_key(push_to_check, source, "branches").is_some();
+    let has_branches_ignore =
+        utils::find_value_for_key(push_to_check, source, "branches-ignore").is_some();
+    if has_branches_plain && has_branches_ignore {
+        if let Some(bi_node) = utils::find_value_for_key(push_to_check, source, "branches-ignore") {
+            diagnostics.push(Diagnostic {
+                message: "Cannot use both 'branches' and 'branches-ignore' on the same event. They are mutually exclusive.".to_string(),
+                severity: Severity::Error,
+                span: Span {
+                    start: bi_node.start_byte(),
+                    end: bi_node.end_byte(),
+                },
+            });
+        }
+    }
+
+    // Check for tags + tags-ignore conflict
+    let has_tags_plain = utils::find_value_for_key(push_to_check, source, "tags").is_some();
+    let has_tags_ignore = utils::find_value_for_key(push_to_check, source, "tags-ignore").is_some();
+    if has_tags_plain && has_tags_ignore {
+        if let Some(ti_node) = utils::find_value_for_key(push_to_check, source, "tags-ignore") {
+            diagnostics.push(Diagnostic {
+                message: "Cannot use both 'tags' and 'tags-ignore' on the same event. They are mutually exclusive.".to_string(),
+                severity: Severity::Error,
+                span: Span {
+                    start: ti_node.start_byte(),
+                    end: ti_node.end_byte(),
+                },
+            });
+        }
+    }
+
+    // Check for paths + paths-ignore conflict
+    let has_paths = utils::find_value_for_key(push_to_check, source, "paths").is_some();
+    let has_paths_ignore =
+        utils::find_value_for_key(push_to_check, source, "paths-ignore").is_some();
+    if has_paths && has_paths_ignore {
+        if let Some(pi_node) = utils::find_value_for_key(push_to_check, source, "paths-ignore") {
+            diagnostics.push(Diagnostic {
+                message: "Cannot use both 'paths' and 'paths-ignore' on the same event. They are mutually exclusive.".to_string(),
+                severity: Severity::Error,
+                span: Span {
+                    start: pi_node.start_byte(),
+                    end: pi_node.end_byte(),
+                },
+            });
+        }
+    }
+
     fn check_fields(
         node: Node,
         source: &str,
@@ -156,6 +206,39 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
 
 fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
     let pr_to_check = utils::unwrap_node(pr_node);
+
+    // Check for branches + branches-ignore conflict
+    let has_branches_plain = utils::find_value_for_key(pr_to_check, source, "branches").is_some();
+    let has_branches_ignore =
+        utils::find_value_for_key(pr_to_check, source, "branches-ignore").is_some();
+    if has_branches_plain && has_branches_ignore {
+        if let Some(bi_node) = utils::find_value_for_key(pr_to_check, source, "branches-ignore") {
+            diagnostics.push(Diagnostic {
+                message: "Cannot use both 'branches' and 'branches-ignore' on the same event. They are mutually exclusive.".to_string(),
+                severity: Severity::Error,
+                span: Span {
+                    start: bi_node.start_byte(),
+                    end: bi_node.end_byte(),
+                },
+            });
+        }
+    }
+
+    // Check for paths + paths-ignore conflict
+    let has_paths = utils::find_value_for_key(pr_to_check, source, "paths").is_some();
+    let has_paths_ignore = utils::find_value_for_key(pr_to_check, source, "paths-ignore").is_some();
+    if has_paths && has_paths_ignore {
+        if let Some(pi_node) = utils::find_value_for_key(pr_to_check, source, "paths-ignore") {
+            diagnostics.push(Diagnostic {
+                message: "Cannot use both 'paths' and 'paths-ignore' on the same event. They are mutually exclusive.".to_string(),
+                severity: Severity::Error,
+                span: Span {
+                    start: pi_node.start_byte(),
+                    end: pi_node.end_byte(),
+                },
+            });
+        }
+    }
 
     // Valid fields for pull_request: types, branches, branches-ignore, paths, paths-ignore
     let valid_fields = [
@@ -227,6 +310,17 @@ fn validate_pr_types(types_node: Node, source: &str, diagnostics: &mut Vec<Diagn
         "unlabeled",
         "review_requested",
         "review_request_removed",
+        "edited",
+        "ready_for_review",
+        "converted_to_draft",
+        "auto_merge_enabled",
+        "auto_merge_disabled",
+        "enqueued",
+        "dequeued",
+        "milestoned",
+        "demilestoned",
+        "locked",
+        "unlocked",
     ];
 
     fn check_type(
@@ -265,6 +359,143 @@ fn validate_pr_types(types_node: Node, source: &str, diagnostics: &mut Vec<Diagn
     }
 
     check_type(types_node, source, &valid_types, diagnostics);
+}
+
+fn validate_cron_expression(
+    cron_cleaned: &str,
+    cron_node: Node,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if cron_cleaned.starts_with("${{") {
+        return;
+    }
+
+    let parts: Vec<&str> = cron_cleaned.split_whitespace().collect();
+    if parts.len() != 5 {
+        diagnostics.push(Diagnostic {
+            message: format!(
+                "Invalid cron expression: '{}'. Cron expression must have 5 space-separated fields (minute hour day month weekday).",
+                cron_cleaned
+            ),
+            severity: Severity::Error,
+            span: Span {
+                start: cron_node.start_byte(),
+                end: cron_node.end_byte(),
+            },
+        });
+        return;
+    }
+
+    // Validate field ranges: minute(0-59), hour(0-23), day(1-31), month(1-12), weekday(0-6)
+    let field_specs: &[(&str, u32, u32)] = &[
+        ("minute", 0, 59),
+        ("hour", 0, 23),
+        ("day of month", 1, 31),
+        ("month", 1, 12),
+        ("day of week", 0, 6),
+    ];
+
+    for (i, (field_name, min, max)) in field_specs.iter().enumerate() {
+        if let Some(err) = validate_cron_field(parts[i], field_name, *min, *max) {
+            diagnostics.push(Diagnostic {
+                message: format!(
+                    "Invalid cron {}: '{}' in '{}'. {}",
+                    field_name, parts[i], cron_cleaned, err
+                ),
+                severity: Severity::Error,
+                span: Span {
+                    start: cron_node.start_byte(),
+                    end: cron_node.end_byte(),
+                },
+            });
+        }
+    }
+}
+
+/// Validate a single cron field (e.g., "*/15", "1-5", "0,30", "MON-FRI").
+/// Returns None if valid, Some(error_message) if invalid.
+fn validate_cron_field(field: &str, name: &str, min: u32, max: u32) -> Option<String> {
+    if field == "*" {
+        return None;
+    }
+
+    // Handle step values: */N or range/N
+    if let Some(base_and_step) = field.strip_prefix("*/") {
+        return match base_and_step.parse::<u32>() {
+            Ok(0) => Some(format!("Step value must be greater than 0 for {}", name)),
+            Ok(_) => None,
+            Err(_) => Some(format!(
+                "Invalid step value '{}' for {}",
+                base_and_step, name
+            )),
+        };
+    }
+
+    // Split by comma for lists: "1,2,3"
+    for part in field.split(',') {
+        let part = part.trim();
+        if part.is_empty() {
+            return Some(format!("Empty value in {} field", name));
+        }
+
+        // Handle step in range: "1-5/2"
+        let (range_part, step_part) = if let Some(idx) = part.find('/') {
+            (&part[..idx], Some(&part[idx + 1..]))
+        } else {
+            (part, None)
+        };
+
+        if let Some(step_str) = step_part {
+            match step_str.parse::<u32>() {
+                Ok(0) => return Some(format!("Step value must be greater than 0 for {}", name)),
+                Ok(_) => {}
+                Err(_) => return Some(format!("Invalid step value '{}' for {}", step_str, name)),
+            }
+        }
+
+        // Handle ranges: "1-5"
+        if range_part.contains('-') {
+            let bounds: Vec<&str> = range_part.splitn(2, '-').collect();
+            if bounds.len() == 2 {
+                match (bounds[0].parse::<u32>(), bounds[1].parse::<u32>()) {
+                    (Ok(lo), Ok(hi)) => {
+                        if lo < min || lo > max {
+                            return Some(format!(
+                                "Value {} is out of range ({}-{}) for {}",
+                                lo, min, max, name
+                            ));
+                        }
+                        if hi < min || hi > max {
+                            return Some(format!(
+                                "Value {} is out of range ({}-{}) for {}",
+                                hi, min, max, name
+                            ));
+                        }
+                    }
+                    _ => {
+                        // Could be month/weekday names — skip validation
+                    }
+                }
+            }
+        } else {
+            // Single value
+            match range_part.parse::<u32>() {
+                Ok(val) => {
+                    if val < min || val > max {
+                        return Some(format!(
+                            "Value {} is out of range ({}-{}) for {}",
+                            val, min, max, name
+                        ));
+                    }
+                }
+                Err(_) => {
+                    // Could be month/weekday name (JAN, MON, etc.) — skip validation
+                }
+            }
+        }
+    }
+
+    None
 }
 
 fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
@@ -306,23 +537,7 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
                 let cron_text = utils::node_text(cron_node, source);
                 let cron_cleaned =
                     cron_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-
-                if !cron_cleaned.starts_with("${{") {
-                    let parts: Vec<&str> = cron_cleaned.split_whitespace().collect();
-                    if parts.len() != 5 {
-                        diagnostics.push(Diagnostic {
-                            message: format!(
-                                "Invalid cron expression: '{}'. Cron expression must have 5 space-separated fields (minute hour day month weekday).",
-                                cron_cleaned
-                            ),
-                            severity: Severity::Error,
-                            span: Span {
-                                start: cron_node.start_byte(),
-                                end: cron_node.end_byte(),
-                            },
-                        });
-                    }
-                }
+                validate_cron_expression(cron_cleaned, cron_node, diagnostics);
             }
             return;
         }
@@ -340,28 +555,10 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
             },
         });
     } else if let Some(cron_node) = cron_value {
-        // Validate cron expression format
         let cron_text = utils::node_text(cron_node, source);
         let cron_cleaned =
             cron_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-
-        if !cron_cleaned.starts_with("${{") {
-            // Basic cron format validation: should have 5 space-separated fields
-            let parts: Vec<&str> = cron_cleaned.split_whitespace().collect();
-            if parts.len() != 5 {
-                diagnostics.push(Diagnostic {
-                    message: format!(
-                        "Invalid cron expression: '{}'. Cron expression must have 5 space-separated fields (minute hour day month weekday).",
-                        cron_cleaned
-                    ),
-                    severity: Severity::Error,
-                    span: Span {
-                        start: cron_node.start_byte(),
-                        end: cron_node.end_byte(),
-                    },
-                });
-            }
-        }
+        validate_cron_expression(cron_cleaned, cron_node, diagnostics);
     }
 
     // Valid fields for schedule: cron

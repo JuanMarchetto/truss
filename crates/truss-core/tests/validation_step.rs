@@ -145,3 +145,92 @@ jobs:
         "Steps with both 'uses' and 'run' (in different steps) should be valid"
     );
 }
+
+#[test]
+fn test_step_uses_and_run_same_step_error() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        run: echo "Hello"
+"#;
+
+    let result = engine.analyze(yaml);
+    let step_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("cannot have both")
+                && d.message.contains("uses")
+                && d.message.contains("run")
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        !step_errors.is_empty(),
+        "Step with both 'uses' and 'run' in same step should produce error. Got: {:?}",
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_step_only_uses_no_mutual_exclusion_error() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+"#;
+
+    let result = engine.analyze(yaml);
+    let step_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("cannot have both") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        step_errors.is_empty(),
+        "Step with only 'uses' should not trigger mutual exclusion error"
+    );
+}
+
+#[test]
+fn test_step_only_run_no_mutual_exclusion_error() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build
+        run: npm run build
+"#;
+
+    let result = engine.analyze(yaml);
+    let step_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("cannot have both") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        step_errors.is_empty(),
+        "Step with only 'run' should not trigger mutual exclusion error"
+    );
+}
