@@ -119,26 +119,6 @@ impl ValidationRule for JobContainerRule {
                             end: image_node.end_byte(),
                         },
                     });
-                } else if !image_cleaned.starts_with("${{") {
-                    // Basic image reference format validation
-                    // Docker images should be in format: [registry/]repository[:tag] or [registry/]repository@digest
-                    if !image_cleaned.contains('/')
-                        && !image_cleaned.contains(':')
-                        && !image_cleaned.contains('@')
-                    {
-                        // Might be invalid - warn
-                        diagnostics.push(Diagnostic {
-                            message: format!(
-                                "Job '{}' container has potentially invalid image reference: '{}'. Image should be in format 'repository:tag' or 'registry/repository:tag'.",
-                                job_name, image_cleaned
-                            ),
-                            severity: Severity::Warning,
-                            span: Span {
-                                start: image_node.start_byte(),
-                                end: image_node.end_byte(),
-                            },
-                        });
-                    }
                 }
             }
 

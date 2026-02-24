@@ -71,7 +71,6 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
     let push_to_check = utils::unwrap_node(push_node);
 
     // Valid fields for push: branches, branches-ignore, paths, paths-ignore, tags, tags-ignore
-    // Note: tags and branches are mutually exclusive
     let valid_fields = [
         "branches",
         "branches-ignore",
@@ -80,37 +79,6 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
         "tags",
         "tags-ignore",
     ];
-
-    // Check for mutual exclusivity: tags and branches cannot be used together
-    let has_branches = utils::find_value_for_key(push_to_check, source, "branches").is_some()
-        || utils::find_value_for_key(push_to_check, source, "branches-ignore").is_some();
-    let has_tags = utils::find_value_for_key(push_to_check, source, "tags").is_some()
-        || utils::find_value_for_key(push_to_check, source, "tags-ignore").is_some();
-
-    if has_branches && has_tags {
-        // Find the tags field to report the error
-        if let Some(tags_node) = utils::find_value_for_key(push_to_check, source, "tags") {
-            diagnostics.push(Diagnostic {
-                message: "Invalid field 'tags' for push event when 'branches' is present. 'tags' and 'branches' are mutually exclusive.".to_string(),
-                severity: Severity::Error,
-                span: Span {
-                    start: tags_node.start_byte(),
-                    end: tags_node.end_byte(),
-                },
-            });
-        } else if let Some(tags_ignore_node) =
-            utils::find_value_for_key(push_to_check, source, "tags-ignore")
-        {
-            diagnostics.push(Diagnostic {
-                message: "Invalid field 'tags-ignore' for push event when 'branches' is present. 'tags-ignore' and 'branches' are mutually exclusive.".to_string(),
-                severity: Severity::Error,
-                span: Span {
-                    start: tags_ignore_node.start_byte(),
-                    end: tags_ignore_node.end_byte(),
-                },
-            });
-        }
-    }
 
     // Check for branches + branches-ignore conflict
     let has_branches_plain = utils::find_value_for_key(push_to_check, source, "branches").is_some();
@@ -526,19 +494,16 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
 
             if actual_content.kind() == "block_mapping" || actual_content.kind() == "flow_mapping" {
                 let cron_in_item = utils::find_value_for_key(actual_content, source, "cron");
-                if cron_in_item.is_some() {
+                if let Some(cron_node) = cron_in_item {
                     found_any_cron = true;
+                    let cron_text = utils::node_text(cron_node, source);
+                    let cron_cleaned = cron_text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+                    validate_cron_expression(cron_cleaned, cron_node, diagnostics);
                 }
             }
         }
         if found_any_cron {
-            // Validate the first cron expression we can find
-            if let Some(cron_node) = utils::find_value_for_key(schedule_to_check, source, "cron") {
-                let cron_text = utils::node_text(cron_node, source);
-                let cron_cleaned =
-                    cron_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
-                validate_cron_expression(cron_cleaned, cron_node, diagnostics);
-            }
             return;
         }
     }
@@ -761,6 +726,8 @@ fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<
 fn validate_issues_types(types_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
     let valid_types = [
         "opened",
+        "edited",
+        "deleted",
         "closed",
         "reopened",
         "assigned",

@@ -489,8 +489,25 @@ pub fn run() -> io::Result<bool> {
             break;
         }
 
+        // Cap content length at 100 MB to prevent memory exhaustion
+        const MAX_CONTENT_LENGTH: usize = 100 * 1024 * 1024;
         let content_length = match content_length {
-            Some(len) if len > 0 => len,
+            Some(len) if len > 0 && len <= MAX_CONTENT_LENGTH => len,
+            Some(len) if len > MAX_CONTENT_LENGTH => {
+                // Reject oversized messages
+                let error_response = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": null,
+                    "error": {
+                        "code": -32600,
+                        "message": format!("Content-Length {} exceeds maximum of {} bytes", len, MAX_CONTENT_LENGTH)
+                    }
+                });
+                let json = serde_json::to_string(&error_response)?;
+                write!(stdout, "Content-Length: {}\r\n\r\n{}", json.len(), json)?;
+                stdout.flush()?;
+                continue;
+            }
             _ => continue,
         };
 

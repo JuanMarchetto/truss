@@ -165,14 +165,16 @@ impl TrussEngine {
     }
 
     fn parse_error_result(source: &str) -> TrussResult {
+        // Find a safe end position that doesn't split a UTF-8 character
+        let mut end = source.len().min(100);
+        while end > 0 && !source.is_char_boundary(end) {
+            end -= 1;
+        }
         TrussResult {
             diagnostics: vec![Diagnostic {
                 message: "Failed to parse YAML".to_string(),
                 severity: Severity::Error,
-                span: Span {
-                    start: 0,
-                    end: source.len().min(100),
-                },
+                span: Span { start: 0, end },
             }],
         }
     }
@@ -197,9 +199,16 @@ pub struct TrussResult {
 
 impl TrussResult {
     /// Returns true if no errors were found.
+    ///
+    /// Note: this ignores warnings and info diagnostics.
+    /// Use `has_errors()` for the inverse check.
     pub fn is_ok(&self) -> bool {
-        !self
-            .diagnostics
+        !self.has_errors()
+    }
+
+    /// Returns true if any error-level diagnostics were found.
+    pub fn has_errors(&self) -> bool {
+        self.diagnostics
             .iter()
             .any(|d| d.severity == Severity::Error)
     }

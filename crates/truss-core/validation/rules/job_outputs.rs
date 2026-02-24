@@ -246,9 +246,9 @@ fn find_output_expressions(
 
                             if after_step_id.starts_with(".outputs") {
                                 // Check if there's a property access after .outputs
-                                // Skip exactly 7 characters for ".outputs"
-                                let after_outputs = if after_step_id.len() > 7 {
-                                    &after_step_id[7..]
+                                // Skip exactly 8 characters for ".outputs"
+                                let after_outputs = if after_step_id.len() > 8 {
+                                    &after_step_id[8..]
                                 } else {
                                     ""
                                 };

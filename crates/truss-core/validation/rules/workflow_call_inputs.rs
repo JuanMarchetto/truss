@@ -76,7 +76,7 @@ impl ValidationRule for WorkflowCallInputsRule {
             if !self.is_valid_input_type(input_type) {
                 diagnostics.push(Diagnostic {
                     message: format!(
-                        "Invalid input type '{}' for workflow_call input '{}'. Valid types are: string, choice, boolean, environment",
+                        "Invalid input type '{}' for workflow_call input '{}'. Valid types are: string, number, choice, boolean, environment",
                         input_type, input_name
                     ),
                     severity: Severity::Error,
@@ -171,7 +171,10 @@ impl WorkflowCallInputsRule {
     }
 
     fn is_valid_input_type(&self, input_type: &str) -> bool {
-        matches!(input_type, "string" | "choice" | "boolean" | "environment")
+        matches!(
+            input_type,
+            "string" | "choice" | "boolean" | "environment" | "number"
+        )
     }
 
     fn validate_input_properties(

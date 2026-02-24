@@ -98,7 +98,33 @@ fn validate_concurrency_node(
 ) {
     let concurrency_to_check = utils::unwrap_node(concurrency_node);
 
-    // Check if group is present and valid
+    // Concurrency can be a simple string (group name) or a mapping with group/cancel-in-progress.
+    // String form: `concurrency: my-group` or `concurrency: ${{ github.ref }}`
+    match concurrency_to_check.kind() {
+        "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
+            // String form is valid — the string IS the group name
+            let text = utils::node_text(concurrency_to_check, source);
+            let cleaned =
+                text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+            if cleaned.is_empty() {
+                diagnostics.push(Diagnostic {
+                    message: format!(
+                        "Concurrency at {} level has empty group name.",
+                        context
+                    ),
+                    severity: Severity::Error,
+                    span: Span {
+                        start: concurrency_to_check.start_byte(),
+                        end: concurrency_to_check.end_byte(),
+                    },
+                });
+            }
+            return;
+        }
+        _ => {}
+    }
+
+    // Mapping form: must have a `group` key
     let group_value = utils::find_value_for_key(concurrency_to_check, source, "group");
 
     if group_value.is_none() {

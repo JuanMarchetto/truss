@@ -92,7 +92,7 @@ on:
 }
 
 #[test]
-fn test_event_payload_error_invalid_field_for_push() {
+fn test_event_payload_push_branches_and_tags_valid() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
 on:
@@ -108,19 +108,46 @@ on:
         .diagnostics
         .iter()
         .filter(|d| {
-            let msg_lower = d.message.to_lowercase();
-            (d.message.contains("event")
-                || d.message.contains("push")
+            (d.message.contains("push")
                 || d.message.contains("tags")
-                || d.message.contains("trigger"))
-                && (msg_lower.contains("invalid") || msg_lower.contains("not valid"))
+                || d.message.contains("branches"))
+                && d.message.contains("mutually exclusive")
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        event_errors.is_empty(),
+        "Using both 'branches' and 'tags' on push is valid and should NOT produce errors"
+    );
+}
+
+#[test]
+fn test_event_payload_error_invalid_field_for_push() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on:
+  push:
+    branches:
+      - main
+    invalid_field:
+      - something
+"#;
+
+    let result = engine.analyze(yaml);
+    let event_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("Invalid field")
+                && d.message.contains("push")
                 && d.severity == Severity::Error
         })
         .collect();
 
     assert!(
         !event_errors.is_empty(),
-        "Invalid field for push event (tags) should produce error"
+        "Invalid field for push event should produce error"
     );
 }
 
