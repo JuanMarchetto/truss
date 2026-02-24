@@ -23,9 +23,8 @@ impl ValidationRule for ExpressionValidationRule {
 
             // Detect unclosed expressions: find_expressions sets end to
             // source.len() when no closing }} is found.
-            let is_closed = source
-                .get(expr.end.saturating_sub(2)..expr.end)
-                .map_or(false, |s| s == "}}");
+            let is_closed =
+                source.get(expr.end.saturating_sub(2)..expr.end) == Some("}}");
             if !is_closed {
                 diagnostics.push(Diagnostic {
                     message: "unclosed expression".to_string(),
