@@ -141,7 +141,9 @@ impl ValidationRule for StepOutputReferenceRule {
                                                         if outputs.is_empty() {
                                                             "none".to_string()
                                                         } else {
-                                                            outputs.iter().cloned().collect::<Vec<_>>().join(", ")
+                                                            let mut sorted: Vec<_> = outputs.iter().cloned().collect();
+                                                            sorted.sort();
+                                                            sorted.join(", ")
                                                         }
                                                     ),
                                                     severity: Severity::Error,
@@ -213,7 +215,9 @@ impl ValidationRule for StepOutputReferenceRule {
                                                         if outputs.is_empty() {
                                                             "none".to_string()
                                                         } else {
-                                                            outputs.iter().cloned().collect::<Vec<_>>().join(", ")
+                                                            let mut sorted: Vec<_> = outputs.iter().cloned().collect();
+                                                            sorted.sort();
+                                                            sorted.join(", ")
                                                         }
                                                     ),
                                                     severity: Severity::Error,

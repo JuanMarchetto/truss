@@ -6,96 +6,6 @@ use tree_sitter::Tree;
 /// Validates GitHub Actions expressions.
 pub struct ExpressionValidationRule;
 
-/// Check if an expression has valid syntax.
-///
-/// GitHub Actions expressions are JavaScript-like, so we check for:
-/// - Valid property access (dot notation, bracket notation)
-/// - Valid operators
-/// - Valid function calls
-/// - No obvious syntax errors
-fn is_valid_expression_syntax(expr: &str) -> bool {
-    let expr = expr.trim();
-
-    // Empty expressions are invalid (handled separately)
-    if expr.is_empty() {
-        return false;
-    }
-
-    let has_context = expr.starts_with("github.")
-        || expr.starts_with("matrix.")
-        || expr.starts_with("secrets.")
-        || expr.starts_with("vars.")
-        || expr.starts_with("needs.")
-        || expr.starts_with("inputs.")
-        || expr.starts_with("env.")
-        || expr.starts_with("steps.")
-        || expr.starts_with("job.")
-        || expr.starts_with("jobs.")
-        || expr.starts_with("runner.")
-        || expr.starts_with("strategy.");
-
-    let expr_lower = expr.to_lowercase();
-    let has_function = expr.contains("contains(")
-        || expr.contains("startsWith(")
-        || expr.contains("endsWith(")
-        || expr.contains("format(")
-        || expr.contains("join(")
-        || expr_lower.contains("tojson(")
-        || expr_lower.contains("fromjson(")
-        || expr.contains("hashFiles(")
-        || expr.contains("success()")
-        || expr.contains("failure()")
-        || expr.contains("cancelled()")
-        || expr.contains("always()");
-
-    let has_operator = expr.contains("==")
-        || expr.contains("!=")
-        || expr.contains("&&")
-        || expr.contains("||")
-        || expr.contains("!")
-        || expr.contains("<")
-        || expr.contains(">")
-        || expr.contains("<=")
-        || expr.contains(">=");
-
-    let is_literal = (expr.starts_with("'") && expr.ends_with("'"))
-        || (expr.starts_with("\"") && expr.ends_with("\""))
-        || expr.parse::<f64>().is_ok()
-        || expr == "true"
-        || expr == "false";
-
-    // Bare context names (e.g., "github", "matrix") are valid expressions
-    let is_bare_context = matches!(
-        expr,
-        "github"
-            | "matrix"
-            | "secrets"
-            | "vars"
-            | "needs"
-            | "inputs"
-            | "env"
-            | "job"
-            | "jobs"
-            | "steps"
-            | "runner"
-            | "strategy"
-    );
-
-    if !has_context
-        && !has_function
-        && !has_operator
-        && !is_literal
-        && !is_bare_context
-        && !expr.contains('.')
-        && !expr.contains('(')
-        && !expr.contains('[')
-    {
-        return false;
-    }
-
-    true
-}
-
 impl ValidationRule for ExpressionValidationRule {
     fn name(&self) -> &str {
         "expression"
@@ -138,7 +48,7 @@ impl ValidationRule for ExpressionValidationRule {
                             end,
                         },
                     });
-                } else if !is_valid_expression_syntax(inner) {
+                } else if !utils::is_valid_expression_syntax(inner) {
                     diagnostics.push(Diagnostic {
                         message: format!("Invalid expression syntax: '{}'", inner),
                         severity: Severity::Error,

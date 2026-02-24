@@ -326,8 +326,10 @@ impl ValidationRule for JobNeedsRule {
         }
 
         let mut visited = std::collections::HashSet::new();
-        for job in &job_names {
-            if !visited.contains(job) {
+        let mut sorted_job_names: Vec<_> = job_names.iter().collect();
+        sorted_job_names.sort();
+        for job in &sorted_job_names {
+            if !visited.contains(*job) {
                 let mut rec_stack = std::collections::HashSet::new();
                 if has_cycle(job, &dependencies, &mut visited, &mut rec_stack) {
                     diagnostics.push(Diagnostic {
