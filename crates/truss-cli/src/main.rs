@@ -1,12 +1,22 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use glob::glob;
 use rayon::prelude::*;
 use std::fs;
-use std::io;
+use std::io::{self, Read};
+use std::path::Path;
 use std::time::Instant;
 use truss_core::TrussEngine;
 
+/// Exit code: one or more files had validation errors.
+const EXIT_VALIDATION_FAILED: i32 = 1;
+/// Exit code: usage error (bad arguments, no files provided).
+const EXIT_USAGE: i32 = 2;
+/// Exit code: I/O error (file not found, permission denied, etc.).
+const EXIT_IO: i32 = 3;
+
 #[derive(Parser)]
 #[command(name = "truss")]
+#[command(version)]
 #[command(about = "Truss - CI/CD pipeline validation tool")]
 struct Cli {
     #[command(subcommand)]
@@ -17,7 +27,7 @@ struct Cli {
 enum Commands {
     /// Validate YAML file(s)
     Validate {
-        /// Path(s) to the YAML file(s) to validate
+        /// Path(s), directories, or glob patterns to validate. Use `-` for stdin.
         #[arg(num_args = 1..)]
         paths: Vec<String>,
 
@@ -28,7 +38,33 @@ enum Commands {
         /// Output results as JSON
         #[arg(long)]
         json: bool,
+
+        /// Minimum severity level to display and fail on
+        #[arg(long, value_enum)]
+        severity: Option<SeverityFilter>,
     },
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum SeverityFilter {
+    /// Show only errors
+    Error,
+    /// Show errors and warnings
+    Warning,
+    /// Show everything (default)
+    Info,
+}
+
+impl SeverityFilter {
+    fn includes(self, severity: truss_core::Severity) -> bool {
+        match self {
+            SeverityFilter::Error => severity == truss_core::Severity::Error,
+            SeverityFilter::Warning => {
+                severity == truss_core::Severity::Error || severity == truss_core::Severity::Warning
+            }
+            SeverityFilter::Info => true,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -64,8 +100,82 @@ impl From<io::Error> for TrussError {
     }
 }
 
-fn read_file(path: &str) -> Result<String, TrussError> {
-    fs::read_to_string(path).map_err(TrussError::Io)
+impl TrussError {
+    fn exit_code(&self) -> i32 {
+        match self {
+            TrussError::Io(_) => EXIT_IO,
+            TrussError::Usage(_) => EXIT_USAGE,
+            TrussError::ValidationFailed => EXIT_VALIDATION_FAILED,
+        }
+    }
+}
+
+fn read_source(path: &str) -> Result<String, TrussError> {
+    if path == "-" {
+        let mut buf = String::new();
+        io::stdin()
+            .read_to_string(&mut buf)
+            .map_err(TrussError::Io)?;
+        Ok(buf)
+    } else {
+        fs::read_to_string(path).map_err(TrussError::Io)
+    }
+}
+
+/// Expand a user-provided path into concrete file paths.
+///
+/// - `-` is returned as-is (stdin marker).
+/// - If the path is a directory, recursively find all `*.yml` and `*.yaml` files.
+/// - If the path contains glob characters, expand via `glob::glob()`.
+/// - Otherwise, return the path as-is.
+fn expand_paths(raw_paths: &[String]) -> Result<Vec<String>, TrussError> {
+    let mut expanded = Vec::new();
+
+    for raw in raw_paths {
+        if raw == "-" {
+            expanded.push("-".to_string());
+            continue;
+        }
+
+        let path = Path::new(raw);
+
+        if path.is_dir() {
+            for ext in &["/**/*.yml", "/**/*.yaml"] {
+                let pattern = format!("{}{}", raw.trim_end_matches('/'), ext);
+                match glob(&pattern) {
+                    Ok(entries) => {
+                        for entry in entries.flatten() {
+                            expanded.push(entry.display().to_string());
+                        }
+                    }
+                    Err(e) => {
+                        return Err(TrussError::Io(io::Error::other(format!(
+                            "Invalid glob pattern '{}': {}",
+                            pattern, e
+                        ))));
+                    }
+                }
+            }
+        } else if raw.contains('*') || raw.contains('?') || raw.contains('[') {
+            match glob(raw) {
+                Ok(entries) => {
+                    for entry in entries.flatten() {
+                        expanded.push(entry.display().to_string());
+                    }
+                }
+                Err(e) => {
+                    return Err(TrussError::Io(io::Error::other(format!(
+                        "Invalid glob pattern '{}': {}",
+                        raw, e
+                    ))));
+                }
+            }
+        } else {
+            expanded.push(raw.clone());
+        }
+    }
+
+    Ok(expanded)
 }
 
 #[derive(serde::Serialize)]
@@ -83,78 +193,120 @@ struct FileMetadata {
     lines: usize,
 }
 
-fn validate_file(path: &str, quiet: bool, json: bool) -> Result<FileResult, TrussError> {
-    let content = read_file(path)?;
+fn validate_source(
+    label: &str,
+    content: &str,
+    quiet: bool,
+    json: bool,
+    severity_filter: SeverityFilter,
+) -> Result<FileResult, TrussError> {
     let file_size = content.len() as u64;
     let lines = content.lines().count();
 
     let start = Instant::now();
     let mut engine = TrussEngine::new();
-    let result = engine.analyze(&content);
+    let result = engine.analyze(content);
     let duration_ms = start.elapsed().as_secs_f64() * 1000.0;
 
-    let valid = result.is_ok();
+    // Filter diagnostics by severity
+    let filtered: Vec<truss_core::Diagnostic> = result
+        .diagnostics
+        .into_iter()
+        .filter(|d| severity_filter.includes(d.severity))
+        .collect();
+
+    let valid = !filtered
+        .iter()
+        .any(|d| d.severity == truss_core::Severity::Error);
 
     if json {
-        let file_result = FileResult {
-            file: path.to_string(),
+        return Ok(FileResult {
+            file: label.to_string(),
             valid,
-            diagnostics: result.diagnostics,
+            diagnostics: filtered,
             duration_ms,
             metadata: FileMetadata { file_size, lines },
-        };
-        return Ok(file_result);
+        });
     }
 
     if valid {
         if !quiet {
-            println!("✓ Valid: {}", path);
-
-            for diagnostic in &result.diagnostics {
-                if diagnostic.severity != truss_core::Severity::Error {
-                    println!("  {}", diagnostic);
-                }
+            println!("✓ Valid: {}", label);
+            for diagnostic in &filtered {
+                println!("  {}", diagnostic);
             }
         }
     } else if !quiet {
-        for diagnostic in &result.diagnostics {
+        for diagnostic in &filtered {
             eprintln!("  {}", diagnostic);
         }
     }
 
     Ok(FileResult {
-        file: path.to_string(),
+        file: label.to_string(),
         valid,
-        diagnostics: result.diagnostics,
+        diagnostics: filtered,
         duration_ms,
         metadata: FileMetadata { file_size, lines },
     })
 }
 
-fn validate_files(paths: Vec<String>, quiet: bool, json: bool) -> Result<(), TrussError> {
-    if paths.is_empty() {
+fn validate_file(
+    path: &str,
+    quiet: bool,
+    json: bool,
+    severity_filter: SeverityFilter,
+) -> Result<FileResult, TrussError> {
+    let content = read_source(path)?;
+    let label = if path == "-" { "<stdin>" } else { path };
+    validate_source(label, &content, quiet, json, severity_filter)
+}
+
+fn validate_files(
+    paths: Vec<String>,
+    quiet: bool,
+    json: bool,
+    severity_filter: SeverityFilter,
+) -> Result<(), TrussError> {
+    let expanded = expand_paths(&paths)?;
+
+    if expanded.is_empty() {
         return Err(TrussError::Usage(
-            "No files provided. Run 'truss validate --help' for usage.".to_string(),
+            "No files found. Run 'truss validate --help' for usage.".to_string(),
         ));
     }
 
+    // Separate stdin from file paths (stdin can't be parallelized)
+    let (stdin_paths, file_paths): (Vec<_>, Vec<_>) =
+        expanded.iter().partition(|p| p.as_str() == "-");
+
+    let mut all_results: Vec<(String, Result<FileResult, TrussError>)> = Vec::new();
+
+    // Process stdin first (sequential)
+    for path in &stdin_paths {
+        let result = validate_file(path, quiet, json, severity_filter);
+        all_results.push((path.to_string(), result));
+    }
+
     // Process files in parallel
-    // Note: Each file gets its own engine instance to avoid mutable borrow conflicts
-    let results: Vec<(String, Result<FileResult, TrussError>)> = paths
+    let file_results: Vec<(String, Result<FileResult, TrussError>)> = file_paths
         .par_iter()
         .map(|path| {
-            let result = validate_file(path, quiet, json);
-            (path.clone(), result)
+            let result = validate_file(path, quiet, json, severity_filter);
+            (path.to_string(), result)
         })
         .collect();
 
+    all_results.extend(file_results);
+
     // Aggregate results
     let mut has_errors = false;
+    let mut has_io_error = false;
     let mut success_count = 0;
     let mut error_count = 0;
     let mut file_results = Vec::new();
 
-    for (path, result) in results {
+    for (path, result) in &all_results {
         match result {
             Ok(file_result) => {
                 if !file_result.valid {
@@ -168,6 +320,9 @@ fn validate_files(paths: Vec<String>, quiet: bool, json: bool) -> Result<(), Tru
             Err(e) => {
                 error_count += 1;
                 has_errors = true;
+                if matches!(e, TrussError::Io(_)) {
+                    has_io_error = true;
+                }
                 if !quiet && !json {
                     eprintln!("Error validating {}: {}", path, e);
                 }
@@ -180,17 +335,16 @@ fn validate_files(paths: Vec<String>, quiet: bool, json: bool) -> Result<(), Tru
             TrussError::Io(io::Error::other(format!("Failed to serialize JSON: {}", e)))
         })?;
         println!("{}", json_output);
-    } else {
-        // Print summary if multiple files and not quiet
-        if !quiet && paths.len() > 1 {
-            println!(
-                "\nSummary: {} passed, {} failed",
-                success_count, error_count
-            );
-        }
+    } else if !quiet && expanded.len() > 1 {
+        println!(
+            "\nSummary: {} passed, {} failed",
+            success_count, error_count
+        );
     }
 
-    if has_errors {
+    if has_io_error {
+        Err(TrussError::Io(io::Error::other("One or more files failed")))
+    } else if has_errors {
         Err(TrussError::ValidationFailed)
     } else {
         Ok(())
@@ -201,12 +355,26 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Validate { paths, quiet, json } => {
-            if let Err(e) = validate_files(paths, quiet, json) {
+        Commands::Validate {
+            paths,
+            quiet,
+            json,
+            severity,
+        } => {
+            let severity_filter = severity.unwrap_or(SeverityFilter::Info);
+
+            if paths.is_empty() {
+                if !quiet && !json {
+                    eprintln!("Error: No files provided. Run 'truss validate --help' for usage.");
+                }
+                std::process::exit(EXIT_USAGE);
+            }
+
+            if let Err(e) = validate_files(paths, quiet, json, severity_filter) {
                 if !quiet && !json {
                     eprintln!("Error: {}", e);
                 }
-                std::process::exit(1);
+                std::process::exit(e.exit_code());
             }
         }
     }
