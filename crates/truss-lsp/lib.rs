@@ -17,6 +17,8 @@ use truss_core::{Diagnostic as CoreDiagnostic, Severity as CoreSeverity, TrussEn
 /// match `LspRequest` if `id` were `Option<Value>`.
 enum LspMessage {
     Request(LspRequest),
+    /// Server ignores incoming responses (we don't send requests to the client).
+    #[allow(dead_code)]
     Response(LspResponse),
     Notification(LspNotification),
 }
