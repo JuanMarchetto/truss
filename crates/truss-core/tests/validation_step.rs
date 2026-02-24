@@ -94,13 +94,14 @@ jobs:
 #[test]
 fn test_step_invalid_action_reference() {
     let mut engine = TrussEngine::new();
+    // Missing @ref — this is a genuinely invalid action reference format
     let yaml = r#"
 on: push
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: invalid/action@v1
+      - uses: actions/checkout
 "#;
 
     let result = engine.analyze(yaml);
@@ -108,8 +109,7 @@ jobs:
         .diagnostics
         .iter()
         .filter(|d| {
-            (d.message.contains("step")
-                || d.message.contains("action")
+            (d.message.contains("action")
                 || d.message.contains("uses"))
                 && (d.severity == Severity::Error || d.severity == Severity::Warning)
         })
