@@ -24,6 +24,15 @@ pub trait ValidationRule: Send + Sync {
     /// - Deterministic (same AST → same diagnostics)
     /// - Independent (doesn't depend on other rules)
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic>;
+
+    /// Whether this rule only applies to GitHub Actions workflow files.
+    ///
+    /// Returns `true` by default. Rules that apply to all YAML files
+    /// (e.g., syntax checking, empty document detection) should override
+    /// this to return `false`.
+    fn requires_workflow(&self) -> bool {
+        true
+    }
 }
 
 /// Collection of validation rules.
@@ -46,12 +55,18 @@ impl RuleSet {
     ///
     /// Rules are independent and can run concurrently.
     /// Results are merged deterministically.
+    ///
+    /// The `is_github_actions_workflow` check is performed once here
+    /// rather than in each rule, eliminating redundant tree walks.
     pub fn validate_parallel(&self, tree: &Tree, source: &str) -> TrussResult {
         use rayon::prelude::*;
+
+        let is_workflow = utils::is_github_actions_workflow(tree, source);
 
         let all_diagnostics: Vec<Diagnostic> = self
             .rules
             .par_iter()
+            .filter(|rule| is_workflow || !rule.requires_workflow())
             .flat_map(|rule| rule.validate(tree, source))
             .collect();
 

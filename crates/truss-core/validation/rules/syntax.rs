@@ -10,6 +10,10 @@ impl ValidationRule for SyntaxRule {
         "syntax"
     }
 
+    fn requires_workflow(&self) -> bool {
+        false
+    }
+
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let root_node = tree.root_node();
 

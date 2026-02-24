@@ -14,10 +14,6 @@ impl ValidationRule for ConcurrencyRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        if !utils::is_github_actions_workflow(tree, source) {
-            return diagnostics;
-        }
-
         let root = tree.root_node();
 
         // Check workflow-level concurrency
