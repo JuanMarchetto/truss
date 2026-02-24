@@ -109,8 +109,7 @@ jobs:
         .diagnostics
         .iter()
         .filter(|d| {
-            (d.message.contains("action")
-                || d.message.contains("uses"))
+            (d.message.contains("action") || d.message.contains("uses"))
                 && (d.severity == Severity::Error || d.severity == Severity::Warning)
         })
         .collect();
