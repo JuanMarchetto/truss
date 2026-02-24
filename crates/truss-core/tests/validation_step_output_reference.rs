@@ -309,3 +309,70 @@ jobs:
         "Valid step output reference with expression fallback should not produce errors"
     );
 }
+
+#[test]
+fn test_step_output_reference_valid_dot_notation_multiple_steps() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - id: setup
+        run: echo "version=1.0" >> $GITHUB_OUTPUT
+      - id: build
+        run: echo "status=ok" >> $GITHUB_OUTPUT
+      - run: echo "${{ steps.setup.outputs.version }} ${{ steps.build.outputs.status }}"
+"#;
+
+    let result = engine.analyze(yaml);
+    let output_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found") || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        output_errors.is_empty(),
+        "Multiple valid dot-notation output references should not produce errors"
+    );
+}
+
+#[test]
+fn test_step_output_reference_valid_in_comparison() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - id: check
+        run: echo "result=success" >> $GITHUB_OUTPUT
+      - if: ${{ steps.check.outputs.result == 'success' }}
+        run: echo "Passed"
+      - if: ${{ steps.check.outputs.result != 'failure' }}
+        run: echo "Not failed"
+"#;
+
+    let result = engine.analyze(yaml);
+    let output_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            (d.message.contains("output") || d.message.contains("step"))
+                && (d.message.contains("not found") || d.message.contains("nonexistent"))
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        output_errors.is_empty(),
+        "Output references in comparisons should not produce errors"
+    );
+}

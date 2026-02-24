@@ -222,3 +222,78 @@ jobs:
         "Valid 'none' permission value should not produce errors"
     );
 }
+
+#[test]
+fn test_permissions_invalid_write_all_as_scope_key() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+permissions:
+  write-all: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+"#;
+
+    let result = engine.analyze(yaml);
+    let perm_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("permission") && d.message.contains("scope"))
+        .collect();
+
+    assert!(
+        !perm_errors.is_empty(),
+        "'write-all' is valid as a top-level value but not as a mapping key"
+    );
+}
+
+#[test]
+fn test_permissions_invalid_read_all_as_scope_key() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+permissions:
+  read-all: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+"#;
+
+    let result = engine.analyze(yaml);
+    let perm_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("permission") && d.message.contains("scope"))
+        .collect();
+
+    assert!(
+        !perm_errors.is_empty(),
+        "'read-all' is valid as a top-level value but not as a mapping key"
+    );
+}
+
+#[test]
+fn test_permissions_invalid_none_as_scope_key() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+permissions:
+  none: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+"#;
+
+    let result = engine.analyze(yaml);
+    let perm_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("permission") && d.message.contains("scope"))
+        .collect();
+
+    assert!(
+        !perm_errors.is_empty(),
+        "'none' is valid as a top-level value but not as a mapping key"
+    );
+}
