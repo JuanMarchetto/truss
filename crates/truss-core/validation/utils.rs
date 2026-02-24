@@ -93,8 +93,9 @@ pub(crate) fn find_value_for_key<'a>(
     match node.kind() {
         "block_mapping_pair" | "flow_pair" => {
             if let Some(key_node) = node.child(0) {
-                let key_text =
-                    source.get(key_node.start_byte()..key_node.end_byte()).unwrap_or("");
+                let key_text = source
+                    .get(key_node.start_byte()..key_node.end_byte())
+                    .unwrap_or("");
                 let key_cleaned = key_text
                     .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                     .trim_end_matches(':');
@@ -148,8 +149,9 @@ pub(crate) fn key_exists(node: Node, source: &str, target_key: &str) -> bool {
     match node.kind() {
         "block_mapping_pair" | "flow_pair" => {
             if let Some(key_node) = node.child(0) {
-                let key_text =
-                    source.get(key_node.start_byte()..key_node.end_byte()).unwrap_or("");
+                let key_text = source
+                    .get(key_node.start_byte()..key_node.end_byte())
+                    .unwrap_or("");
                 let key_cleaned = key_text
                     .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                     .trim_end_matches(':');

@@ -126,8 +126,18 @@ fn validate_concurrency_node(
     // (e.g., "github.ref" looks numeric-with-dot but is actually a valid context reference).
     if !group_cleaned.starts_with("${{") {
         let has_context_prefix = [
-            "github.", "env.", "vars.", "inputs.", "secrets.", "matrix.", "needs.", "job.",
-            "jobs.", "steps.", "runner.", "strategy.",
+            "github.",
+            "env.",
+            "vars.",
+            "inputs.",
+            "secrets.",
+            "matrix.",
+            "needs.",
+            "job.",
+            "jobs.",
+            "steps.",
+            "runner.",
+            "strategy.",
         ]
         .iter()
         .any(|prefix| group_cleaned.starts_with(prefix));

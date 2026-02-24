@@ -491,9 +491,7 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
                                     // Check if this is followed by .outputs
                                     let after_step_id = &after_steps[step_id_end..];
 
-                                    if let Some(after_dot) =
-                                        after_step_id.strip_prefix(".outputs.")
-                                    {
+                                    if let Some(after_dot) = after_step_id.strip_prefix(".outputs.") {
                                         // Direct property access: steps.<id>.outputs.<name>
                                         let output_name_end = after_dot
                                             .find(|c: char| {
