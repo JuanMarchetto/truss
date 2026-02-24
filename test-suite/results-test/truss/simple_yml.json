@@ -3,7 +3,7 @@
     "file": "/home/claw/.openclaw/workspace/truss/scripts/../benchmarks/fixtures/simple.yml",
     "valid": true,
     "diagnostics": [],
-    "duration_ms": 0.31844700000000004,
+    "duration_ms": 0.400527,
     "metadata": {
       "file_size": 245,
       "lines": 14

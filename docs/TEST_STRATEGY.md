@@ -2,7 +2,7 @@
 
 ## Overview
 
-Truss follows a test-driven development (TDD) approach for all validation rules. Every rule gets its own integration test file exercised through the public `TrussEngine` API, so tests reflect real-world usage rather than internal implementation details. At the time of writing the suite covers **41 rules** across **346 tests** spread over **44 test files**.
+Truss follows a test-driven development (TDD) approach for all validation rules. Every rule gets its own integration test file exercised through the public `TrussEngine` API, so tests reflect real-world usage rather than internal implementation details. At the time of writing the suite covers **41 rules** across **347 tests** spread over **44 test files**.
 
 ## How Tests Are Organized
 

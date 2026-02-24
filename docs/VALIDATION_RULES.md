@@ -348,7 +348,7 @@ Validates `actions/upload-artifact` and `actions/download-artifact` usage, check
 ### 34. EventPayloadValidationRule
 Goes deeper than WorkflowTriggerRule by validating event-specific fields -- for example, making sure `branches` filters are only used on events that support them.
 
-**Tests:** `validation_event_payload.rs` (17 tests)
+**Tests:** `validation_event_payload.rs` (18 tests)
 **Test cases:**
 - ✅ Event-specific fields matching their event types
 - ✅ Error on fields that don't belong to a given event type
@@ -481,4 +481,4 @@ crates/truss-core/tests/
 └── validation_benchmark_fixtures.rs      ✅ (10 tests)
 ```
 
-**Total: 346 tests across 44 test files (all passing)**
+**Total: 347 tests across 44 test files (all passing)**
