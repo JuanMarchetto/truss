@@ -246,15 +246,16 @@ jobs:
     let context_warnings: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("undefined") || d.message.contains("nonexistent")
-        })
+        .filter(|d| d.message.contains("undefined") || d.message.contains("nonexistent"))
         .collect();
 
     assert!(
         context_warnings.is_empty(),
         "Valid secrets context reference should not produce undefined context warnings. Got: {:?}",
-        context_warnings.iter().map(|d| &d.message).collect::<Vec<_>>()
+        context_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -280,15 +281,16 @@ jobs:
     let context_warnings: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("undefined") || d.message.contains("nonexistent")
-        })
+        .filter(|d| d.message.contains("undefined") || d.message.contains("nonexistent"))
         .collect();
 
     assert!(
         context_warnings.is_empty(),
         "Valid matrix context reference should not produce undefined context warnings. Got: {:?}",
-        context_warnings.iter().map(|d| &d.message).collect::<Vec<_>>()
+        context_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -309,14 +311,15 @@ jobs:
     let context_warnings: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("undefined") || d.message.contains("nonexistent")
-        })
+        .filter(|d| d.message.contains("undefined") || d.message.contains("nonexistent"))
         .collect();
 
     assert!(
         context_warnings.is_empty(),
         "Valid env context reference should not produce undefined context warnings. Got: {:?}",
-        context_warnings.iter().map(|d| &d.message).collect::<Vec<_>>()
+        context_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
