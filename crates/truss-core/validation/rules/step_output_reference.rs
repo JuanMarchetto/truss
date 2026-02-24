@@ -472,8 +472,7 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
                             let output_name = &after_dot[..output_name_end];
 
                             if !output_name.is_empty() {
-                                let span_start =
-                                    node_start + expr_offset + 3 + actual_pos + 6;
+                                let span_start = node_start + expr_offset + 3 + actual_pos + 6;
                                 let span_end = span_start + step_id.len();
 
                                 references.push((
@@ -485,18 +484,16 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
                                     },
                                 ));
                             }
-                        } else if let Some(after_bracket) =
-                            after_step_id.strip_prefix(".outputs[")
+                        } else if let Some(after_bracket) = after_step_id.strip_prefix(".outputs[")
                         {
                             // Bracket notation: steps.<id>.outputs["<name>"]
                             if let Some(close_bracket) = after_bracket.find(']') {
                                 let output_name = &after_bracket[..close_bracket];
-                                let output_name_cleaned = output_name
-                                    .trim_matches(|c: char| c == '"' || c == '\'');
+                                let output_name_cleaned =
+                                    output_name.trim_matches(|c: char| c == '"' || c == '\'');
 
                                 if !output_name_cleaned.is_empty() {
-                                    let span_start =
-                                        node_start + expr_offset + 3 + actual_pos + 6;
+                                    let span_start = node_start + expr_offset + 3 + actual_pos + 6;
                                     let span_end = span_start + step_id.len();
 
                                     references.push((

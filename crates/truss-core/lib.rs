@@ -120,10 +120,7 @@ impl TrussEngine {
     ///
     /// Returns `None` for the tree when parsing fails, so callers can
     /// distinguish between a valid empty tree and a parse failure.
-    pub fn analyze_with_tree(
-        &mut self,
-        source: &str,
-    ) -> (TrussResult, Option<tree_sitter::Tree>) {
+    pub fn analyze_with_tree(&mut self, source: &str) -> (TrussResult, Option<tree_sitter::Tree>) {
         let tree = match self.parser.parse(source) {
             Ok(tree) => tree,
             Err(_) => return (Self::parse_error_result(source), None),
