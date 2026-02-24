@@ -26,3 +26,8 @@ tree-sitter = "0.21"
 rayon = "1.8"
 clap = { version = "4", features = ["derive"] }
 criterion = "0.5"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

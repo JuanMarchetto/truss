@@ -10,6 +10,10 @@ impl ValidationRule for NonEmptyRule {
         "non_empty"
     }
 
+    fn requires_workflow(&self) -> bool {
+        false
+    }
+
     fn validate(&self, _tree: &Tree, source: &str) -> Vec<Diagnostic> {
         if source.trim().is_empty() {
             vec![Diagnostic {

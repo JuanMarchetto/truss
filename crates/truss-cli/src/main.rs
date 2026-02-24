@@ -194,6 +194,7 @@ struct FileMetadata {
 }
 
 fn validate_source(
+    engine: &mut TrussEngine,
     label: &str,
     content: &str,
     quiet: bool,
@@ -204,7 +205,6 @@ fn validate_source(
     let lines = content.lines().count();
 
     let start = Instant::now();
-    let mut engine = TrussEngine::new();
     let result = engine.analyze(content);
     let duration_ms = start.elapsed().as_secs_f64() * 1000.0;
 
@@ -252,6 +252,7 @@ fn validate_source(
 }
 
 fn validate_file(
+    engine: &mut TrussEngine,
     path: &str,
     quiet: bool,
     json: bool,
@@ -259,7 +260,7 @@ fn validate_file(
 ) -> Result<FileResult, TrussError> {
     let content = read_source(path)?;
     let label = if path == "-" { "<stdin>" } else { path };
-    validate_source(label, &content, quiet, json, severity_filter)
+    validate_source(engine, label, &content, quiet, json, severity_filter)
 }
 
 fn validate_files(
@@ -282,20 +283,33 @@ fn validate_files(
 
     let mut all_results: Vec<(String, Result<FileResult, TrussError>)> = Vec::new();
 
-    // Process stdin first (sequential)
+    // Process stdin first (sequential, reuse one engine)
+    let mut engine = TrussEngine::new();
     for path in &stdin_paths {
-        let result = validate_file(path, quiet, json, severity_filter);
+        let result = validate_file(&mut engine, path, quiet, json, severity_filter);
         all_results.push((path.to_string(), result));
     }
 
-    // Process files in parallel
-    let file_results: Vec<(String, Result<FileResult, TrussError>)> = file_paths
-        .par_iter()
-        .map(|path| {
-            let result = validate_file(path, quiet, json, severity_filter);
-            (path.to_string(), result)
-        })
-        .collect();
+    // For a single file, sequential is faster (avoids rayon thread pool overhead).
+    // For multiple files, parallel processing pays off.
+    let file_results: Vec<(String, Result<FileResult, TrussError>)> = if file_paths.len() <= 1 {
+        file_paths
+            .iter()
+            .map(|path| {
+                let result = validate_file(&mut engine, path, quiet, json, severity_filter);
+                (path.to_string(), result)
+            })
+            .collect()
+    } else {
+        file_paths
+            .par_iter()
+            .map(|path| {
+                let mut engine = TrussEngine::new();
+                let result = validate_file(&mut engine, path, quiet, json, severity_filter);
+                (path.to_string(), result)
+            })
+            .collect()
+    };
 
     all_results.extend(file_results);
 
