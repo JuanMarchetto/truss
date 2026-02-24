@@ -47,7 +47,7 @@ These rules must guide all technical decisions:
 ## 3. Target Architecture (High Level)
 
 ```
-Editor / CLI / WASM
+VS Code Extension / Other Editors / CLI / WASM
         │
         ▼
  truss-lsp / truss-cli / truss-wasm   (adapters)
@@ -75,7 +75,13 @@ Editor / CLI / WASM
 
 - **truss-cli**
   - Run validations from the command line
+  - Supports glob/directory scanning, stdin, severity filtering, JSON output
   - Act as the foundation for comparative benchmarks
+
+- **editors/vscode**
+  - VS Code extension that launches `truss-lsp` via stdio
+  - Activates on `.github/workflows/*.yml` files
+  - Thin LSP client — no validation logic
 
 - **truss-wasm (future)**
   - Reuse the core without logical changes
