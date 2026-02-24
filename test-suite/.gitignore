@@ -6,6 +6,7 @@ results/
 
 # Comparison data and reports
 comparison/
+comparison-test/
 
 # Temporary files
 *.tmp
