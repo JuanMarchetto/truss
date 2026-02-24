@@ -422,7 +422,7 @@ fn validate_cron_field(field: &str, name: &str, min: u32, max: u32) -> Option<St
     // Handle step values: */N or range/N
     if let Some(base_and_step) = field.strip_prefix("*/") {
         return match base_and_step.parse::<u32>() {
-            Ok(step) if step == 0 => {
+            Ok(0) => {
                 Some(format!("Step value must be greater than 0 for {}", name))
             }
             Ok(_) => None,
