@@ -197,3 +197,98 @@ jobs:
         env_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn test_step_env_github_prefix_warning() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GITHUB_MY_VAR: some_value
+        run: echo "Test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let prefix_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("GITHUB_")
+                && d.message.contains("reserved")
+                && d.severity == Severity::Warning
+        })
+        .collect();
+
+    assert!(
+        !prefix_warnings.is_empty(),
+        "Env var with GITHUB_ prefix should produce warning. Got: {:?}",
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_step_env_github_prefix_exact_match() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        run: echo "Test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let prefix_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("GITHUB_")
+                && d.message.contains("reserved")
+                && d.severity == Severity::Warning
+        })
+        .collect();
+
+    assert!(
+        !prefix_warnings.is_empty(),
+        "GITHUB_TOKEN should trigger reserved prefix warning"
+    );
+}
+
+#[test]
+fn test_step_env_no_github_prefix_no_warning() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          MY_TOKEN: value
+          NODE_ENV: production
+        run: echo "Test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let prefix_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("reserved") && d.severity == Severity::Warning)
+        .collect();
+
+    assert!(
+        prefix_warnings.is_empty(),
+        "Normal env vars should not produce reserved prefix warning"
+    );
+}

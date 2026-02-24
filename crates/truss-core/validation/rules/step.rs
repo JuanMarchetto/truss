@@ -107,6 +107,16 @@ impl ValidationRule for StepValidationRule {
                                                 end: step_node.end_byte(),
                                             },
                                         });
+                                    } else if has_uses && has_run {
+                                        diagnostics.push(Diagnostic {
+                                            message: "Step cannot have both 'uses' and 'run' fields. Each step must use one or the other."
+                                                .to_string(),
+                                            severity: Severity::Error,
+                                            span: Span {
+                                                start: step_node.start_byte(),
+                                                end: step_node.end_byte(),
+                                            },
+                                        });
                                     }
                                 }
 

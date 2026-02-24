@@ -11,12 +11,13 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use validation::{
     ActionReferenceRule, ArtifactValidationRule, ConcurrencyRule, DefaultsValidationRule,
-    EnvironmentRule, EventPayloadValidationRule, ExpressionValidationRule, GitHubActionsSchemaRule,
-    JobContainerRule, JobIfExpressionRule, JobNameRule, JobNeedsRule, JobOutputsRule,
-    JobStrategyValidationRule, MatrixStrategyRule, NonEmptyRule, PermissionsRule,
-    ReusableWorkflowCallRule, RuleSet, RunnerLabelRule, RunsOnRequiredRule, SecretsValidationRule,
-    StepContinueOnErrorRule, StepEnvValidationRule, StepIdUniquenessRule, StepIfExpressionRule,
-    StepNameRule, StepOutputReferenceRule, StepShellRule, StepTimeoutRule, StepValidationRule,
+    DeprecatedCommandsRule, EnvironmentRule, EventPayloadValidationRule,
+    ExpressionValidationRule, GitHubActionsSchemaRule, JobContainerRule, JobIfExpressionRule,
+    JobNameRule, JobNeedsRule, JobOutputsRule, JobStrategyValidationRule, MatrixStrategyRule,
+    NonEmptyRule, PermissionsRule, ReusableWorkflowCallRule, RuleSet, RunnerLabelRule,
+    RunsOnRequiredRule, ScriptInjectionRule, SecretsValidationRule, StepContinueOnErrorRule,
+    StepEnvValidationRule, StepIdUniquenessRule, StepIfExpressionRule, StepNameRule,
+    StepOutputReferenceRule, StepShellRule, StepTimeoutRule, StepValidationRule,
     StepWorkingDirectoryRule, SyntaxRule, TimeoutRule, ValidationRule, WorkflowCallInputsRule,
     WorkflowCallOutputsRule, WorkflowCallSecretsRule, WorkflowInputsRule, WorkflowNameRule,
     WorkflowTriggerRule,
@@ -74,6 +75,8 @@ impl TrussEngine {
         rules.add_rule(JobContainerRule);
         rules.add_rule(StepNameRule);
         rules.add_rule(DefaultsValidationRule);
+        rules.add_rule(DeprecatedCommandsRule);
+        rules.add_rule(ScriptInjectionRule);
 
         Self {
             parser: YamlParser::new(),
