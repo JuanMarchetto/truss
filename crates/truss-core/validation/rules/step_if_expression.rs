@@ -162,4 +162,3 @@ impl ValidationRule for StepIfExpressionRule {
         diagnostics
     }
 }
-

@@ -233,4 +233,3 @@ fn collect_job_names(jobs_node: Node, source: &str) -> HashSet<String> {
     collect(jobs_node, source, &mut job_names);
     job_names
 }
-
