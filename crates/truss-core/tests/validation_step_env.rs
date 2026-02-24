@@ -194,9 +194,6 @@ jobs:
     assert!(
         env_errors.is_empty(),
         "Valid env with comment between dash and step should not produce errors. Got: {:?}",
-        env_errors
-            .iter()
-            .map(|d| &d.message)
-            .collect::<Vec<_>>()
+        env_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
     );
 }

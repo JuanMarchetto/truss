@@ -207,9 +207,6 @@ jobs:
     assert!(
         name_errors.is_empty(),
         "Valid step name with comment between dash and step should not produce warnings. Got: {:?}",
-        name_errors
-            .iter()
-            .map(|d| &d.message)
-            .collect::<Vec<_>>()
+        name_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
     );
 }
