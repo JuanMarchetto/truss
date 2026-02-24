@@ -10,56 +10,46 @@ use tree_sitter::{Node, Tree};
 /// Returns `true` if the document appears to be a GitHub Actions workflow.
 pub(crate) fn is_github_actions_workflow(tree: &Tree, source: &str) -> bool {
     let root = tree.root_node();
-    let mut top_level_keys = Vec::new();
+    let mut has_on = false;
+    let mut has_jobs = false;
 
-    fn extract_key_text(node: Node, source: &str) -> Option<String> {
-        let text = source.get(node.start_byte()..node.end_byte())?;
-        let cleaned = text
-            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-            .trim_end_matches(':');
-        Some(cleaned.to_string())
-    }
-
-    fn find_top_level_keys(node: Node, source: &str, keys: &mut Vec<String>, depth: usize) {
-        if depth > 4 {
+    fn check_top_level_keys(
+        node: Node,
+        source: &str,
+        has_on: &mut bool,
+        has_jobs: &mut bool,
+        depth: usize,
+    ) {
+        if depth > 4 || (*has_on && *has_jobs) {
             return;
         }
 
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    if let Some(key_text) = extract_key_text(key_node, source) {
-                        keys.push(key_text);
+                    let text = source
+                        .get(key_node.start_byte()..key_node.end_byte())
+                        .unwrap_or("");
+                    let cleaned = text
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                        .trim_end_matches(':');
+                    if cleaned.eq_ignore_ascii_case("on") {
+                        *has_on = true;
+                    } else if cleaned.eq_ignore_ascii_case("jobs") {
+                        *has_jobs = true;
                     }
-                }
-            }
-            "block_mapping" | "flow_mapping" | "document" | "stream" | "block_node" => {
-                let mut cursor = node.walk();
-                for child in node.children(&mut cursor) {
-                    find_top_level_keys(child, source, keys, depth + 1);
                 }
             }
             _ => {
-                if depth < 4 {
-                    let mut cursor = node.walk();
-                    for child in node.children(&mut cursor) {
-                        find_top_level_keys(child, source, keys, depth + 1);
-                    }
+                let mut cursor = node.walk();
+                for child in node.children(&mut cursor) {
+                    check_top_level_keys(child, source, has_on, has_jobs, depth + 1);
                 }
             }
         }
     }
 
-    find_top_level_keys(root, source, &mut top_level_keys, 0);
-
-    // A GitHub Actions workflow must have `on` or `jobs` at the top level.
-    // `name` alone is not sufficient — many YAML files have a `name:` key.
-    let has_on = top_level_keys
-        .iter()
-        .any(|key| key.to_lowercase().trim() == "on");
-    let has_jobs = top_level_keys
-        .iter()
-        .any(|key| key.to_lowercase().trim() == "jobs");
+    check_top_level_keys(root, source, &mut has_on, &mut has_jobs, 0);
 
     has_on || has_jobs
 }
@@ -178,6 +168,26 @@ pub(crate) fn key_exists(node: Node, source: &str, target_key: &str) -> bool {
     }
 }
 
+/// Extract and clean a YAML key name from a node.
+///
+/// Strips surrounding quotes, whitespace, and trailing colon. This is the
+/// standard key cleaning pattern used throughout validation rules.
+pub(crate) fn clean_key<'a>(node: Node, source: &'a str) -> &'a str {
+    node_text(node, source)
+        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+        .trim_end_matches(':')
+}
+
+/// Get the unwrapped `jobs:` mapping node from a workflow tree.
+///
+/// Combines `find_value_for_key` + `unwrap_node` for the common pattern
+/// used by 31+ validation rules.
+pub(crate) fn get_jobs_node<'a>(tree: &'a Tree, source: &'a str) -> Option<Node<'a>> {
+    let root = tree.root_node();
+    let jobs_value = find_value_for_key(root, source, "jobs")?;
+    Some(unwrap_node(jobs_value))
+}
+
 /// Helper to extract text from a node.
 ///
 /// Returns an empty string if the byte offsets fall outside the source
@@ -206,9 +216,11 @@ pub(crate) fn is_valid_expression_syntax(expr: &str) -> bool {
         return false;
     }
 
-    let has_context = KNOWN_CONTEXTS
-        .iter()
-        .any(|ctx| expr.starts_with(&format!("{}.", ctx)));
+    let has_context = KNOWN_CONTEXTS.iter().any(|ctx| {
+        expr.len() > ctx.len()
+            && expr.as_bytes()[ctx.len()] == b'.'
+            && expr.starts_with(ctx)
+    });
 
     let expr_lower = expr.to_lowercase();
     let has_function = expr.contains("contains(")
