@@ -1,148 +1,131 @@
 # Implementation Summary
 
-This document summarizes the implementation of the Multifile Adversarial Testing Framework.
+This covers what was built for the Multifile Adversarial Testing Framework and how it all fits together.
 
-## Completed Components
+## What We Built
 
-### 1. CLI JSON Output ✅
-- Added `--json` flag to `truss-cli`
-- Outputs structured JSON with diagnostics, timing, and metadata
-- File: `crates/truss-cli/src/main.rs`
+### CLI JSON Output
 
-### 2. Result Capture Scripts ✅
-- Created `capture.sh` scripts for each competitor:
-  - `competitors/actionlint/capture.sh`
-  - `competitors/yamllint/capture.sh`
-  - `competitors/yaml-language-server/capture.sh`
-- All scripts output JSON in consistent format
+We added a `--json` flag to `truss-cli` so it can output structured diagnostics with timing and metadata. The change lives in `crates/truss-cli/src/main.rs`.
 
-### 3. Workflow Discovery ✅
-- `scripts/discover-workflows.sh` - Finds all workflow files in repos
-- `scripts/manage-repos.sh` - Manages repository lifecycle (clone, update, list, clean)
+### Result Capture Scripts
 
-### 4. Repository Selection ✅
-- `test-suite/repos.json` - Configuration for 7 test repositories
-- `scripts/setup-test-repos.sh` - Automated repository setup
+Each competitor got a `capture.sh` script that runs the tool and outputs JSON in a consistent format:
 
-### 5. Comparison Engine ✅
-- `scripts/compare-results.py` - Python script that:
-  - Loads results from all tools
-  - Normalizes error messages and locations
-  - Calculates coverage metrics
-  - Identifies unique/missing errors
-  - Generates comparison JSON
+- `competitors/actionlint/capture.sh`
+- `competitors/yamllint/capture.sh`
+- `competitors/yaml-language-server/capture.sh`
 
-### 6. Reporting System ✅
-- `scripts/generate-report.py` - Generates:
-  - Markdown reports (`summary.md`)
-  - HTML reports (`summary.html`)
-  - Includes metrics, coverage analysis, and file-by-file breakdown
+This means we can compare apples to apples across all tools.
 
-### 7. Orchestration ✅
-- `scripts/run-full-suite.sh` - Main orchestration script:
-  - Discovers workflows
-  - Runs all tools on all files
-  - Compares results
-  - Generates reports
-- `scripts/run-validation.sh` - Run validation on single repository
+### Workflow Discovery and Repo Management
 
-### 8. Documentation ✅
-- `test-suite/README.md` - Comprehensive usage guide
-- Updated `competitors/README.md` - Documented capture scripts
-- Added justfile commands:
-  - `just test-multifile` - Run full test suite
-  - `just test-repo <repo>` - Test single repository
-  - `just setup-test-repos` - Setup test repositories
-  - `just compare-results` - Compare results
-  - `just generate-report` - Generate reports
+`scripts/discover-workflows.sh` finds all workflow files in a given repository. `scripts/manage-repos.sh` handles the lifecycle -- cloning, updating, listing, and cleaning up old repos.
 
-## File Structure
+### Repository Selection
+
+`test-suite/repos.json` defines our 7 test repositories, and `scripts/setup-test-repos.sh` automates cloning them.
+
+### Comparison Engine
+
+`scripts/compare-results.py` does the heavy lifting: it loads results from every tool, normalizes error messages and locations, calculates coverage metrics, identifies unique and missing errors, and produces a comparison JSON file.
+
+### Reporting
+
+`scripts/generate-report.py` takes the comparison data and generates both Markdown (`summary.md`) and HTML (`summary.html`) reports with metrics, coverage analysis, and file-by-file breakdowns.
+
+### Orchestration
+
+`scripts/run-full-suite.sh` ties it all together -- discovers workflows, runs every tool on every file, compares results, and generates reports. For single-repo runs, there's `scripts/run-validation.sh`.
+
+### Documentation and Justfile
+
+We wrote up usage docs in `test-suite/README.md`, updated `competitors/README.md`, and added justfile commands: `test-multifile`, `test-repo`, `setup-test-repos`, `compare-results`, and `generate-report`.
+
+## File Layout
 
 ```
 truss/
 ├── crates/
 │   ├── truss-cli/
-│   │   └── src/main.rs          # Added --json flag
+│   │   └── src/main.rs          # --json flag added here
 │   └── truss-core/
-│       ├── Cargo.toml           # Added serde dependencies
-│       └── lib.rs               # Added serde derives
+│       ├── Cargo.toml           # serde dependencies added
+│       └── lib.rs               # serde derives added
 ├── competitors/
 │   ├── actionlint/
-│   │   └── capture.sh           # NEW: JSON capture script
+│   │   └── capture.sh           # JSON capture
 │   ├── yamllint/
-│   │   └── capture.sh           # NEW: JSON capture script
+│   │   └── capture.sh           # JSON capture
 │   ├── yaml-language-server/
-│   │   └── capture.sh           # NEW: JSON capture script
-│   └── README.md                # Updated with capture.sh docs
+│   │   └── capture.sh           # JSON capture
+│   └── README.md                # Updated with capture docs
 ├── scripts/
-│   ├── discover-workflows.sh    # NEW: Workflow discovery
-│   ├── manage-repos.sh          # NEW: Repo management
-│   ├── setup-test-repos.sh      # NEW: Repo setup
-│   ├── run-full-suite.sh        # NEW: Full test suite
-│   ├── run-validation.sh        # NEW: Single repo validation
-│   ├── compare-results.py       # NEW: Comparison engine
-│   └── generate-report.py       # NEW: Report generation
+│   ├── discover-workflows.sh    # Workflow discovery
+│   ├── manage-repos.sh          # Repo management
+│   ├── setup-test-repos.sh      # Repo setup
+│   ├── run-full-suite.sh        # Full test suite orchestration
+│   ├── run-validation.sh        # Single repo validation
+│   ├── compare-results.py       # Comparison engine
+│   └── generate-report.py       # Report generation
 ├── test-suite/
-│   ├── README.md                # NEW: Usage documentation
-│   ├── IMPLEMENTATION.md         # This file
-│   ├── repos.json               # NEW: Test repo config
-│   └── .gitignore               # NEW: Ignore test data
-└── justfile                     # Added new commands
+│   ├── README.md                # Usage documentation
+│   ├── IMPLEMENTATION.md        # This file
+│   ├── repos.json               # Test repo config
+│   └── .gitignore               # Ignores test data
+└── justfile                     # New commands added
 ```
 
-## Usage Examples
-
-### Basic Workflow
+## Typical Workflow
 
 ```bash
-# 1. Setup test repositories
+# 1. Clone the test repos
 just setup-test-repos
 
-# 2. Run full test suite
+# 2. Run everything
 just test-multifile
 
-# 3. View results
+# 3. Read the results
 cat test-suite/comparison/reports/summary.md
 open test-suite/comparison/reports/summary.html
 ```
 
-### Advanced Usage
+For more targeted work:
 
 ```bash
-# Test single repository
+# Test one repo
 just test-repo rust-lang-rust
 
-# Discover workflows manually
+# Find workflows manually
 bash scripts/discover-workflows.sh test-suite/repos/rust-lang-rust
 
-# Compare results manually
+# Run the comparison step by itself
 python3 scripts/compare-results.py test-suite/results output.json
 
-# Generate reports manually
+# Generate reports from existing data
 python3 scripts/generate-report.py output.json reports/
 ```
 
-## Key Features
+## What This Gets Us
 
-1. **Automated Testing**: Run validation across multiple repositories and tools
-2. **Coverage Analysis**: Compare error detection across tools
-3. **Performance Metrics**: Track execution time for each tool
-4. **Structured Output**: JSON format for programmatic analysis
-5. **Human-Readable Reports**: Markdown and HTML reports
-6. **Repository Management**: Easy cloning and updating of test repos
+- **Automated multi-tool testing** across real repositories
+- **Coverage analysis** so we know where Truss stands relative to the competition
+- **Performance tracking** to catch regressions early
+- **Structured JSON output** for programmatic analysis
+- **Readable reports** in Markdown and HTML for humans
+- **Easy repo management** for adding and maintaining test data
 
-## Next Steps
+## What's Next
 
-1. Run initial test suite to establish baseline
-2. Analyze coverage gaps and improve validation rules
-3. Track performance regressions over time
-4. Add more test repositories as needed
-5. Integrate into CI/CD pipeline
+1. Run the initial suite and establish a baseline
+2. Analyze coverage gaps and improve rules accordingly
+3. Track performance over time to catch regressions
+4. Add more test repositories as we find interesting ones
+5. Wire this into CI so it runs automatically
 
 ## Notes
 
-- All scripts are designed to be idempotent and handle errors gracefully
-- Results are stored in `test-suite/results/` (gitignored)
-- Comparison data is stored in `test-suite/comparison/` (gitignored)
-- Test repositories are stored in `test-suite/repos/` (gitignored)
-
+- All scripts are idempotent and handle errors gracefully
+- Results go in `test-suite/results/` (gitignored)
+- Comparison data goes in `test-suite/comparison/` (gitignored)
+- Cloned repos go in `test-suite/repos/` (gitignored)

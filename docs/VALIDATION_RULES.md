@@ -1,425 +1,434 @@
 # GitHub Actions Validation Rules
 
-This document defines all validation rules that should be implemented for GitHub Actions workflows, following TDD principles.
+This document covers every validation rule implemented in Truss. Each rule was developed test-first, so the test cases listed below double as a living spec for what the rule accepts and rejects.
 
-## Current Rules (Implemented)
+## Current Rules
 
-### 1. SyntaxRule ✅
-**Purpose:** Validates YAML syntax correctness  
-**Status:** Implemented  
+### 1. SyntaxRule
+Catches malformed YAML before anything else runs. If the file can't be parsed, there's no point running further rules.
+
 **Tests:** `validation_syntax.rs` (3 tests)
 
-### 2. NonEmptyRule ✅
-**Purpose:** Warns on empty documents  
-**Status:** Implemented  
+### 2. NonEmptyRule
+Flags empty or effectively-blank documents. Usually means someone committed a placeholder file by accident.
+
 **Tests:** `validation_non_empty.rs` (4 tests)
 
-### 3. GitHubActionsSchemaRule ✅
-**Purpose:** Validates basic GitHub Actions workflow structure  
-**Status:** Implemented  
+### 3. GitHubActionsSchemaRule
+Checks the basic shape of a workflow file -- does it have `on:` and `jobs:`, are the top-level keys what GitHub expects, etc.
+
 **Tests:** `validation_schema.rs` (5 tests)
 
-### 4. WorkflowTriggerRule ✅
-**Purpose:** Validates `on:` trigger configuration  
-**Status:** Implemented  
-**Tests:** `validation_workflow_trigger.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: `on: push`
-- ✅ Valid: `on: [push, pull_request]`
-- ✅ Valid: `on: { push: { branches: [main] } }`
-- ✅ Error: Missing `on:` field
-- ✅ Error: Invalid event type
-- ✅ Error: Invalid trigger syntax
+### 4. WorkflowTriggerRule
+Validates the `on:` trigger block. Supports the shorthand string form, array form, and full object form with branch/path filters.
 
-### 5. JobNameRule ✅
-**Purpose:** Validates job names  
-**Status:** Implemented  
-**Tests:** `validation_job_name.rs` (5 tests)  
-**Test Cases:**
-- ✅ Valid: `build`, `test`, `deploy`
-- ✅ Valid: `build-and-test`
-- ✅ Error: Duplicate job names
-- ✅ Error: Invalid characters (spaces)
-- ✅ Error: Reserved names (`if`, `else`, etc.)
+**Tests:** `validation_workflow_trigger.rs` (6 tests)
+**Test cases:**
+- ✅ `on: push` (simple string)
+- ✅ `on: [push, pull_request]` (array)
+- ✅ `on: { push: { branches: [main] } }` (object with filters)
+- ✅ Error on missing `on:` field entirely
+- ✅ Error on unrecognized event types
+- ✅ Error on malformed trigger syntax
 
-### 6. JobNeedsRule ✅
-**Purpose:** Validates job dependencies (`needs:`)  
-**Status:** Implemented  
-**Tests:** `validation_job_needs.rs` (5 tests)  
-**Test Cases:**
-- ✅ Valid: `needs: [build, test]`
-- ✅ Valid: `needs: build`
-- ✅ Error: Reference to non-existent job
-- ✅ Error: Circular dependency
-- ✅ Error: Self-reference
+### 5. JobNameRule
+Makes sure job IDs are valid identifiers. GitHub is surprisingly strict here -- no spaces, no reserved words.
 
-### 7. StepValidationRule ✅
-**Purpose:** Validates step structure  
-**Status:** Implemented  
-**Tests:** `validation_step.rs` (5 tests)  
-**Test Cases:**
-- ✅ Valid: Step with `uses:`
-- ✅ Valid: Step with `run:`
-- ✅ Valid: Multiple steps with both
-- ✅ Error: Missing both `uses` and `run`
-- ✅ Warning: Invalid action reference format
+**Tests:** `validation_job_name.rs` (5 tests)
+**Test cases:**
+- ✅ Standard names like `build`, `test`, `deploy`
+- ✅ Hyphenated names like `build-and-test`
+- ✅ Error on duplicate job names
+- ✅ Error on names with spaces or special characters
+- ✅ Error on reserved words (`if`, `else`, etc.)
 
-### 8. ExpressionValidationRule ✅
-**Purpose:** Validates GitHub Actions expressions  
-**Status:** Implemented  
-**Tests:** `validation_expression.rs` (8 tests)  
-**Test Cases:**
-- ✅ Valid: `${{ github.event.pull_request.number }}`
-- ✅ Valid: `${{ matrix.os }}`
-- ✅ Valid: Conditional expressions
-- ✅ Valid: Nested property access
-- ✅ Valid: workflow_dispatch inputs
-- ✅ Error: Invalid expression syntax
-- ✅ Warning: Undefined context variable
-- ✅ Error: Unclosed expression
+### 6. JobNeedsRule
+Validates the `needs:` dependency graph between jobs. Catches dangling references, cycles, and self-references that would cause GitHub to reject the workflow at runtime.
 
-### 9. PermissionsRule ✅
-**Purpose:** Validates permissions configuration  
-**Status:** Implemented  
-**Tests:** `validation_permissions.rs` (8 tests)  
-**Test Cases:**
-- ✅ Valid: `permissions: read-all`
-- ✅ Valid: `permissions: write-all`
-- ✅ Valid: `permissions: { contents: read }`
-- ✅ Valid: Empty permissions `{}`
-- ✅ Valid: Job-level permissions
-- ✅ Valid: `none` value
-- ✅ Error: Invalid permission scope
-- ✅ Error: Invalid permission value
+**Tests:** `validation_job_needs.rs` (5 tests)
+**Test cases:**
+- ✅ `needs: [build, test]` (array form)
+- ✅ `needs: build` (string form)
+- ✅ Error when referencing a job that doesn't exist
+- ✅ Error on circular dependencies
+- ✅ Error on self-references
 
-### 10. EnvironmentRule ✅
-**Purpose:** Validates environment references  
-**Status:** Implemented  
-**Tests:** `validation_environment.rs` (7 tests)  
-**Test Cases:**
-- ✅ Valid: `environment: production`
-- ✅ Valid: `environment: { name: prod, url: ... }`
-- ✅ Valid: Workflow-level env variables
-- ✅ Valid: Step-level env variables
-- ✅ Valid: Environment with URL
-- ✅ Error: Invalid environment name (spaces)
-- ✅ Error: Invalid protection rules (not supported in workflow YAML)
+### 7. StepValidationRule
+Every step needs either `uses:` or `run:` -- this rule enforces that, and also checks that action references in `uses:` look reasonable.
 
-### 11. WorkflowNameRule ✅
-**Purpose:** Validates workflow name field  
-**Status:** Implemented  
-**Tests:** `validation_workflow_name.rs` (7 tests)  
-**Test Cases:**
-- ✅ Valid: `name: CI`
-- ✅ Valid: `name: ${{ github.event.pull_request.title }}`
-- ✅ Valid: Optional (missing name is OK)
-- ✅ Valid: Special characters in quotes
-- ✅ Valid: Unicode characters
-- ✅ Error: Empty name `name: ""`
-- ✅ Error: Name too long (>255 characters)
+**Tests:** `validation_step.rs` (8 tests)
+**Test cases:**
+- ✅ Step with `uses:`
+- ✅ Step with `run:`
+- ✅ Multiple steps mixing both forms
+- ✅ Error when a step has neither `uses` nor `run`
+- ✅ Warning on invalid action reference format
 
-### 12. MatrixStrategyRule ✅
-**Purpose:** Validates matrix strategy syntax  
-**Status:** Implemented  
-**Tests:** `validation_matrix.rs` (7 tests)  
-**Test Cases:**
-- ✅ Valid: `matrix: { os: [ubuntu, windows] }`
-- ✅ Valid: `matrix: { include: [...] }`
-- ✅ Valid: `matrix: { exclude: [...] }`
-- ✅ Error: Empty matrix
-- ✅ Error: Invalid include syntax
-- ✅ Error: Invalid exclude syntax
+### 8. ExpressionValidationRule
+Parses `${{ ... }}` expressions and checks that context references (like `github.event.pull_request.number` or `matrix.os`) are plausible.
 
-### 13. RunsOnRequiredRule ✅
-**Purpose:** Validates that `runs-on` is required for all jobs  
-**Status:** Implemented  
-**Tests:** `validation_runs_on.rs` (7 tests)  
-**Test Cases:**
-- ✅ Valid: Job with `runs-on: ubuntu-latest`
-- ✅ Valid: Job with `runs-on: ${{ matrix.os }}` (expression)
-- ✅ Valid: Multiple jobs with `runs-on`
-- ✅ Valid: Job with `runs-on` and other fields
-- ✅ Error: Job missing `runs-on` field
-- ✅ Error: Job with empty `runs-on: ""`
-- ✅ Error: One of multiple jobs missing `runs-on`
+**Tests:** `validation_expression.rs` (8 tests)
+**Test cases:**
+- ✅ Property access: `${{ github.event.pull_request.number }}`
+- ✅ Matrix references: `${{ matrix.os }}`
+- ✅ Conditional expressions
+- ✅ Nested property access chains
+- ✅ `workflow_dispatch` input references
+- ✅ Error on broken expression syntax
+- ✅ Warning on undefined context variables
+- ✅ Error on unclosed `${{ }}`
 
-### 14. SecretsValidationRule ✅
-**Purpose:** Validates secrets.* references  
-**Status:** Implemented  
-**Tests:** `validation_secrets.rs` (7 tests)  
-**Test Cases:**
-- ✅ Valid: `${{ secrets.GITHUB_TOKEN }}`
-- ✅ Valid: `${{ secrets.MY_SECRET }}`
-- ✅ Valid: Secret reference in env variables
-- ✅ Valid: Multiple secret references
-- ✅ Valid: Secret reference in conditional
-- ✅ Error: Invalid syntax (singular 'secret' instead of 'secrets')
-- ✅ Error: Missing dot (secretsMY_SECRET instead of secrets.MY_SECRET)
+### 9. PermissionsRule
+Validates the `permissions:` block at both workflow and job levels. GitHub supports `read-all`, `write-all`, `none`, or a map of individual scopes.
 
-### 15. TimeoutRule ✅
-**Purpose:** Validates that `timeout-minutes` is a positive number  
-**Status:** Implemented  
-**Tests:** `validation_timeout.rs` (8 tests)  
-**Test Cases:**
-- ✅ Valid: `timeout-minutes: 60`
-- ✅ Valid: `timeout-minutes: ${{ matrix.timeout }}` (expression)
-- ✅ Valid: No timeout (optional field)
-- ✅ Valid: Large positive number
-- ✅ Valid: Decimal number (GitHub Actions accepts decimals)
-- ✅ Error: `timeout-minutes: -5` (negative)
-- ✅ Error: `timeout-minutes: 0` (zero)
-- ✅ Error: `timeout-minutes: "60"` (string instead of number)
+**Tests:** `validation_permissions.rs` (8 tests)
+**Test cases:**
+- ✅ `permissions: read-all` and `permissions: write-all`
+- ✅ Scoped map: `permissions: { contents: read }`
+- ✅ Empty permissions `{}` (effectively no permissions)
+- ✅ Job-level permissions override
+- ✅ `none` value
+- ✅ Error on invalid permission scope names
+- ✅ Error on invalid permission values (anything other than `read`, `write`, `none`)
 
-### 16. WorkflowInputsRule ✅
-**Purpose:** Validates workflow_dispatch inputs  
-**Status:** Implemented  
-**Tests:** `validation_workflow_inputs.rs` (8 tests)  
-**Test Cases:**
-- ✅ Valid: `workflow_dispatch` with string input
-- ✅ Valid: `workflow_dispatch` with choice input
-- ✅ Valid: `workflow_dispatch` with boolean input
-- ✅ Valid: `workflow_dispatch` with environment input
-- ✅ Valid: `workflow_dispatch` without inputs
-- ✅ Valid: Multiple inputs
-- ✅ Error: Input reference to undefined input
-- ✅ Error: Invalid input type
+### 10. EnvironmentRule
+Checks environment references and environment variable definitions at the workflow, job, and step levels.
 
-### 17. JobOutputsRule ✅
-**Purpose:** Validates that job outputs reference valid step IDs  
-**Status:** Implemented  
-**Tests:** `validation_job_outputs.rs` (10 tests)  
-**Test Cases:**
-- ✅ Valid: `outputs: { result: ${{ steps.build.outputs.result }} }` where `build` step exists
-- ✅ Valid: Multiple outputs referencing same step ID
-- ✅ Valid: Output with conditional expression
-- ✅ Error: Reference to non-existent step ID
-- ✅ Error: Reference to step in different job
-- ✅ Error: Reference to step without `id` field
-- ✅ Error: Invalid output syntax (missing output name)
+**Tests:** `validation_environment.rs` (7 tests)
+**Test cases:**
+- ✅ Simple string: `environment: production`
+- ✅ Object form: `environment: { name: prod, url: ... }`
+- ✅ Workflow-level and step-level `env:` blocks
+- ✅ Environment with URL
+- ✅ Error on names with invalid characters
+- ✅ Error on protection rules (not supported in workflow YAML)
 
-### 18. ConcurrencyRule ✅
-**Purpose:** Validates concurrency syntax  
-**Status:** Implemented  
-**Tests:** `validation_concurrency.rs` (11 tests)  
-**Test Cases:**
-- ✅ Valid: `concurrency: { group: 'ci-${{ github.ref }}', cancel-in-progress: true }`
-- ✅ Valid: Workflow-level concurrency with cancel-in-progress: false
-- ✅ Valid: Job-level concurrency with expression group
-- ✅ Error: Missing required `group` field (workflow level)
-- ✅ Error: Missing required `group` field (job level)
-- ✅ Error: Invalid cancel-in-progress value (string instead of boolean)
-- ✅ Error: Invalid group type (number instead of string/expression)
+### 11. WorkflowNameRule
+The `name:` field is optional, but if present it should be non-empty and not absurdly long.
 
-### 19. ActionReferenceRule ✅
-**Purpose:** Validates action reference format (owner/repo@ref)  
-**Status:** Implemented  
-**Tests:** `validation_action_reference.rs` (14 tests)  
-**Test Cases:**
-- ✅ Valid: `uses: actions/checkout@v3` (tag)
-- ✅ Valid: `uses: actions/checkout@main` (branch)
-- ✅ Valid: `uses: actions/checkout@abc123def456` (SHA)
-- ✅ Valid: Local path `uses: ./.github/actions/my-action`
-- ✅ Valid: Docker `uses: docker://alpine:3.18`
-- ✅ Valid: Composite action `uses: my-org/my-composite-action@v1`
-- ✅ Error: `uses: invalid-action` (missing @ref)
-- ✅ Error: `uses: owner/repo` (missing @ref)
-- ✅ Error: `uses: checkout@v3` (missing owner)
-- ✅ Error: `uses: actionscheckout@v3` (missing slash)
-- ✅ Error: Invalid owner format (spaces)
+**Tests:** `validation_workflow_name.rs` (7 tests)
+**Test cases:**
+- ✅ `name: CI`
+- ✅ Expression in name: `name: ${{ github.event.pull_request.title }}`
+- ✅ Missing name is fine (it's optional)
+- ✅ Special characters and Unicode are allowed
+- ✅ Error on empty string `name: ""`
+- ✅ Error on names longer than 255 characters
 
-### 20. StepIdUniquenessRule ✅
-**Purpose:** Validates that step IDs are unique within a job  
-**Status:** Implemented  
-**Tests:** `validation_step_id_uniqueness.rs` (7 tests)  
-**Test Cases:**
-- ✅ Valid: Unique step IDs within a job
-- ✅ Valid: Steps without IDs (no conflict)
-- ✅ Valid: Different jobs can have same step IDs
-- ✅ Error: Duplicate step ID in same job
-- ✅ Error: Multiple steps with same `id` field
+### 12. MatrixStrategyRule
+Validates `strategy.matrix` blocks including `include` and `exclude` modifiers.
 
-### 21. StepOutputReferenceRule ✅
-**Purpose:** Validates that step output references (`steps.<step_id>.outputs.<output_name>`) reference valid outputs  
-**Status:** Implemented  
-**Tests:** `validation_step_output_reference.rs` (9 tests)  
-**Test Cases:**
-- ✅ Valid: Reference to existing step output
-- ✅ Valid: Reference in job outputs
-- ✅ Valid: Reference in step `if` conditions
-- ✅ Valid: Reference in step `env` variables
-- ✅ Error: Reference to non-existent output name
-- ✅ Error: Reference to output from step without `id`
-- ✅ Error: Reference to step in different job
+**Tests:** `validation_matrix.rs` (7 tests)
+**Test cases:**
+- ✅ `matrix: { os: [ubuntu, windows] }`
+- ✅ `matrix: { include: [...] }`
+- ✅ `matrix: { exclude: [...] }`
+- ✅ Error on empty matrix
+- ✅ Error on invalid `include`/`exclude` syntax
 
-### 22. JobStrategyValidationRule ✅
-**Purpose:** Validates `strategy` field syntax and constraints (max-parallel, fail-fast)  
-**Status:** Implemented  
-**Tests:** `validation_job_strategy.rs` (8 tests)  
-**Test Cases:**
-- ✅ Valid: `strategy: { max-parallel: 3, fail-fast: true }`
-- ✅ Valid: Strategy with matrix
-- ✅ Error: `max-parallel: -1` (must be positive)
-- ✅ Error: `fail-fast: "true"` (must be boolean, not string)
+### 13. RunsOnRequiredRule
+Every job needs a `runs-on` value. This rule catches jobs that are missing it or have it set to an empty string, which would fail silently on GitHub.
 
-### 23. StepIfExpressionRule ✅
-**Purpose:** Validates `if` condition expressions in steps  
-**Status:** Implemented  
-**Tests:** `validation_step_if_expression.rs` (7 tests)  
-**Test Cases:**
-- ✅ Valid: `if: ${{ github.ref == 'refs/heads/main' }}`
-- ✅ Valid: Complex conditional expressions
-- ✅ Error: `if: github.ref == 'refs/heads/main'` (missing `${{ }}` wrapper)
-- ✅ Error: Invalid expression syntax in `if` condition
+**Tests:** `validation_runs_on.rs` (7 tests)
+**Test cases:**
+- ✅ `runs-on: ubuntu-latest`
+- ✅ Expression form: `runs-on: ${{ matrix.os }}`
+- ✅ Multiple jobs each with their own `runs-on`
+- ✅ Error when `runs-on` is missing
+- ✅ Error when `runs-on` is empty
+- ✅ Error when one job in a multi-job workflow is missing it
 
-### 24. JobIfExpressionRule ✅
-**Purpose:** Validates `if` condition expressions in jobs  
-**Status:** Implemented  
-**Tests:** `validation_job_if_expression.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: `if: ${{ github.ref == 'refs/heads/main' }}`
-- ✅ Valid: Job-level conditional expressions
-- ✅ Error: Invalid expression syntax in `if` condition
+### 14. SecretsValidationRule
+Catches common typos in `secrets.*` references -- the most frequent being `secret.` (singular) instead of `secrets.` (plural).
 
-### 25. WorkflowCallInputsRule ✅
-**Purpose:** Validates `workflow_call` inputs and their usage  
-**Status:** Implemented  
-**Tests:** `validation_workflow_call_inputs.rs` (8 tests)  
-**Test Cases:**
-- ✅ Valid: `workflow_call` with properly defined inputs
-- ✅ Valid: Input reference matches defined input
-- ✅ Error: Input reference to undefined input
-- ✅ Error: Invalid input type
+**Tests:** `validation_secrets.rs` (7 tests)
+**Test cases:**
+- ✅ `${{ secrets.GITHUB_TOKEN }}` and `${{ secrets.MY_SECRET }}`
+- ✅ Secret references inside `env:` blocks
+- ✅ Multiple secret references in one file
+- ✅ Secret reference in `if:` conditionals
+- ✅ Error on `secret.` (missing the "s")
+- ✅ Error on `secretsMY_SECRET` (missing the dot)
 
-### 26. WorkflowCallSecretsRule ✅
-**Purpose:** Validates `workflow_call` secrets and their usage  
-**Status:** Implemented  
-**Tests:** `validation_workflow_call_secrets.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: `workflow_call` with properly defined secrets
-- ✅ Valid: Secret reference matches defined secret
-- ✅ Error: Secret reference to undefined secret
+### 15. TimeoutRule
+Validates `timeout-minutes` at the job level. Must be a positive number -- GitHub silently accepts strings and zeros, but they don't behave the way you'd expect.
 
-### 27. ReusableWorkflowCallRule ✅
-**Purpose:** Validates `uses:` workflow calls reference valid reusable workflows  
-**Status:** Implemented  
-**Tests:** `validation_reusable_workflow_call.rs` (7 tests)  
-**Test Cases:**
-- ✅ Valid: `uses: owner/repo/.github/workflows/reusable.yml@main`
-- ✅ Valid: Reusable workflow call with inputs
-- ✅ Error: Invalid workflow call format
-- ✅ Error: Missing required fields
+**Tests:** `validation_timeout.rs` (8 tests)
+**Test cases:**
+- ✅ `timeout-minutes: 60`
+- ✅ Expression form: `timeout-minutes: ${{ matrix.timeout }}`
+- ✅ No timeout specified (it's optional)
+- ✅ Large values and decimals (GitHub does accept these)
+- ✅ Error on negative values
+- ✅ Error on zero
+- ✅ Error on string values like `timeout-minutes: "60"`
 
-### 28. WorkflowCallOutputsRule ✅
-**Purpose:** Validates `workflow_call` outputs are properly defined  
-**Status:** Implemented  
-**Tests:** `validation_workflow_call_outputs.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: `workflow_call` output references valid job output
-- ✅ Error: Output references non-existent job
-- ✅ Error: Output references non-existent job output
+### 16. WorkflowInputsRule
+Validates `workflow_dispatch` inputs: their types, required flags, default values, and whether references to them actually exist.
 
-### 29. StepContinueOnErrorRule ✅
-**Purpose:** Validates `continue-on-error` is a boolean  
-**Status:** Implemented  
-**Tests:** `validation_step_continue_on_error.rs` (4 tests)  
-**Test Cases:**
-- ✅ Valid: `continue-on-error: true`
-- ✅ Valid: `continue-on-error: false`
-- ✅ Error: `continue-on-error: "true"` (string instead of boolean)
+**Tests:** `validation_workflow_inputs.rs` (8 tests)
+**Test cases:**
+- ✅ String, choice, boolean, and environment input types
+- ✅ `workflow_dispatch` with no inputs (valid)
+- ✅ Multiple inputs
+- ✅ Error on references to inputs that aren't defined
+- ✅ Error on unrecognized input types
 
-### 30. StepTimeoutRule ✅
-**Purpose:** Validates `timeout-minutes` at step level  
-**Status:** Implemented  
-**Tests:** `validation_step_timeout.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: `timeout-minutes: 30` at step level
-- ✅ Error: `timeout-minutes: -5` (must be positive)
-- ✅ Error: `timeout-minutes: 0` (must be positive)
+### 17. JobOutputsRule
+Checks that job-level `outputs:` actually reference step IDs that exist in that job. A surprisingly common source of broken workflows when steps get renamed or moved.
 
-### 31. StepShellRule ✅
-**Purpose:** Validates `shell` field values  
-**Status:** Implemented  
-**Tests:** `validation_step_shell.rs` (8 tests)  
-**Test Cases:**
-- ✅ Valid: `shell: bash`, `shell: pwsh`, `shell: python`
-- ✅ Valid: Custom shell with inline script
-- ✅ Error: Invalid shell syntax
+**Tests:** `validation_job_outputs.rs` (10 tests)
+**Test cases:**
+- ✅ `outputs: { result: ${{ steps.build.outputs.result }} }` where `build` step exists
+- ✅ Multiple outputs pointing at the same step
+- ✅ Outputs with conditional expressions
+- ✅ Error on references to non-existent step IDs
+- ✅ Error on cross-job step references
+- ✅ Error on references to steps that lack an `id` field
+- ✅ Error on malformed output syntax
 
-### 32. StepWorkingDirectoryRule ✅
-**Purpose:** Validates `working-directory` paths  
-**Status:** Implemented  
-**Tests:** `validation_step_working_directory.rs` (4 tests)  
-**Test Cases:**
-- ✅ Valid: `working-directory: ./src`
-- ✅ Valid: Absolute and relative paths
-- ✅ Warning: Potentially invalid paths (basic format validation)
+### 18. ConcurrencyRule
+Validates concurrency groups at workflow and job levels. The `group` field is required when using the object form -- without it, GitHub will reject the workflow.
 
-### 33. ArtifactValidationRule ✅
-**Purpose:** Validates `actions/upload-artifact` and `actions/download-artifact` usage  
-**Status:** Implemented  
-**Tests:** `validation_artifact.rs` (5 tests)  
-**Test Cases:**
-- ✅ Valid: Artifact with valid name and path
-- ✅ Error: Empty artifact name
-- ✅ Warning: Potentially invalid paths
+**Tests:** `validation_concurrency.rs` (11 tests)
+**Test cases:**
+- ✅ `concurrency: { group: 'ci-${{ github.ref }}', cancel-in-progress: true }`
+- ✅ `cancel-in-progress: false` at workflow level
+- ✅ Job-level concurrency with expression-based groups
+- ✅ Error on missing `group` field (both workflow and job level)
+- ✅ Error on `cancel-in-progress` being a string instead of boolean
+- ✅ Error on `group` being a number instead of string/expression
 
-### 34. EventPayloadValidationRule ✅
-**Purpose:** Validates event-specific fields in `on:` triggers  
-**Status:** Implemented  
-**Tests:** `validation_event_payload.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: Event-specific fields for each event type
-- ✅ Error: Invalid field for event type
-- ✅ Error: Invalid event type value
+### 19. ActionReferenceRule
+Validates the format of `uses:` references. Handles the various forms: `owner/repo@ref`, local paths, Docker images, and composite actions.
 
-### 35. RunnerLabelRule ✅
-**Purpose:** Validates `runs-on` labels are valid GitHub-hosted runners or self-hosted runner groups  
-**Status:** Implemented  
-**Tests:** `validation_runner_label.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: Known GitHub-hosted runners (`ubuntu-latest`, `windows-latest`, etc.)
-- ✅ Valid: Self-hosted runner labels
-- ✅ Warning: Unknown runner labels (basic format validation)
+**Tests:** `validation_action_reference.rs` (14 tests)
+**Test cases:**
+- ✅ Tag ref: `uses: actions/checkout@v3`
+- ✅ Branch ref: `uses: actions/checkout@main`
+- ✅ SHA ref: `uses: actions/checkout@abc123def456`
+- ✅ Local path: `uses: ./.github/actions/my-action`
+- ✅ Docker: `uses: docker://alpine:3.18`
+- ✅ Composite: `uses: my-org/my-composite-action@v1`
+- ✅ Error on missing `@ref` suffix
+- ✅ Error on `owner/repo` without version
+- ✅ Error on missing owner (`checkout@v3`)
+- ✅ Error on missing slash (`actionscheckout@v3`)
+- ✅ Error on spaces in owner name
 
-### 36. StepEnvValidationRule ✅
-**Purpose:** Validates environment variable names and values at step level  
-**Status:** Implemented  
-**Tests:** `validation_step_env.rs` (5 tests)  
-**Test Cases:**
-- ✅ Valid: `env: { VALID_NAME: value }`
-- ✅ Valid: Environment variables with expressions
-- ✅ Error: Invalid env var name format
+### 20. StepIdUniquenessRule
+Step IDs must be unique within a job. Different jobs can reuse the same IDs -- that's fine -- but duplicates within a single job will confuse output references.
 
-### 37. JobContainerRule ✅
-**Purpose:** Validates `container` and `services` configurations  
-**Status:** Implemented  
-**Tests:** `validation_job_container.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: Container with valid image and ports
-- ✅ Valid: Services configuration
-- ✅ Error: Invalid port mapping format
-- ✅ Error: Invalid container configuration
+**Tests:** `validation_step_id_uniqueness.rs` (7 tests)
+**Test cases:**
+- ✅ Unique step IDs within a job
+- ✅ Steps without IDs (no conflict possible)
+- ✅ Same step ID in different jobs (allowed)
+- ✅ Error on duplicate step IDs in the same job
 
-### 38. StepNameRule ✅
-**Purpose:** Validates step `name` field format  
-**Status:** Implemented  
-**Tests:** `validation_step_name.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: Step with valid name
-- ✅ Valid: Step name with expressions
-- ✅ Warning: Empty step name
-- ✅ Warning: Very long step name
+### 21. StepOutputReferenceRule
+Validates `steps.<step_id>.outputs.<output_name>` references. Checks that the step ID exists, belongs to the current job, and actually has an `id` field.
 
-### 39. DefaultsValidationRule ✅
-**Purpose:** Validates `defaults` configuration at workflow and job levels  
-**Status:** Implemented  
-**Tests:** `validation_defaults.rs` (6 tests)  
-**Test Cases:**
-- ✅ Valid: Defaults with valid shell and working-directory
-- ✅ Valid: Workflow-level defaults
-- ✅ Valid: Job-level defaults
-- ✅ Error: Invalid shell in defaults
-- ✅ Error: Invalid working-directory in defaults
+**Tests:** `validation_step_output_reference.rs` (9 tests)
+**Test cases:**
+- ✅ Reference to existing step output
+- ✅ References in job outputs, `if:` conditions, and `env:` blocks
+- ✅ Error on non-existent output names
+- ✅ Error on references to steps without an `id`
+- ✅ Error on cross-job step references
+
+### 22. JobStrategyValidationRule
+Validates the `strategy` block beyond just the matrix -- checks `max-parallel` and `fail-fast` types and values.
+
+**Tests:** `validation_job_strategy.rs` (8 tests)
+**Test cases:**
+- ✅ `strategy: { max-parallel: 3, fail-fast: true }`
+- ✅ Strategy combined with matrix
+- ✅ Error on negative `max-parallel`
+- ✅ Error on `fail-fast` being a string instead of boolean
+
+### 23. StepIfExpressionRule
+Validates `if:` conditions on steps. GitHub actually allows bare expressions without `${{ }}` wrappers in `if:` fields, but we warn about it since it's a common source of confusion and inconsistency.
+
+**Tests:** `validation_step_if_expression.rs` (7 tests)
+**Test cases:**
+- ✅ `if: ${{ github.ref == 'refs/heads/main' }}`
+- ✅ Complex conditionals with logical operators
+- ✅ Error on missing `${{ }}` wrapper
+- ✅ Error on invalid expression syntax
+
+### 24. JobIfExpressionRule
+Same as StepIfExpressionRule, but for job-level `if:` conditions.
+
+**Tests:** `validation_job_if_expression.rs` (6 tests)
+**Test cases:**
+- ✅ `if: ${{ github.ref == 'refs/heads/main' }}`
+- ✅ Job-level conditional expressions
+- ✅ Error on invalid expression syntax
+
+### 25. WorkflowCallInputsRule
+For reusable workflows (`workflow_call`), validates that declared inputs match their usage and have valid types.
+
+**Tests:** `validation_workflow_call_inputs.rs` (8 tests)
+**Test cases:**
+- ✅ Properly defined inputs with matching references
+- ✅ Error on references to undefined inputs
+- ✅ Error on invalid input types
+
+### 26. WorkflowCallSecretsRule
+Same idea as WorkflowCallInputsRule, but for `workflow_call` secrets. Makes sure secret references point to something that's actually declared.
+
+**Tests:** `validation_workflow_call_secrets.rs` (6 tests)
+**Test cases:**
+- ✅ Properly defined secrets with matching references
+- ✅ Error on references to undefined secrets
+
+### 27. ReusableWorkflowCallRule
+Validates the `uses:` field when calling a reusable workflow (as opposed to an action). The format is `owner/repo/.github/workflows/file.yml@ref`.
+
+**Tests:** `validation_reusable_workflow_call.rs` (7 tests)
+**Test cases:**
+- ✅ `uses: owner/repo/.github/workflows/reusable.yml@main`
+- ✅ Workflow call with input passthrough
+- ✅ Error on invalid format
+- ✅ Error on missing required fields
+
+### 28. WorkflowCallOutputsRule
+Checks that `workflow_call` output mappings point to jobs and job outputs that actually exist.
+
+**Tests:** `validation_workflow_call_outputs.rs` (6 tests)
+**Test cases:**
+- ✅ Output referencing a valid job output
+- ✅ Error on references to non-existent jobs
+- ✅ Error on references to non-existent job outputs
+
+### 29. StepContinueOnErrorRule
+Simple type check: `continue-on-error` must be a boolean (or an expression). Strings like `"true"` are a common mistake.
+
+**Tests:** `validation_step_continue_on_error.rs` (4 tests)
+**Test cases:**
+- ✅ `continue-on-error: true` and `continue-on-error: false`
+- ✅ Error on `continue-on-error: "true"` (string)
+
+### 30. StepTimeoutRule
+Like TimeoutRule (#15), but at the step level. Same constraints: must be a positive number.
+
+**Tests:** `validation_step_timeout.rs` (6 tests)
+**Test cases:**
+- ✅ `timeout-minutes: 30` on a step
+- ✅ Error on negative values and zero
+
+### 31. StepShellRule
+Validates the `shell:` field on `run:` steps. Recognizes the built-in shells (`bash`, `pwsh`, `python`, `sh`, `cmd`, `powershell`) and allows custom shell strings.
+
+**Tests:** `validation_step_shell.rs` (8 tests)
+**Test cases:**
+- ✅ `shell: bash`, `shell: pwsh`, `shell: python`
+- ✅ Custom shell with inline script
+- ✅ Error on invalid shell syntax
+
+### 32. StepWorkingDirectoryRule
+Basic sanity check on `working-directory` paths. Accepts relative and absolute paths, warns on anything that looks malformed.
+
+**Tests:** `validation_step_working_directory.rs` (4 tests)
+**Test cases:**
+- ✅ `working-directory: ./src`
+- ✅ Absolute and relative paths
+- ✅ Warning on suspicious path formats
+
+### 33. ArtifactValidationRule
+Validates `actions/upload-artifact` and `actions/download-artifact` usage, checking that artifact names and paths are present and well-formed.
+
+**Tests:** `validation_artifact.rs` (5 tests)
+**Test cases:**
+- ✅ Artifact with valid name and path
+- ✅ Error on empty artifact name
+- ✅ Warning on potentially invalid paths
+
+### 34. EventPayloadValidationRule
+Goes deeper than WorkflowTriggerRule by validating event-specific fields -- for example, making sure `branches` filters are only used on events that support them.
+
+**Tests:** `validation_event_payload.rs` (17 tests)
+**Test cases:**
+- ✅ Event-specific fields matching their event types
+- ✅ Error on fields that don't belong to a given event type
+- ✅ Error on invalid event type values
+
+### 35. RunnerLabelRule
+Validates `runs-on` labels against known GitHub-hosted runners. Self-hosted labels are allowed too, but unknown labels get a warning since they're a frequent source of "workflow queued forever" issues.
+
+**Tests:** `validation_runner_label.rs` (6 tests)
+**Test cases:**
+- ✅ Known runners: `ubuntu-latest`, `windows-latest`, `macos-latest`, etc.
+- ✅ Self-hosted runner labels
+- ✅ Warning on unrecognized labels
+
+### 36. StepEnvValidationRule
+Validates environment variable names and values at the step level. Env var names must follow the standard `[A-Z_][A-Z0-9_]*` convention.
+
+**Tests:** `validation_step_env.rs` (8 tests)
+**Test cases:**
+- ✅ `env: { VALID_NAME: value }`
+- ✅ Environment variables with expression values
+- ✅ Error on invalid env var name format
+
+### 37. JobContainerRule
+Validates `container:` and `services:` blocks on jobs. Checks image names, port mappings, and the overall structure.
+
+**Tests:** `validation_job_container.rs` (6 tests)
+**Test cases:**
+- ✅ Container with valid image and ports
+- ✅ Services configuration with multiple containers
+- ✅ Error on malformed port mappings
+- ✅ Error on invalid container configuration
+
+### 38. StepNameRule
+Validates the optional `name:` field on steps. It's not required, but if present it shouldn't be empty or excessively long.
+
+**Tests:** `validation_step_name.rs` (6 tests)
+**Test cases:**
+- ✅ Step with a descriptive name
+- ✅ Name containing expressions
+- ✅ Warning on empty name
+- ✅ Warning on very long names
+
+### 39. DefaultsValidationRule
+Validates `defaults.run` at both the workflow and job levels. Mostly checks that `shell` and `working-directory` contain sensible values.
+
+**Tests:** `validation_defaults.rs` (6 tests)
+**Test cases:**
+- ✅ Defaults with valid shell and working-directory
+- ✅ Workflow-level and job-level defaults
+- ✅ Error on invalid shell in defaults
+- ✅ Error on invalid working-directory in defaults
+
+### 40. DeprecatedCommandsRule
+Warns when a `run:` block uses deprecated workflow commands. GitHub removed support for `::set-output`, `::save-state`, `::set-env`, and `::add-path` due to security concerns -- workflows using them will fail or behave unexpectedly.
+
+**Tests:** `validation_deprecated_commands.rs` (7 tests)
+**Test cases:**
+- ✅ Detects `::set-output` and suggests `GITHUB_OUTPUT`
+- ✅ Detects `::save-state` and suggests `GITHUB_STATE`
+- ✅ Detects `::set-env` and suggests `GITHUB_ENV`
+- ✅ Detects `::add-path` and suggests `GITHUB_PATH`
+- ✅ Handles multiline `run:` blocks correctly
+- ✅ Detects multiple deprecated commands in a single block
+- ✅ No false positives on modern `GITHUB_OUTPUT`-style syntax
+
+### 41. ScriptInjectionRule
+Detects potential script injection vulnerabilities in `run:` blocks. When untrusted inputs (like PR titles, issue bodies, or branch names) are interpolated directly via `${{ }}` expressions, an attacker can inject arbitrary shell commands.
+
+**Tests:** `validation_script_injection.rs` (9 tests)
+**Test cases:**
+- ✅ Detects `${{ github.event.pull_request.title }}` in run blocks
+- ✅ Detects `${{ github.event.pull_request.body }}`
+- ✅ Detects `${{ github.event.pull_request.head.ref }}`
+- ✅ Detects `${{ github.event.issue.body }}`
+- ✅ Detects `${{ github.event.comment.body }}`
+- ✅ Detects `${{ github.head_ref }}`
+- ✅ No false positive on `${{ github.sha }}` (safe context)
+- ✅ No false positive on env var or secrets references
+- ✅ Recognizes safe usage through environment variable indirection
 
 ## Test Organization
 
@@ -436,7 +445,7 @@ crates/truss-core/tests/
 ├── validation_job_outputs.rs             ✅ (10 tests)
 ├── validation_job_container.rs           ✅ (6 tests)
 ├── validation_job_strategy.rs            ✅ (8 tests)
-├── validation_step.rs                    ✅ (5 tests)
+├── validation_step.rs                    ✅ (8 tests)
 ├── validation_step_name.rs               ✅ (6 tests)
 ├── validation_step_id_uniqueness.rs      ✅ (7 tests)
 ├── validation_step_if_expression.rs      ✅ (7 tests)
@@ -445,7 +454,7 @@ crates/truss-core/tests/
 ├── validation_step_timeout.rs            ✅ (6 tests)
 ├── validation_step_shell.rs              ✅ (8 tests)
 ├── validation_step_working_directory.rs  ✅ (4 tests)
-├── validation_step_env.rs                ✅ (5 tests)
+├── validation_step_env.rs                ✅ (8 tests)
 ├── validation_expression.rs             ✅ (8 tests)
 ├── validation_expression_edge_cases.rs  ✅ (11 tests)
 ├── validation_permissions.rs             ✅ (8 tests)
@@ -465,9 +474,11 @@ crates/truss-core/tests/
 ├── validation_defaults.rs                ✅ (6 tests)
 ├── validation_action_reference.rs        ✅ (14 tests)
 ├── validation_artifact.rs                ✅ (5 tests)
-├── validation_event_payload.rs           ✅ (6 tests)
+├── validation_event_payload.rs           ✅ (17 tests)
+├── validation_deprecated_commands.rs     ✅ (7 tests)
+├── validation_script_injection.rs        ✅ (9 tests)
 ├── validation_comment_handling.rs        ✅ (8 tests)
 └── validation_benchmark_fixtures.rs      ✅ (10 tests)
 ```
 
-**Total: 294 tests across 40 test files (all passing)**
+**Total: 346 tests across 44 test files (all passing)**

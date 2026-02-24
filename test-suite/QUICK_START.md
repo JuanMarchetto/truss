@@ -1,161 +1,131 @@
-# Quick Start Guide
+# Quick Start
 
-Since `just` may not be installed, here are the direct bash commands to use:
+Don't have `just` installed? No worries -- here are the plain bash commands.
 
-## Prerequisites
+## Before You Start
 
-1. **Build Truss:**
-   ```bash
-   cargo build --release
-   ```
+**Build Truss:**
 
-2. **Install competitor tools (optional, for full comparison):**
-   ```bash
-   # actionlint
-   brew install actionlint
-   # or
-   go install github.com/rhymond/actionlint@latest
-   
-   # yamllint
-   pip install yamllint
-   # or
-   brew install yamllint
-   
-   # yaml-language-server
-   npm install -g yaml-language-server
-   ```
+```bash
+cargo build --release
+```
 
-## Step 1: Setup Test Repositories
+**Install the competitor tools** (optional -- you only need these for full comparison):
+
+```bash
+# actionlint
+brew install actionlint
+# or: go install github.com/rhymond/actionlint@latest
+
+# yamllint
+pip install yamllint
+# or: brew install yamllint
+
+# yaml-language-server
+npm install -g yaml-language-server
+```
+
+## Step 1: Grab the Test Repos
 
 ```bash
 # Clone all test repositories
 bash scripts/setup-test-repos.sh
 
-# Or clone only high-priority ones
+# Or just the high-priority ones
 bash scripts/setup-test-repos.sh high
 
-# List what was cloned
+# Check what got cloned
 bash scripts/manage-repos.sh list
 ```
 
-**Note:** This requires network access and git. If you can't clone repos, you can test with existing fixtures (see below).
+If you don't have network access or just want to try things out quickly, skip ahead to "Testing Without Cloning Repos" below.
 
-## Step 2: Run Test Suite
+## Step 2: Run the Tests
 
 ```bash
-# Full test suite (all repos, all tools)
+# Run everything (all repos, all tools)
 bash scripts/run-full-suite.sh
 
-# Or test a single repository
+# Or just one repo
 bash scripts/run-validation.sh test-suite/repos/rust-lang-rust
 ```
 
-## Step 3: View Results
+## Step 3: See What Happened
 
 ```bash
-# View Markdown report
+# Markdown report
 cat test-suite/comparison/reports/summary.md
 
-# View HTML report (open in browser)
+# HTML report
 open test-suite/comparison/reports/summary.html
-# or
-xdg-open test-suite/comparison/reports/summary.html  # Linux
+# On Linux:
+xdg-open test-suite/comparison/reports/summary.html
 
-# View JSON comparison data
+# Raw JSON
 cat test-suite/comparison/coverage.json | jq
 ```
 
 ## Testing Without Cloning Repos
 
-If you can't clone repositories, test with existing benchmark fixtures:
+If you can't clone repositories, you can still exercise the framework using the existing benchmark fixtures:
 
 ```bash
-# Test framework with existing fixtures
 bash scripts/test-framework.sh
 ```
 
-This will:
-- Test Truss JSON output on existing fixtures
-- Test competitor capture scripts (if tools are installed)
-- Run comparison and report generation
-- Show results in `test-suite/results-test/` and `test-suite/comparison-test/`
+This runs Truss (and any installed competitor tools) against the bundled fixtures, then does the comparison and report generation. Results end up in `test-suite/results-test/` and `test-suite/comparison-test/`.
 
-## Manual Testing
+## Trying Things by Hand
 
-### Test Truss JSON Output
+### Truss JSON output
 
 ```bash
-# Single file
+# One file
 ./target/release/truss validate --json benchmarks/fixtures/simple.yml
 
-# Multiple files
+# A bunch of files
 ./target/release/truss validate --json benchmarks/fixtures/*.yml
 ```
 
-### Test Competitor Capture Scripts
+### Competitor capture scripts
 
 ```bash
-# actionlint
 bash competitors/actionlint/capture.sh benchmarks/fixtures/simple.yml
-
-# yamllint
 bash competitors/yamllint/capture.sh benchmarks/fixtures/simple.yml
-
-# yaml-language-server
 bash competitors/yaml-language-server/capture.sh benchmarks/fixtures/simple.yml
 ```
 
-### Run Comparison Manually
+### Comparison and reporting
 
 ```bash
-# Compare results
 python3 scripts/compare-results.py test-suite/results test-suite/comparison/coverage.json
-
-# Generate reports
 python3 scripts/generate-report.py test-suite/comparison/coverage.json test-suite/comparison/reports
 ```
 
-## Troubleshooting
+## Common Issues
 
-### "just: command not found"
+**"just: command not found"** -- Use the bash scripts directly:
+- `just test-multifile` becomes `bash scripts/run-full-suite.sh`
+- `just test-repo <repo>` becomes `bash scripts/run-validation.sh test-suite/repos/<repo>`
+- `just setup-test-repos` becomes `bash scripts/setup-test-repos.sh`
 
-Use the bash scripts directly instead:
-- `just test-multifile` → `bash scripts/run-full-suite.sh`
-- `just test-repo <repo>` → `bash scripts/run-validation.sh test-suite/repos/<repo>`
-- `just setup-test-repos` → `bash scripts/setup-test-repos.sh`
+**"No such file or directory" for reports** -- Reports only exist after you run the suite. Either run `bash scripts/run-full-suite.sh` or try `bash scripts/test-framework.sh` first.
 
-### "No such file or directory" for reports
+**Permission denied** -- Make the scripts executable:
 
-The reports are only created after running the test suite. Run:
-```bash
-bash scripts/run-full-suite.sh
-```
-
-Or test with fixtures first:
-```bash
-bash scripts/test-framework.sh
-```
-
-### Permission denied
-
-Make scripts executable:
 ```bash
 chmod +x scripts/*.sh
 chmod +x competitors/*/capture.sh
 ```
 
-### Tool not found errors
+**Tool not found** -- That's fine. The framework skips tools that aren't installed. If you want full comparison, install the missing ones (see "Before You Start" above).
 
-The framework will skip tools that aren't installed. To get full comparison, install the missing tools (see Prerequisites above).
-
-## Expected Output Structure
-
-After running the test suite, you should have:
+## What You Should See Afterward
 
 ```
 test-suite/
-├── repos/                    # Cloned repositories (if setup was run)
-├── results/                  # Validation results
+├── repos/                    # Cloned repositories (if you ran setup)
+├── results/                  # Raw validation results
 │   ├── truss/
 │   ├── actionlint/
 │   ├── yamllint/
@@ -166,4 +136,3 @@ test-suite/
         ├── summary.md        # Markdown report
         └── summary.html      # HTML report
 ```
-

@@ -3,10 +3,11 @@
     "file": "/home/claw/.openclaw/workspace/truss/scripts/../benchmarks/fixtures/complex-dynamic.yml",
     "valid": true,
     "diagnostics": [],
-    "duration_ms": 5.516667,
+    "duration_ms": 0.0,
     "metadata": {
-      "file_size": 14190,
-      "lines": 335
-    }
+      "file_size": 0,
+      "lines": 0
+    },
+    "error": "yamllint not found"
   }
 ]

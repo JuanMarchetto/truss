@@ -1,379 +1,297 @@
 # Truss
 
-> **Early Development Notice:** This project is in early development. A significant portion of the codebase was AI-generated and is actively being reviewed, tested, and refined. While all tests pass and benchmarks are reproducible, you should treat this as an experimental tool — not production-ready software. Feedback, bug reports, and contributions are welcome as we work toward a stable release.
+> **Heads up:** This project is still early. A good chunk of the code was AI-generated and is being actively reviewed, tested, and improved. All tests pass and the benchmarks are reproducible, but treat this as experimental for now. Bug reports and contributions are very welcome as we work toward a stable release.
 
-High-performance CI/CD pipeline validation and analysis engine written in Rust. Truss provides real-time feedback, high performance, and reproducible results by detecting configuration errors, semantic inconsistencies, and autocomplete opportunities before a pipeline is executed.
+A fast GitHub Actions workflow validator written in Rust. Truss catches configuration errors, semantic issues, and common mistakes in your CI/CD pipelines before you push — so you spend less time debugging failed runs.
 
-## Performance Highlights
+## Why Truss?
 
-**Truss is 15-35x faster than existing GitHub Actions validation tools:**
+**It's fast.** Like, really fast. 15-35x faster than the alternatives:
 
-| Tool | Language | Mean Time | Relative Speed |
-|------|----------|-----------|----------------|
-| **Truss** | Rust | **11.1ms** | 1.00x (baseline) |
-| actionlint | Go | 165.7ms | **14.98x slower** |
-| yaml-language-server | TypeScript | 381.7ms | **34.51x slower** |
-| yamllint | Python | 210.9ms | **19.07x slower** |
+| Tool | Language | Mean Time | vs Truss |
+|------|----------|-----------|----------|
+| **Truss** | Rust | **11.1ms** | baseline |
+| actionlint | Go | 165.7ms | 15x slower |
+| yamllint | Python | 210.9ms | 19x slower |
+| yaml-language-server | TypeScript | 381.7ms | 35x slower |
 
-*Benchmark: Complex dynamic workflow validation via Hyperfine. See [Performance](#performance) section for details.*
+*Measured with Hyperfine on `complex-dynamic.yml`. See [benchmarks/hyperfine/compare.md](benchmarks/hyperfine/compare.md).*
 
-**Why this matters:** 11.1ms is fast enough for real-time LSP integration, enabling instant diagnostics as you type in your editor.
+At 11ms, Truss is fast enough to validate workflows as you type — no perceptible lag in your editor.
 
-## Features
+## What It Catches
 
-- **High Performance**: 15-35x faster than competitors (11.1ms average for complex workflows)
-- **Semantic Validation**: Goes beyond syntax checking to validate semantic correctness
-- **39 Validation Rules**: Comprehensive coverage of GitHub Actions workflow syntax and semantics
-- **Modular Design**: Core engine with multiple adapter layers (CLI, LSP, WASM)
-- **Measurable**: Comprehensive benchmarking infrastructure from day one
-- **Incremental**: Designed for partial file edits and real-time feedback
+Truss ships with **41 validation rules** that go well beyond syntax checking. It validates job dependencies for circular references, checks that your `runs-on` labels are real GitHub-hosted runners, flags script injection risks, warns about deprecated workflow commands, verifies matrix strategies, validates cron expressions, and much more.
 
-## Quick Start
+See the [full rule list](#validation-rules) below or check [docs/VALIDATION_RULES.md](docs/VALIDATION_RULES.md) for the details.
+
+## Getting Started
 
 ### Prerequisites
 
-- Rust 1.70+ (install via [rustup](https://rustup.rs/))
-- `just` (recommended) or `make` for build automation
+- Rust 1.70+ ([rustup.rs](https://rustup.rs/))
+- `just` (recommended) or `make`
 
-### Installation
+### Install & Build
 
 ```bash
-# Clone the repository
 git clone https://github.com/JuanMarchetto/truss.git
 cd truss
-
-# Build the project
-just build
-# or: make build
-
-# Run tests
-just test
-# or: make test
+just build    # or: make build
+just test     # or: make test
 ```
 
-### Usage
-
-#### CLI
+### Basic Usage
 
 ```bash
-# Validate a GitHub Actions workflow file
-truss validate path/to/workflow.yml
+# Validate a workflow file
+truss validate .github/workflows/ci.yml
 
-# Validate multiple files (processed in parallel)
-truss validate file1.yml file2.yml
-
-# Validate an entire directory (recursively finds *.yml and *.yaml)
+# Validate everything in a directory
 truss validate .github/workflows/
 
-# Validate with glob patterns
+# Multiple files at once (parallel processing)
+truss validate ci.yml deploy.yml release.yml
+
+# Glob patterns work too
 truss validate '.github/workflows/*.yml'
 
-# Read from stdin
+# Pipe from stdin
 cat workflow.yml | truss validate -
 
-# Show only errors (suppress warnings and info)
-truss validate --severity error path/to/workflow.yml
+# Only show errors (skip warnings)
+truss validate --severity error ci.yml
 
-# JSON output (includes timing and metadata)
-truss validate --json path/to/workflow.yml
+# Machine-readable JSON output
+truss validate --json ci.yml
 
-# Quiet mode (suppress output, only exit code)
-truss validate --quiet path/to/workflow.yml
+# Quiet mode — just the exit code
+truss validate --quiet ci.yml
 
-# Show version
+# Version info
 truss --version
 ```
 
-#### Exit Codes
+### Exit Codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | All files valid |
 | 1 | Validation errors found |
-| 2 | Usage error (no files, bad arguments) |
+| 2 | Bad arguments or no files given |
 | 3 | I/O error (file not found, permission denied) |
 
-#### VS Code Extension
+### VS Code Extension
 
-A VS Code extension is available in `editors/vscode/` for real-time diagnostics:
+There's a VS Code extension in `editors/vscode/` that gives you real-time diagnostics as you type:
 
 ```bash
-# Build the LSP server
 cargo build --release -p truss-lsp
-
-# Install the extension (requires Node.js)
 cd editors/vscode
-npm install
-npm run compile
+npm install && npm run compile
 npx vsce package
 code --install-extension truss-validator-0.1.0.vsix
 ```
 
-The extension activates automatically for `.github/workflows/*.yml` files and provides inline diagnostics via the Truss LSP server. See [editors/vscode/README.md](editors/vscode/README.md) for configuration options.
+It activates automatically on `.github/workflows/*.yml` files. See [editors/vscode/README.md](editors/vscode/README.md) for setup details.
 
-#### LSP Server (Manual Setup)
+### Other Editors
 
-For editors other than VS Code, configure the Truss LSP server directly:
+You can hook up `truss-lsp` to any editor that supports LSP:
 
 ```bash
-# Run the LSP server (communicates over stdio)
-./target/release/truss-lsp
+./target/release/truss-lsp   # stdio transport
 ```
 
-The LSP server supports:
-- Real-time validation as you type
-- Incremental parsing for performance
-- Diagnostics for all 39 validation rules
-- UTF-16 position handling for LSP compatibility
-
-Configure your editor to use `truss-lsp` as the language server for `.github/workflows/*.yml` files.
+Point your editor's LSP client at this binary for `.github/workflows/*.yml` files. It supports incremental parsing, so re-validation after edits is near-instant.
 
 ## Validation Rules
 
-Truss implements **39 comprehensive validation rules** across 5 categories:
+41 rules across 5 categories:
 
 ### Core & Structural (4 rules)
-- **SyntaxRule** - YAML syntax validation via tree-sitter
-- **NonEmptyRule** - Empty document detection
-- **GitHubActionsSchemaRule** - Basic GitHub Actions workflow structure
-- **WorkflowTriggerRule** - `on:` trigger configuration with 30+ event types
+| Rule | What it does |
+|------|-------------|
+| SyntaxRule | YAML syntax validation via tree-sitter |
+| NonEmptyRule | Catches empty documents |
+| GitHubActionsSchemaRule | Validates basic workflow structure |
+| WorkflowTriggerRule | `on:` trigger config (30+ event types) |
 
 ### Job-Level (9 rules)
-- **JobNameRule** - Duplicate names, format, reserved words
-- **JobNeedsRule** - Dependency validation with circular dependency detection
-- **JobIfExpressionRule** - Conditional expression validation
-- **JobOutputsRule** - Output reference validation
-- **JobContainerRule** - Container image, ports, services
-- **JobStrategyValidationRule** - Strategy structure validation
-- **RunsOnRequiredRule** - Runner requirement enforcement
-- **RunnerLabelRule** - GitHub-hosted runner label validation (22+ labels including ARM)
-- **ReusableWorkflowCallRule** - Reusable workflow path and structure
+| Rule | What it does |
+|------|-------------|
+| JobNameRule | Duplicate names, invalid characters, reserved words |
+| JobNeedsRule | Dependency validation, circular dependency detection |
+| JobIfExpressionRule | Conditional expression validation |
+| JobOutputsRule | Output reference validation |
+| JobContainerRule | Container image, ports, services config |
+| JobStrategyValidationRule | Strategy structure validation |
+| RunsOnRequiredRule | Makes sure every job has `runs-on` |
+| RunnerLabelRule | Validates GitHub-hosted runner labels (22+ labels) |
+| ReusableWorkflowCallRule | Reusable workflow path and structure |
 
 ### Step-Level (11 rules)
-- **StepValidationRule** - Step structure (`uses` or `run` required)
-- **StepNameRule** - Step name validation
-- **StepIdUniquenessRule** - Unique step IDs within jobs
-- **StepIfExpressionRule** - Step conditional expressions
-- **StepOutputReferenceRule** - `steps.X.outputs.Y` reference validation
-- **StepContinueOnErrorRule** - Boolean validation
-- **StepTimeoutRule** - Timeout value validation
-- **StepShellRule** - Shell type validation (bash, pwsh, python, sh, cmd, powershell)
-- **StepWorkingDirectoryRule** - Working directory path validation
-- **StepEnvValidationRule** - Environment variable name format
-- **ArtifactValidationRule** - upload/download-artifact parameter validation
+| Rule | What it does |
+|------|-------------|
+| StepValidationRule | Step structure — must have `uses` or `run` (not both) |
+| StepNameRule | Step name format validation |
+| StepIdUniquenessRule | No duplicate step IDs within a job |
+| StepIfExpressionRule | Step conditional expressions |
+| StepOutputReferenceRule | `steps.X.outputs.Y` reference validation |
+| StepContinueOnErrorRule | Boolean validation for `continue-on-error` |
+| StepTimeoutRule | Timeout value validation |
+| StepShellRule | Shell type validation (bash, pwsh, python, etc.) |
+| StepWorkingDirectoryRule | Working directory path validation |
+| StepEnvValidationRule | Env var names + reserved `GITHUB_` prefix detection |
+| ArtifactValidationRule | upload/download-artifact parameter validation |
 
 ### Workflow-Level (9 rules)
-- **WorkflowNameRule** - Workflow name validation
-- **WorkflowInputsRule** - Workflow input types and requirements
-- **WorkflowCallInputsRule** - Reusable workflow call input validation
-- **WorkflowCallSecretsRule** - Secret definition and reference validation
-- **WorkflowCallOutputsRule** - Workflow call output validation
-- **TimeoutRule** - Job-level timeout validation
-- **PermissionsRule** - Permission scope validation (15+ scopes)
-- **ConcurrencyRule** - Concurrency group and cancel-in-progress
-- **DefaultsValidationRule** - Default shell and working directory
+| Rule | What it does |
+|------|-------------|
+| WorkflowNameRule | Workflow name validation |
+| WorkflowInputsRule | Input types and requirements |
+| WorkflowCallInputsRule | Reusable workflow call inputs |
+| WorkflowCallSecretsRule | Secret definitions and references |
+| WorkflowCallOutputsRule | Workflow call output validation |
+| TimeoutRule | Job-level timeout validation |
+| PermissionsRule | Permission scope validation (15+ scopes) |
+| ConcurrencyRule | Concurrency groups and cancel-in-progress |
+| DefaultsValidationRule | Default shell and working directory |
 
-### Expression & Reference (6 rules)
-- **ExpressionValidationRule** - `${{ }}` syntax, functions, operators
-- **ActionReferenceRule** - `owner/repo@ref` format validation
-- **EventPayloadValidationRule** - Event-specific field validation (branches, tags, cron, types)
-- **SecretsValidationRule** - Secret reference format and name validation
-- **MatrixStrategyRule** - Matrix structure and key validation
-- **EnvironmentRule** - Environment name format validation
-
-See [docs/VALIDATION_RULES.md](docs/VALIDATION_RULES.md) for complete details on each rule.
+### Expression, Reference & Security (8 rules)
+| Rule | What it does |
+|------|-------------|
+| ExpressionValidationRule | `${{ }}` syntax, functions, operators |
+| ActionReferenceRule | `owner/repo@ref` format validation |
+| EventPayloadValidationRule | Event fields, filter conflicts, cron ranges, activity types |
+| SecretsValidationRule | Secret reference format and naming |
+| MatrixStrategyRule | Matrix structure and key validation |
+| EnvironmentRule | Environment name format |
+| ScriptInjectionRule | Flags untrusted inputs used directly in `run:` blocks |
+| DeprecatedCommandsRule | Warns about `::set-output`, `::set-env`, etc. |
 
 ## Performance
 
-Truss is designed for speed and efficiency, making it ideal for real-time editor integration and CI/CD pipelines.
+### CLI Benchmarks (Hyperfine)
 
-### Hyperfine Benchmark (CLI end-to-end)
+End-to-end timing of `truss validate` vs competitors on the complex dynamic workflow fixture:
 
-Comparing `truss validate` against competitor tools on `benchmarks/fixtures/complex-dynamic.yml`:
-
-| Tool | Mean Time | Min | Max | Relative to Truss |
-|------|-----------|-----|-----|-------------------|
+| Tool | Mean | Min | Max | Relative |
+|------|------|-----|-----|----------|
 | **Truss** | **11.1ms** | 1.7ms | 17.9ms | 1.00x |
-| actionlint | 165.7ms | 144.5ms | 189.7ms | 14.98x slower |
-| yaml-language-server | 381.7ms | 263.9ms | 553.4ms | 34.51x slower |
-| yamllint | 210.9ms | 94.6ms | 276.7ms | 19.07x slower |
+| actionlint | 165.7ms | 144.5ms | 189.7ms | 14.98x |
+| yaml-language-server | 381.7ms | 263.9ms | 553.4ms | 34.51x |
+| yamllint | 210.9ms | 94.6ms | 276.7ms | 19.07x |
 
-### Criterion Benchmarks (Core engine)
+### Core Engine Benchmarks (Criterion)
 
-| Fixture | Mean Time | Description |
-|---------|-----------|-------------|
-| Simple YAML | **225 us** | Minimal workflow (name + on: push) |
-| Medium YAML | **984 us** | Standard workflow with multiple jobs |
-| Complex static | **3.66 ms** | Large workflow with matrix, permissions, containers |
-| Complex dynamic | **2.44 ms** | Dynamic workflow with expressions and reusable calls |
-
-### Why Performance Matters
-
-Truss achieves **15-35x better performance** than existing tools while providing comprehensive semantic validation:
-
-- **Real-time editor feedback** - LSP integration with instant diagnostics (11.1ms is well under perceptible latency)
-- **Large-scale validation** - Process hundreds of workflow files quickly via parallel processing
-- **CI/CD integration** - Fast validation doesn't slow down pipelines
-- **Better developer experience** - Instant feedback improves productivity
+| Fixture | Mean | Description |
+|---------|------|-------------|
+| Simple | 225 us | Minimal workflow |
+| Medium | 984 us | Multi-step with branching |
+| Complex static | 3.66 ms | Matrix strategies, dependencies, containers |
+| Complex dynamic | 2.44 ms | Expressions, reusable calls, dynamic matrices |
 
 ### Running Benchmarks
 
 ```bash
-# Criterion benchmarks (core engine)
-just bench
-# or: cargo bench -p truss-core
-
-# CLI benchmarks via Hyperfine
-just bench-cli
-
-# Compare against competitors
-just compare
+just bench          # Criterion (core engine)
+just bench-cli      # Hyperfine (CLI end-to-end)
+just compare        # Compare against competitors
 ```
-
-See [benchmarks/hyperfine/compare.md](benchmarks/hyperfine/compare.md) for detailed Hyperfine results.
 
 ## Project Structure
 
 ```
 truss/
 ├── crates/
-│   ├── truss-core/      # Core validation engine (editor-agnostic, deterministic)
-│   │   ├── lib.rs        # Engine entry point with 39 registered rules
-│   │   ├── parser.rs     # tree-sitter YAML parser with incremental support
-│   │   ├── validation/   # Validation framework and 39 rule implementations
-│   │   ├── tests/        # 40 integration test files (294 tests)
+│   ├── truss-core/      # Validation engine — editor-agnostic, deterministic
+│   │   ├── lib.rs        # Engine with 41 registered rules
+│   │   ├── parser.rs     # tree-sitter YAML parser (incremental)
+│   │   ├── validation/   # 41 rule implementations
+│   │   ├── tests/        # 44 test files, 346 tests
 │   │   └── benches/      # Criterion benchmarks
-│   ├── truss-cli/        # CLI (parallel processing, globs, stdin, severity filtering)
+│   ├── truss-cli/        # CLI — parallel processing, globs, stdin, JSON output
 │   ├── truss-lsp/        # Language Server Protocol adapter
 │   └── truss-wasm/       # WebAssembly bindings (placeholder)
 ├── editors/
-│   └── vscode/           # VS Code extension (LSP client)
-├── benchmarks/           # Benchmark fixtures and Hyperfine results
-├── competitors/          # Comparison benchmark scripts
+│   └── vscode/           # VS Code extension
+├── benchmarks/           # Fixtures and Hyperfine results
+├── competitors/          # Comparison scripts for actionlint, yamllint, etc.
 ├── test-suite/           # Multi-repo comparison testing framework
 ├── scripts/              # Build, test, and comparison automation
-├── docs/                 # Architecture, rules, and test strategy docs
-└── .github/workflows/    # CI/CD pipeline (check, test, clippy, fmt)
+├── docs/                 # Architecture, rules, test strategy docs
+└── .github/workflows/    # CI pipeline
 ```
 
-## Build Systems
-
-Truss provides two build systems for flexibility:
-
-### `justfile` (Recommended)
-
-The primary build system with enhanced features:
-
-```bash
-just build          # Build release
-just test           # Run all tests
-just test-core      # Run core tests only
-just bench          # Run Criterion benchmarks
-just bench-cli      # Run Hyperfine CLI benchmarks
-just compare        # Compare with competitors
-just ci             # Full CI pipeline
-```
-
-**Installation:** `cargo install just` or see [just's documentation](https://github.com/casey/just)
-
-### `makefile` (Fallback)
-
-A minimal fallback for environments without `just`:
-
-```bash
-make build          # Build release
-make test           # Run tests
-make bench          # Run benchmarks
-make compare        # Compare with competitors
-make ci             # Full CI pipeline
-```
-
-## Development
-
-### Building
+## Building & Testing
 
 ```bash
 # Debug build
-just build-debug
-# or: cargo build --workspace
+just build-debug      # or: cargo build --workspace
 
 # Release build
-just build
-# or: cargo build --workspace --release
+just build            # or: cargo build --workspace --release
+
+# Run all 346 tests
+just test             # or: cargo test --workspace
+
+# Core tests only
+just test-core        # or: cargo test -p truss-core
 ```
 
-### Testing
+### CI
 
-```bash
-# Run all tests (294 tests across 40 test files)
-just test
-# or: cargo test --workspace
-
-# Run core tests only
-just test-core
-# or: cargo test -p truss-core
-```
-
-### CI Pipeline
-
-The project uses GitHub Actions CI with 4 jobs:
-- **Check** - `cargo check --workspace`
-- **Test** - `cargo test --workspace` (294 tests)
-- **Clippy** - `cargo clippy --workspace -- -D warnings`
-- **Format** - `cargo fmt --all -- --check`
-
-All 4 jobs must pass on every push to `main` and on every pull request.
+Every push to `main` and every PR runs:
+- `cargo check --workspace`
+- `cargo test --workspace` (346 tests)
+- `cargo clippy --workspace -- -D warnings`
+- `cargo fmt --all -- --check`
 
 ## Architecture
 
-Truss follows a strict "Core First" architecture:
+Truss follows a "core first" design. All validation logic lives in `truss-core`, which is editor-agnostic and fully deterministic. The CLI, LSP server, and WASM crate are thin adapters that wrap the core for different interfaces.
 
-- **truss-core**: All critical logic lives here. Editor-agnostic and fully deterministic. Uses tree-sitter for YAML parsing and rayon for parallel rule execution.
-- **Adapters** (truss-cli, truss-lsp, truss-wasm): Thin layers that adapt the core to different interfaces.
+Key ideas:
+- **Performance is a feature**, not an afterthought — everything is benchmarked
+- **Rules are stateless** — each rule gets the parsed tree and source, returns diagnostics
+- **Results are deterministic** — same input always produces the same output
+- **Incremental parsing** — the LSP server only re-parses what changed
 
-Key design principles:
-- Performance is a first-class requirement, not an afterthought
-- Validation rules are stateless and independently testable
-- Results are deterministic and reproducible
-- Incremental parsing enables real-time editor integration
-
-For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+More details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Current Status
 
-**MVP Complete:**
-- 39 validation rules implemented and tested
-- 294 tests across 40 test files (all passing)
+**What's working:**
+- 41 validation rules, all tested (346 tests across 44 files)
 - LSP server with real-time diagnostics and incremental parsing
-- VS Code extension for one-click editor integration
-- CLI tool with parallel file processing, glob/directory scanning, stdin, severity filtering, and JSON output
-- `--version` flag and distinct exit codes (0/1/2/3)
-- 15-35x faster than competitors
-- Comprehensive benchmarking infrastructure
-- Clean architecture (Core + adapters)
-- CI/CD pipeline (check, test, clippy, fmt)
+- VS Code extension
+- CLI with parallel file processing, globs, stdin, severity filtering, JSON output
+- 15-35x faster than alternatives
+- CI pipeline (check, test, clippy, fmt)
 
-**Planned:**
+**Coming next:**
 - Contextual autocomplete
-- WASM bindings (structure in place)
-- `cargo install truss-cli` (crates.io publishing)
-- Neovim / other editor integrations
+- WASM bindings
+- `cargo install truss-cli` (crates.io)
+- Neovim and other editor integrations
 
-**Not Included (for now):**
-- Azure Pipelines / GitLab CI support
+**Out of scope (for now):**
+- Azure Pipelines / GitLab CI
 - Advanced UI
 - Complex configuration
 
 ## Documentation
 
-- [Architecture Guide](docs/ARCHITECTURE.md) - Design principles and guidelines
-- [Validation Rules](docs/VALIDATION_RULES.md) - Complete list of all 39 validation rules
-- [Test Strategy](docs/TEST_STRATEGY.md) - Testing approach and organization
+- [Architecture](docs/ARCHITECTURE.md) — Design principles and guidelines
+- [Validation Rules](docs/VALIDATION_RULES.md) — All 41 rules in detail
+- [Test Strategy](docs/TEST_STRATEGY.md) — How we test
+- [Planned Improvements](docs/PLANNED_IMPROVEMENTS.md) — What's on the roadmap
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting a pull request.
+Contributions are welcome! See the [Contributing Guide](CONTRIBUTING.md) to get started.
 
 ## License
 
-Licensed under the MIT License. See [LICENSE-MIT](LICENSE-MIT) for details.
+MIT. See [LICENSE-MIT](LICENSE-MIT).
