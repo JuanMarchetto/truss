@@ -228,3 +228,98 @@ jobs:
         "Valid nested step if conditional should not produce errors"
     );
 }
+
+#[test]
+fn test_step_if_expression_valid_secrets_no_false_warning() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ secrets.DEPLOY_TOKEN != '' }}
+        run: echo "Deploy"
+"#;
+
+    let result = engine.analyze(yaml);
+    let context_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("undefined") || d.message.contains("nonexistent"))
+        .collect();
+
+    assert!(
+        context_warnings.is_empty(),
+        "Valid secrets context reference should not produce undefined context warnings. Got: {:?}",
+        context_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_step_if_expression_valid_matrix_no_false_warning() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: echo "Ubuntu"
+      - if: ${{ matrix.os == 'windows-latest' }}
+        run: echo "Windows"
+"#;
+
+    let result = engine.analyze(yaml);
+    let context_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("undefined") || d.message.contains("nonexistent"))
+        .collect();
+
+    assert!(
+        context_warnings.is_empty(),
+        "Valid matrix context reference should not produce undefined context warnings. Got: {:?}",
+        context_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_step_if_expression_valid_env_no_false_warning() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ env.CI == 'true' }}
+        run: echo "Running in CI"
+"#;
+
+    let result = engine.analyze(yaml);
+    let context_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("undefined") || d.message.contains("nonexistent"))
+        .collect();
+
+    assert!(
+        context_warnings.is_empty(),
+        "Valid env context reference should not produce undefined context warnings. Got: {:?}",
+        context_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}

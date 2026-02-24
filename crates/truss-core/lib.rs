@@ -6,7 +6,7 @@
 mod parser;
 mod validation;
 
-use parser::YamlParser;
+use parser::{ParseError, YamlParser};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use validation::{
@@ -91,18 +91,7 @@ impl TrussEngine {
     pub fn analyze(&mut self, source: &str) -> TrussResult {
         let tree = match self.parser.parse(source) {
             Ok(tree) => tree,
-            Err(_) => {
-                return TrussResult {
-                    diagnostics: vec![Diagnostic {
-                        message: "Failed to parse YAML".to_string(),
-                        severity: Severity::Error,
-                        span: Span {
-                            start: 0,
-                            end: source.len().min(100),
-                        },
-                    }],
-                };
-            }
+            Err(_) => return Self::parse_error_result(source),
         };
 
         self.rules.validate_parallel(&tree, source)
@@ -116,25 +105,9 @@ impl TrussEngine {
         source: &str,
         old_tree: Option<&tree_sitter::Tree>,
     ) -> TrussResult {
-        let tree = match old_tree {
-            Some(old) => self.parser.parse_incremental(source, Some(old)),
-            None => self.parser.parse(source),
-        };
-
-        let tree = match tree {
+        let tree = match self.parse_maybe_incremental(source, old_tree) {
             Ok(tree) => tree,
-            Err(_) => {
-                return TrussResult {
-                    diagnostics: vec![Diagnostic {
-                        message: "Failed to parse YAML".to_string(),
-                        severity: Severity::Error,
-                        span: Span {
-                            start: 0,
-                            end: source.len().min(100),
-                        },
-                    }],
-                };
-            }
+            Err(_) => return Self::parse_error_result(source),
         };
 
         self.rules.validate_parallel(&tree, source)
@@ -147,23 +120,7 @@ impl TrussEngine {
     pub fn analyze_with_tree(&mut self, source: &str) -> (TrussResult, tree_sitter::Tree) {
         let tree = match self.parser.parse(source) {
             Ok(tree) => tree,
-            Err(_) => {
-                let result = TrussResult {
-                    diagnostics: vec![Diagnostic {
-                        message: "Failed to parse YAML".to_string(),
-                        severity: Severity::Error,
-                        span: Span {
-                            start: 0,
-                            end: source.len().min(100),
-                        },
-                    }],
-                };
-                // Parsing empty string should never fail with a valid parser
-                let dummy_tree = self.parser.parse("").expect(
-                    "BUG: tree-sitter failed to parse empty string; parser may be misconfigured",
-                );
-                return (result, dummy_tree);
-            }
+            Err(_) => return (Self::parse_error_result(source), self.dummy_tree()),
         };
 
         let result = self.rules.validate_parallel(&tree, source);
@@ -179,34 +136,43 @@ impl TrussEngine {
         source: &str,
         old_tree: Option<&tree_sitter::Tree>,
     ) -> (TrussResult, tree_sitter::Tree) {
-        let tree = match old_tree {
-            Some(old) => self.parser.parse_incremental(source, Some(old)),
-            None => self.parser.parse(source),
-        };
-
-        let tree = match tree {
+        let tree = match self.parse_maybe_incremental(source, old_tree) {
             Ok(tree) => tree,
-            Err(_) => {
-                let result = TrussResult {
-                    diagnostics: vec![Diagnostic {
-                        message: "Failed to parse YAML".to_string(),
-                        severity: Severity::Error,
-                        span: Span {
-                            start: 0,
-                            end: source.len().min(100),
-                        },
-                    }],
-                };
-                // Parsing empty string should never fail with a valid parser
-                let dummy_tree = self.parser.parse("").expect(
-                    "BUG: tree-sitter failed to parse empty string; parser may be misconfigured",
-                );
-                return (result, dummy_tree);
-            }
+            Err(_) => return (Self::parse_error_result(source), self.dummy_tree()),
         };
 
         let result = self.rules.validate_parallel(&tree, source);
         (result, tree)
+    }
+
+    fn parse_maybe_incremental(
+        &mut self,
+        source: &str,
+        old_tree: Option<&tree_sitter::Tree>,
+    ) -> Result<tree_sitter::Tree, ParseError> {
+        match old_tree {
+            Some(old) => self.parser.parse_incremental(source, Some(old)),
+            None => self.parser.parse(source),
+        }
+    }
+
+    fn parse_error_result(source: &str) -> TrussResult {
+        TrussResult {
+            diagnostics: vec![Diagnostic {
+                message: "Failed to parse YAML".to_string(),
+                severity: Severity::Error,
+                span: Span {
+                    start: 0,
+                    end: source.len().min(100),
+                },
+            }],
+        }
+    }
+
+    fn dummy_tree(&mut self) -> tree_sitter::Tree {
+        self.parser
+            .parse("")
+            .expect("BUG: tree-sitter failed to parse empty string; parser may be misconfigured")
     }
 
     /// Add a custom validation rule.

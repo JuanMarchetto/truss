@@ -44,6 +44,11 @@ impl ValidationRule for RunsOnRequiredRule {
                             if job_value.kind() == "block_mapping"
                                 || job_value.kind() == "flow_mapping"
                             {
+                                // Skip reusable workflow call jobs (they use `uses:` instead of `runs-on`)
+                                if utils::key_exists(job_value, source, "uses") {
+                                    return;
+                                }
+
                                 // This is a job definition, check for runs-on
                                 let runs_on_value =
                                     utils::find_value_for_key(job_value, source, "runs-on");

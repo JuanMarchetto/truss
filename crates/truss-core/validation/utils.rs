@@ -173,3 +173,107 @@ pub(crate) fn key_exists(node: Node, source: &str, target_key: &str) -> bool {
 pub(crate) fn node_text(node: Node, source: &str) -> String {
     source[node.start_byte()..node.end_byte()].to_string()
 }
+
+/// Known GitHub Actions expression context names.
+const KNOWN_CONTEXTS: &[&str] = &[
+    "github", "matrix", "secrets", "vars", "needs", "inputs", "env", "job", "jobs", "steps",
+    "runner", "strategy",
+];
+
+/// Check if an expression has valid GitHub Actions expression syntax.
+///
+/// Validates that the expression contains recognized contexts, functions,
+/// operators, or literals. Also rejects unknown context references like
+/// `invalid.property`.
+pub(crate) fn is_valid_expression_syntax(expr: &str) -> bool {
+    let expr = expr.trim();
+
+    if expr.is_empty() {
+        return false;
+    }
+
+    let has_context = KNOWN_CONTEXTS
+        .iter()
+        .any(|ctx| expr.starts_with(&format!("{}.", ctx)));
+
+    let expr_lower = expr.to_lowercase();
+    let has_function = expr.contains("contains(")
+        || expr.contains("startsWith(")
+        || expr.contains("endsWith(")
+        || expr.contains("format(")
+        || expr.contains("join(")
+        || expr_lower.contains("tojson(")
+        || expr_lower.contains("fromjson(")
+        || expr.contains("hashFiles(")
+        || expr.contains("success()")
+        || expr.contains("failure()")
+        || expr.contains("cancelled()")
+        || expr.contains("always()");
+
+    let has_operator = expr.contains("==")
+        || expr.contains("!=")
+        || expr.contains("&&")
+        || expr.contains("||")
+        || expr.contains("!")
+        || expr.contains("<")
+        || expr.contains(">")
+        || expr.contains("<=")
+        || expr.contains(">=");
+
+    let is_literal = (expr.starts_with("'") && expr.ends_with("'"))
+        || (expr.starts_with("\"") && expr.ends_with("\""))
+        || expr.parse::<f64>().is_ok()
+        || expr == "true"
+        || expr == "false";
+
+    let is_bare_context = KNOWN_CONTEXTS.contains(&expr);
+
+    // Check if expression contains a dot but doesn't start with a known context
+    // (e.g., "invalid.expression" should be rejected)
+    if expr.contains('.') && !has_context {
+        let first_token = expr
+            .split(|c: char| {
+                c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')
+            })
+            .next()
+            .unwrap_or("");
+        if first_token.contains('.') {
+            let context_name = first_token.split('.').next().unwrap_or("");
+            if !KNOWN_CONTEXTS.contains(&context_name) {
+                return false;
+            }
+        }
+    }
+
+    if !has_context
+        && !has_function
+        && !has_operator
+        && !is_literal
+        && !is_bare_context
+        && !expr.contains('.')
+        && !expr.contains('(')
+        && !expr.contains('[')
+    {
+        return false;
+    }
+
+    true
+}
+
+/// Check if expression may always evaluate to true.
+pub(crate) fn is_potentially_always_true(expr: &str) -> bool {
+    let expr_lower = expr.to_lowercase();
+    expr_lower == "true"
+        || expr_lower == "!false"
+        || expr_lower.contains("|| true")
+        || expr_lower.contains("true ||")
+}
+
+/// Check if expression may always evaluate to false.
+pub(crate) fn is_potentially_always_false(expr: &str) -> bool {
+    let expr_lower = expr.to_lowercase();
+    expr_lower == "false"
+        || expr_lower == "!true"
+        || expr_lower.contains("&& false")
+        || expr_lower.contains("false &&")
+}

@@ -71,7 +71,7 @@ impl ValidationRule for JobIfExpressionRule {
 
                                     {
                                         // Validate expression syntax
-                                        if !is_valid_expression_syntax(inner) {
+                                        if !utils::is_valid_expression_syntax(inner) {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
                                                     "Job '{}' has invalid 'if' expression syntax: '{}'",
@@ -85,15 +85,9 @@ impl ValidationRule for JobIfExpressionRule {
                                             });
                                         }
 
-                                        // Check for undefined context variables
+                                        // Check for obviously undefined context variables
                                         if inner.contains("github.nonexistent")
                                             || inner.contains("nonexistent.property")
-                                            || (inner.contains("github.")
-                                                && !is_valid_github_context(inner))
-                                            || (inner.contains("matrix.")
-                                                && !is_valid_matrix_context(inner))
-                                            || (inner.contains("secrets.")
-                                                && !is_valid_secrets_context(inner))
                                         {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
@@ -109,7 +103,7 @@ impl ValidationRule for JobIfExpressionRule {
                                         }
 
                                         // Check for potentially always-true/false conditions
-                                        if is_potentially_always_true(inner) {
+                                        if utils::is_potentially_always_true(inner) {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
                                                     "Job '{}' 'if' expression may always evaluate to true: '{}'",
@@ -121,7 +115,7 @@ impl ValidationRule for JobIfExpressionRule {
                                                     end: if_node.end_byte(),
                                                 },
                                             });
-                                        } else if is_potentially_always_false(inner) {
+                                        } else if utils::is_potentially_always_false(inner) {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
                                                     "Job '{}' 'if' expression may always evaluate to false: '{}'",
@@ -238,156 +232,4 @@ fn collect_job_names(jobs_node: Node, source: &str) -> HashSet<String> {
 
     collect(jobs_node, source, &mut job_names);
     job_names
-}
-
-/// Check if an expression has valid syntax (similar to ExpressionValidationRule)
-fn is_valid_expression_syntax(expr: &str) -> bool {
-    let expr = expr.trim();
-
-    if expr.is_empty() {
-        return false;
-    }
-
-    let has_context = expr.starts_with("github.")
-        || expr.starts_with("matrix.")
-        || expr.starts_with("secrets.")
-        || expr.starts_with("vars.")
-        || expr.starts_with("needs.")
-        || expr.starts_with("inputs.")
-        || expr.starts_with("env.")
-        || expr.starts_with("job.")
-        || expr.starts_with("jobs.")
-        || expr.starts_with("steps.")
-        || expr.starts_with("runner.")
-        || expr.starts_with("strategy.");
-
-    let expr_lower = expr.to_lowercase();
-    let has_function = expr.contains("contains(")
-        || expr.contains("startsWith(")
-        || expr.contains("endsWith(")
-        || expr.contains("format(")
-        || expr.contains("join(")
-        || expr_lower.contains("tojson(")
-        || expr_lower.contains("fromjson(")
-        || expr.contains("hashFiles(")
-        || expr.contains("success()")
-        || expr.contains("failure()")
-        || expr.contains("cancelled()")
-        || expr.contains("always()");
-
-    let has_operator = expr.contains("==")
-        || expr.contains("!=")
-        || expr.contains("&&")
-        || expr.contains("||")
-        || expr.contains("!")
-        || expr.contains("<")
-        || expr.contains(">")
-        || expr.contains("<=")
-        || expr.contains(">=");
-
-    let is_literal = (expr.starts_with("'") && expr.ends_with("'"))
-        || (expr.starts_with("\"") && expr.ends_with("\""))
-        || expr.parse::<f64>().is_ok()
-        || expr == "true"
-        || expr == "false";
-
-    // Bare context names (e.g., "github", "matrix") are valid expressions
-    let is_bare_context = matches!(
-        expr,
-        "github"
-            | "matrix"
-            | "secrets"
-            | "vars"
-            | "needs"
-            | "inputs"
-            | "env"
-            | "job"
-            | "jobs"
-            | "steps"
-            | "runner"
-            | "strategy"
-    );
-
-    // If expression contains a dot but doesn't start with a known context, check if it's invalid
-    // (e.g., "invalid.expression" should be rejected)
-    if expr.contains('.') && !has_context {
-        // Extract the first part before any operator, whitespace, or parenthesis
-        let first_token = expr
-            .split(|c: char| {
-                c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')
-            })
-            .next()
-            .unwrap_or("");
-        if first_token.contains('.') {
-            let context_name = first_token.split('.').next().unwrap_or("");
-            if !matches!(
-                context_name,
-                "github"
-                    | "matrix"
-                    | "secrets"
-                    | "vars"
-                    | "needs"
-                    | "inputs"
-                    | "env"
-                    | "job"
-                    | "jobs"
-                    | "steps"
-                    | "runner"
-                    | "strategy"
-            ) {
-                // Unknown context reference - reject it
-                return false;
-            }
-        }
-    }
-
-    if !has_context
-        && !has_function
-        && !has_operator
-        && !is_literal
-        && !is_bare_context
-        && !expr.contains('.')
-        && !expr.contains('(')
-        && !expr.contains('[')
-    {
-        return false;
-    }
-
-    true
-}
-
-/// Check if a GitHub context reference is valid
-fn is_valid_github_context(expr: &str) -> bool {
-    // Basic check - in real implementation, would validate against known GitHub context properties
-    !expr.contains("github.nonexistent") && !expr.contains("github.invalid")
-}
-
-/// Check if a matrix context reference is valid
-fn is_valid_matrix_context(expr: &str) -> bool {
-    // Basic check - matrix references are usually valid if they reference a matrix key
-    !expr.contains("matrix.nonexistent") && !expr.contains("matrix.invalid")
-}
-
-/// Check if a secrets context reference is valid
-fn is_valid_secrets_context(expr: &str) -> bool {
-    // Basic check - secrets references are usually valid
-    !expr.contains("secrets.nonexistent") && !expr.contains("secrets.invalid")
-}
-
-/// Check if expression may always evaluate to true
-fn is_potentially_always_true(expr: &str) -> bool {
-    let expr_lower = expr.to_lowercase();
-    expr_lower == "true"
-        || expr_lower == "!false"
-        || expr_lower.contains("|| true")
-        || expr_lower.contains("true ||")
-}
-
-/// Check if expression may always evaluate to false
-fn is_potentially_always_false(expr: &str) -> bool {
-    let expr_lower = expr.to_lowercase();
-    expr_lower == "false"
-        || expr_lower == "!true"
-        || expr_lower.contains("&& false")
-        || expr_lower.contains("false &&")
 }

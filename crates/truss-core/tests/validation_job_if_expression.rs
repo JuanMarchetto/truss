@@ -198,3 +198,97 @@ jobs:
         "Job if expression referencing non-existent job should produce error"
     );
 }
+
+#[test]
+fn test_job_if_expression_error_undefined_context() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    if: ${{ github.nonexistent.property }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            (d.message.contains("undefined")
+                || d.message.contains("nonexistent")
+                || d.message.contains("context"))
+                && (d.severity == Severity::Warning || d.severity == Severity::Error)
+        })
+        .collect();
+
+    assert!(
+        !warnings.is_empty(),
+        "Job if expression with github.nonexistent should produce warning"
+    );
+}
+
+#[test]
+fn test_job_if_expression_valid_secrets_no_false_warning() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  deploy:
+    if: ${{ secrets.DEPLOY_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploy"
+"#;
+
+    let result = engine.analyze(yaml);
+    let context_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("undefined") || d.message.contains("nonexistent"))
+        .collect();
+
+    assert!(
+        context_warnings.is_empty(),
+        "Valid secrets context reference should not produce undefined context warnings. Got: {:?}",
+        context_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_job_if_expression_valid_matrix_no_false_warning() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  test:
+    if: ${{ matrix.os == 'ubuntu-latest' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - run: echo "Testing on ${{ matrix.os }}"
+"#;
+
+    let result = engine.analyze(yaml);
+    let context_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("undefined") || d.message.contains("nonexistent"))
+        .collect();
+
+    assert!(
+        context_warnings.is_empty(),
+        "Valid matrix context reference should not produce undefined context warnings. Got: {:?}",
+        context_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
