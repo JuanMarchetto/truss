@@ -33,7 +33,11 @@ jobs:
     assert!(
         !deprecated_warnings.is_empty(),
         "Deprecated ::set-output command should produce warning. Got diagnostics: {:?}",
-        result.diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
     assert!(
         deprecated_warnings
@@ -69,7 +73,11 @@ jobs:
     assert!(
         !deprecated_warnings.is_empty(),
         "Deprecated ::save-state command should produce warning. Got diagnostics: {:?}",
-        result.diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
     assert!(
         deprecated_warnings
@@ -105,7 +113,11 @@ jobs:
     assert!(
         !deprecated_warnings.is_empty(),
         "Deprecated ::set-env command should produce warning. Got diagnostics: {:?}",
-        result.diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
     assert!(
         deprecated_warnings
@@ -141,7 +153,11 @@ jobs:
     assert!(
         !deprecated_warnings.is_empty(),
         "Deprecated ::add-path command should produce warning. Got diagnostics: {:?}",
-        result.diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
     assert!(
         deprecated_warnings
@@ -211,7 +227,11 @@ jobs:
     assert!(
         !deprecated_warnings.is_empty(),
         "Deprecated command in multiline run block should produce warning. Got diagnostics: {:?}",
-        result.diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
     );
 }
 

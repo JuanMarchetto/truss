@@ -168,10 +168,7 @@ jobs:
     let injection_warnings: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("script injection")
-                && d.severity == Severity::Warning
-        })
+        .filter(|d| d.message.contains("script injection") && d.severity == Severity::Warning)
         .collect();
 
     assert!(
@@ -196,10 +193,7 @@ jobs:
     let injection_warnings: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("script injection")
-                && d.severity == Severity::Warning
-        })
+        .filter(|d| d.message.contains("script injection") && d.severity == Severity::Warning)
         .collect();
 
     assert!(
@@ -224,10 +218,7 @@ jobs:
     let injection_warnings: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("script injection")
-                && d.severity == Severity::Warning
-        })
+        .filter(|d| d.message.contains("script injection") && d.severity == Severity::Warning)
         .collect();
 
     assert!(
@@ -255,10 +246,7 @@ jobs:
     let injection_warnings: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("script injection")
-                && d.severity == Severity::Warning
-        })
+        .filter(|d| d.message.contains("script injection") && d.severity == Severity::Warning)
         .collect();
 
     assert!(

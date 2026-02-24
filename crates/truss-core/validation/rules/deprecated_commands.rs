@@ -17,10 +17,7 @@ const DEPRECATED_COMMANDS: &[(&str, &str)] = &[
         "::set-env",
         "Use `echo \"name=value\" >> $GITHUB_ENV` instead",
     ),
-    (
-        "::add-path",
-        "Use `echo \"path\" >> $GITHUB_PATH` instead",
-    ),
+    ("::add-path", "Use `echo \"path\" >> $GITHUB_PATH` instead"),
 ];
 
 /// Detects deprecated workflow commands in `run:` scripts.

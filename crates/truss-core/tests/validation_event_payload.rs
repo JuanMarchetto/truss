@@ -406,10 +406,7 @@ on:
     let cron_errors: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("cron")
-                && d.severity == Severity::Error
-        })
+        .filter(|d| d.message.contains("cron") && d.severity == Severity::Error)
         .collect();
 
     assert!(
@@ -432,10 +429,7 @@ on:
     let cron_errors: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            d.message.contains("cron")
-                && d.severity == Severity::Error
-        })
+        .filter(|d| d.message.contains("cron") && d.severity == Severity::Error)
         .collect();
 
     assert!(

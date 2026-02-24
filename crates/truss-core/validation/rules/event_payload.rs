@@ -113,14 +113,11 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
     }
 
     // Check for branches + branches-ignore conflict
-    let has_branches_plain =
-        utils::find_value_for_key(push_to_check, source, "branches").is_some();
+    let has_branches_plain = utils::find_value_for_key(push_to_check, source, "branches").is_some();
     let has_branches_ignore =
         utils::find_value_for_key(push_to_check, source, "branches-ignore").is_some();
     if has_branches_plain && has_branches_ignore {
-        if let Some(bi_node) =
-            utils::find_value_for_key(push_to_check, source, "branches-ignore")
-        {
+        if let Some(bi_node) = utils::find_value_for_key(push_to_check, source, "branches-ignore") {
             diagnostics.push(Diagnostic {
                 message: "Cannot use both 'branches' and 'branches-ignore' on the same event. They are mutually exclusive.".to_string(),
                 severity: Severity::Error,
@@ -134,8 +131,7 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
 
     // Check for tags + tags-ignore conflict
     let has_tags_plain = utils::find_value_for_key(push_to_check, source, "tags").is_some();
-    let has_tags_ignore =
-        utils::find_value_for_key(push_to_check, source, "tags-ignore").is_some();
+    let has_tags_ignore = utils::find_value_for_key(push_to_check, source, "tags-ignore").is_some();
     if has_tags_plain && has_tags_ignore {
         if let Some(ti_node) = utils::find_value_for_key(push_to_check, source, "tags-ignore") {
             diagnostics.push(Diagnostic {
@@ -212,14 +208,11 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
     let pr_to_check = utils::unwrap_node(pr_node);
 
     // Check for branches + branches-ignore conflict
-    let has_branches_plain =
-        utils::find_value_for_key(pr_to_check, source, "branches").is_some();
+    let has_branches_plain = utils::find_value_for_key(pr_to_check, source, "branches").is_some();
     let has_branches_ignore =
         utils::find_value_for_key(pr_to_check, source, "branches-ignore").is_some();
     if has_branches_plain && has_branches_ignore {
-        if let Some(bi_node) =
-            utils::find_value_for_key(pr_to_check, source, "branches-ignore")
-        {
+        if let Some(bi_node) = utils::find_value_for_key(pr_to_check, source, "branches-ignore") {
             diagnostics.push(Diagnostic {
                 message: "Cannot use both 'branches' and 'branches-ignore' on the same event. They are mutually exclusive.".to_string(),
                 severity: Severity::Error,
@@ -233,8 +226,7 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
 
     // Check for paths + paths-ignore conflict
     let has_paths = utils::find_value_for_key(pr_to_check, source, "paths").is_some();
-    let has_paths_ignore =
-        utils::find_value_for_key(pr_to_check, source, "paths-ignore").is_some();
+    let has_paths_ignore = utils::find_value_for_key(pr_to_check, source, "paths-ignore").is_some();
     if has_paths && has_paths_ignore {
         if let Some(pi_node) = utils::find_value_for_key(pr_to_check, source, "paths-ignore") {
             diagnostics.push(Diagnostic {
@@ -430,9 +422,14 @@ fn validate_cron_field(field: &str, name: &str, min: u32, max: u32) -> Option<St
     // Handle step values: */N or range/N
     if let Some(base_and_step) = field.strip_prefix("*/") {
         return match base_and_step.parse::<u32>() {
-            Ok(step) if step == 0 => Some(format!("Step value must be greater than 0 for {}", name)),
+            Ok(step) if step == 0 => {
+                Some(format!("Step value must be greater than 0 for {}", name))
+            }
             Ok(_) => None,
-            Err(_) => Some(format!("Invalid step value '{}' for {}", base_and_step, name)),
+            Err(_) => Some(format!(
+                "Invalid step value '{}' for {}",
+                base_and_step, name
+            )),
         };
     }
 
@@ -454,9 +451,7 @@ fn validate_cron_field(field: &str, name: &str, min: u32, max: u32) -> Option<St
             match step_str.parse::<u32>() {
                 Ok(0) => return Some(format!("Step value must be greater than 0 for {}", name)),
                 Ok(_) => {}
-                Err(_) => {
-                    return Some(format!("Invalid step value '{}' for {}", step_str, name))
-                }
+                Err(_) => return Some(format!("Invalid step value '{}' for {}", step_str, name)),
             }
         }
 
