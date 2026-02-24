@@ -104,14 +104,10 @@ fn validate_concurrency_node(
         "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
             // String form is valid — the string IS the group name
             let text = utils::node_text(concurrency_to_check, source);
-            let cleaned =
-                text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+            let cleaned = text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
             if cleaned.is_empty() {
                 diagnostics.push(Diagnostic {
-                    message: format!(
-                        "Concurrency at {} level has empty group name.",
-                        context
-                    ),
+                    message: format!("Concurrency at {} level has empty group name.", context),
                     severity: Severity::Error,
                     span: Span {
                         start: concurrency_to_check.start_byte(),

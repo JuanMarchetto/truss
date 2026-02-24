@@ -149,10 +149,10 @@ fn expand_paths(raw_paths: &[String]) -> Result<Vec<String>, TrussError> {
                         }
                     }
                     Err(e) => {
-                        return Err(TrussError::Io(io::Error::new(io::ErrorKind::Other, format!(
-                            "Invalid glob pattern '{}': {}",
-                            pattern, e
-                        ))));
+                        return Err(TrussError::Io(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("Invalid glob pattern '{}': {}", pattern, e),
+                        )));
                     }
                 }
             }
@@ -164,10 +164,10 @@ fn expand_paths(raw_paths: &[String]) -> Result<Vec<String>, TrussError> {
                     }
                 }
                 Err(e) => {
-                    return Err(TrussError::Io(io::Error::new(io::ErrorKind::Other, format!(
-                        "Invalid glob pattern '{}': {}",
-                        raw, e
-                    ))));
+                    return Err(TrussError::Io(io::Error::new(
+                        io::ErrorKind::Other,
+                        format!("Invalid glob pattern '{}': {}", raw, e),
+                    )));
                 }
             }
         } else {
@@ -332,7 +332,10 @@ fn validate_files(
 
     if json {
         let json_output = serde_json::to_string_pretty(&file_results).map_err(|e| {
-            TrussError::Io(io::Error::new(io::ErrorKind::Other, format!("Failed to serialize JSON: {}", e)))
+            TrussError::Io(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to serialize JSON: {}", e),
+            ))
         })?;
         println!("{}", json_output);
     } else if !quiet && expanded.len() > 1 {
