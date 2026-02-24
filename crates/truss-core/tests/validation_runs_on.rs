@@ -1,6 +1,6 @@
 //! Tests for RunsOnRequiredRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates that `runs-on` is required for all jobs in GitHub Actions workflows.
 

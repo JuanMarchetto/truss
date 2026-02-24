@@ -1,6 +1,6 @@
 //! Tests for JobNameRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates job names in GitHub Actions workflows.
 

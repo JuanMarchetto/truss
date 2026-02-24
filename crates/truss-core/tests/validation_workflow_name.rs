@@ -1,6 +1,6 @@
 //! Tests for WorkflowNameRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates workflow name field in GitHub Actions workflows.
 

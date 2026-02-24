@@ -110,23 +110,6 @@ impl ValidationRule for StepIfExpressionRule {
                         });
                     }
 
-                    // Check for obviously undefined context variables
-                    if inner.contains("github.nonexistent")
-                        || inner.contains("nonexistent.property")
-                    {
-                        diagnostics.push(Diagnostic {
-                            message: format!(
-                                "Step 'if' expression may reference undefined context variable: '{}'",
-                                inner
-                            ),
-                            severity: Severity::Warning,
-                            span: Span {
-                                start: if_node.start_byte(),
-                                end: if_node.end_byte(),
-                            },
-                        });
-                    }
-
                     // Check for potentially always-true/false conditions
                     if utils::is_potentially_always_true(inner) {
                         diagnostics.push(Diagnostic {

@@ -1,6 +1,6 @@
 //! Tests for JobNeedsRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates job dependencies (`needs:`) in GitHub Actions workflows.
 

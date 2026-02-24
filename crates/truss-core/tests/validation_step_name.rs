@@ -1,6 +1,6 @@
 //! Tests for StepNameRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates step name field format in GitHub Actions workflows.
 

@@ -1,6 +1,6 @@
 //! Tests for StepShellRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates shell field values in GitHub Actions workflows.
 

@@ -1,6 +1,6 @@
 //! Tests for ArtifactValidationRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates actions/upload-artifact and actions/download-artifact usage in GitHub Actions workflows.
 

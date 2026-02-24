@@ -1,6 +1,6 @@
 //! Tests for JobStrategyValidationRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates strategy field syntax and constraints (max-parallel, fail-fast) in GitHub Actions workflows.
 

@@ -279,6 +279,95 @@ pub(crate) fn is_potentially_always_true(expr: &str) -> bool {
         || expr_lower.contains("true ||")
 }
 
+/// An extracted `${{ ... }}` expression with its byte offsets in the source.
+pub(crate) struct Expression<'a> {
+    /// The inner text between `${{` and `}}`, untrimmed.
+    pub inner: &'a str,
+    /// Byte offset of the `$` in `${{` within the source string.
+    pub start: usize,
+    /// Byte offset just past the closing `}}` within the source string.
+    pub end: usize,
+}
+
+/// Find all `${{ ... }}` expressions in a source string using brace-counting.
+///
+/// Unlike simple `find("${{")` + `find("}}")`, this correctly handles nested
+/// braces in format strings (e.g., `${{ format('{0}', matrix.os) }}`).
+///
+/// Skips expressions inside YAML comments (`# ... ${{ expr }}`).
+pub(crate) fn find_expressions(source: &str) -> Vec<Expression<'_>> {
+    let mut results = Vec::new();
+    let bytes = source.as_bytes();
+    let mut i = 0;
+
+    while i + 2 < bytes.len() {
+        if bytes[i] == b'$' && bytes[i + 1] == b'{' && bytes[i + 2] == b'{' {
+            // Skip expressions inside YAML comments
+            let line_start = source[..i].rfind('\n').map(|p| p + 1).unwrap_or(0);
+            let line_before = &source[line_start..i];
+            if line_before.trim_start().starts_with('#') {
+                i += 3;
+                continue;
+            }
+
+            let mut j = i + 3;
+            let mut brace_count: i32 = 2;
+            let mut found_closing = false;
+
+            while j < bytes.len() {
+                if j + 1 < bytes.len() && bytes[j] == b'}' && bytes[j + 1] == b'}' {
+                    brace_count -= 2;
+                    if brace_count == 0 {
+                        found_closing = true;
+                        j += 2;
+                        break;
+                    }
+                    j += 2;
+                } else if bytes[j] == b'{' {
+                    brace_count += 1;
+                    j += 1;
+                } else if bytes[j] == b'}' {
+                    brace_count -= 1;
+                    j += 1;
+                } else {
+                    j += 1;
+                }
+            }
+
+            if found_closing {
+                let expr_start = i + 3;
+                let expr_end = j - 2;
+                if expr_start < expr_end && expr_end <= bytes.len() {
+                    if let Some(inner) = source.get(expr_start..expr_end) {
+                        results.push(Expression {
+                            inner,
+                            start: i,
+                            end: j,
+                        });
+                    }
+                }
+                i = j;
+            } else {
+                // Unclosed expression — record it with end at source length
+                // so callers can emit an "unclosed expression" diagnostic.
+                let expr_start = i + 3;
+                if let Some(inner) = source.get(expr_start..source.len()) {
+                    results.push(Expression {
+                        inner,
+                        start: i,
+                        end: source.len(),
+                    });
+                }
+                break;
+            }
+        } else {
+            i += 1;
+        }
+    }
+
+    results
+}
+
 /// Check if expression may always evaluate to false.
 pub(crate) fn is_potentially_always_false(expr: &str) -> bool {
     let expr_lower = expr.to_lowercase();

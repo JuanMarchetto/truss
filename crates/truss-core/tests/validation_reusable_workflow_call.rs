@@ -1,6 +1,6 @@
 //! Tests for ReusableWorkflowCallRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates uses: workflow calls reference valid reusable workflows in GitHub Actions workflows.
 

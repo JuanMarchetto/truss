@@ -1,6 +1,6 @@
 //! Tests for PermissionsRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates permissions configuration in GitHub Actions workflows.
 

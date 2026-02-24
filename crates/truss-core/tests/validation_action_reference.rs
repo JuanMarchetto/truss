@@ -1,6 +1,6 @@
 //! Tests for ActionReferenceRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates action reference format (owner/repo@ref) in GitHub Actions workflows.
 //! Note: This rule may overlap with StepValidationRule but provides more comprehensive validation.

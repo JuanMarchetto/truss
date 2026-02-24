@@ -1,6 +1,6 @@
 //! Tests for WorkflowCallInputsRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates workflow_call inputs and their usage in GitHub Actions workflows.
 

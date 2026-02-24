@@ -1,6 +1,6 @@
 //! Tests for StepOutputReferenceRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates that step output references (steps.<step_id>.outputs.<output_name>) reference valid outputs
 //! in GitHub Actions workflows.

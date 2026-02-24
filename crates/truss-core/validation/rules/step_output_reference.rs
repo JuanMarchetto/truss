@@ -415,153 +415,104 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
             let node_text = utils::node_text(node, source);
             let node_start = node.start_byte();
 
-            // Find all ${{ ... }} expressions
-            let source_bytes = node_text.as_bytes();
-            let mut i = 0;
+            for expr in utils::find_expressions(&node_text) {
+                let expr_offset = expr.start;
+                let expr_text = expr.inner;
 
-            while i < source_bytes.len() {
-                if i + 3 < source_bytes.len()
-                    && source_bytes[i] == b'$'
-                    && source_bytes[i + 1] == b'{'
-                    && source_bytes[i + 2] == b'{'
-                {
-                    let mut j = i + 3;
-                    let mut brace_count = 2;
-                    let mut found_closing = false;
+                // Look for steps.*.outputs.* references
+                let expr_lower = expr_text.to_lowercase();
+                let mut search_pos = 0;
 
-                    while j < source_bytes.len() {
-                        if j + 1 < source_bytes.len()
-                            && source_bytes[j] == b'}'
-                            && source_bytes[j + 1] == b'}'
+                while let Some(pos) = expr_lower[search_pos..].find("steps.") {
+                    let actual_pos = search_pos + pos;
+                    let after_steps = &expr_text[actual_pos + 6..];
+
+                    // Find where the step ID ends
+                    let step_id_end = after_steps
+                        .find(|c: char| {
+                            c.is_whitespace()
+                                || c == '.'
+                                || c == '}'
+                                || c == ')'
+                                || c == ']'
+                                || c == '&'
+                                || c == '|'
+                                || c == '='
+                                || c == '!'
+                                || c == '<'
+                                || c == '>'
+                                || c == '['
+                        })
+                        .unwrap_or(after_steps.len());
+
+                    let step_id = &after_steps[..step_id_end.min(after_steps.len())];
+
+                    if !step_id.is_empty() {
+                        // Check if this is followed by .outputs
+                        let after_step_id = &after_steps[step_id_end..];
+
+                        if let Some(after_dot) = after_step_id.strip_prefix(".outputs.") {
+                            // Direct property access: steps.<id>.outputs.<name>
+                            let output_name_end = after_dot
+                                .find(|c: char| {
+                                    c.is_whitespace()
+                                        || c == '.'
+                                        || c == '}'
+                                        || c == ')'
+                                        || c == ']'
+                                        || c == '&'
+                                        || c == '|'
+                                        || c == '='
+                                        || c == '!'
+                                        || c == '<'
+                                        || c == '>'
+                                        || c == '['
+                                })
+                                .unwrap_or(after_dot.len());
+                            let output_name = &after_dot[..output_name_end];
+
+                            if !output_name.is_empty() {
+                                let span_start =
+                                    node_start + expr_offset + 3 + actual_pos + 6;
+                                let span_end = span_start + step_id.len();
+
+                                references.push((
+                                    step_id.to_string(),
+                                    output_name.to_string(),
+                                    Span {
+                                        start: span_start,
+                                        end: span_end,
+                                    },
+                                ));
+                            }
+                        } else if let Some(after_bracket) =
+                            after_step_id.strip_prefix(".outputs[")
                         {
-                            brace_count -= 2;
-                            if brace_count == 0 {
-                                found_closing = true;
-                                j += 2;
-                                break;
-                            }
-                            j += 2;
-                        } else if source_bytes[j] == b'{' {
-                            brace_count += 1;
-                            j += 1;
-                        } else if source_bytes[j] == b'}' {
-                            brace_count -= 1;
-                            j += 1;
-                        } else {
-                            j += 1;
-                        }
-                    }
+                            // Bracket notation: steps.<id>.outputs["<name>"]
+                            if let Some(close_bracket) = after_bracket.find(']') {
+                                let output_name = &after_bracket[..close_bracket];
+                                let output_name_cleaned = output_name
+                                    .trim_matches(|c: char| c == '"' || c == '\'');
 
-                    if found_closing {
-                        let expr_start = i + 3;
-                        let expr_end = j - 2;
+                                if !output_name_cleaned.is_empty() {
+                                    let span_start =
+                                        node_start + expr_offset + 3 + actual_pos + 6;
+                                    let span_end = span_start + step_id.len();
 
-                        if expr_start < expr_end && expr_end <= source_bytes.len() {
-                            let expr_text = &node_text[expr_start..expr_end];
-
-                            // Look for steps.*.outputs.* references
-                            let expr_lower = expr_text.to_lowercase();
-                            let mut search_pos = 0;
-
-                            while let Some(pos) = expr_lower[search_pos..].find("steps.") {
-                                let actual_pos = search_pos + pos;
-                                let after_steps = &expr_text[actual_pos + 6..];
-
-                                // Find where the step ID ends
-                                let step_id_end = after_steps
-                                    .find(|c: char| {
-                                        c.is_whitespace()
-                                            || c == '.'
-                                            || c == '}'
-                                            || c == ')'
-                                            || c == ']'
-                                            || c == '&'
-                                            || c == '|'
-                                            || c == '='
-                                            || c == '!'
-                                            || c == '<'
-                                            || c == '>'
-                                            || c == '['
-                                    })
-                                    .unwrap_or(after_steps.len());
-
-                                let step_id = &after_steps[..step_id_end.min(after_steps.len())];
-
-                                if !step_id.is_empty() {
-                                    // Check if this is followed by .outputs
-                                    let after_step_id = &after_steps[step_id_end..];
-
-                                    if let Some(after_dot) = after_step_id.strip_prefix(".outputs.")
-                                    {
-                                        // Direct property access: steps.<id>.outputs.<name>
-                                        let output_name_end = after_dot
-                                            .find(|c: char| {
-                                                c.is_whitespace()
-                                                    || c == '.'
-                                                    || c == '}'
-                                                    || c == ')'
-                                                    || c == ']'
-                                                    || c == '&'
-                                                    || c == '|'
-                                                    || c == '='
-                                                    || c == '!'
-                                                    || c == '<'
-                                                    || c == '>'
-                                                    || c == '['
-                                            })
-                                            .unwrap_or(after_dot.len());
-                                        let output_name = &after_dot[..output_name_end];
-
-                                        if !output_name.is_empty() {
-                                            let span_start = node_start + i + 3 + actual_pos + 6;
-                                            let span_end = span_start + step_id.len();
-
-                                            references.push((
-                                                step_id.to_string(),
-                                                output_name.to_string(),
-                                                Span {
-                                                    start: span_start,
-                                                    end: span_end,
-                                                },
-                                            ));
-                                        }
-                                    } else if let Some(after_bracket) =
-                                        after_step_id.strip_prefix(".outputs[")
-                                    {
-                                        // Bracket notation: steps.<id>.outputs["<name>"]
-                                        if let Some(close_bracket) = after_bracket.find(']') {
-                                            let output_name = &after_bracket[..close_bracket];
-                                            let output_name_cleaned = output_name
-                                                .trim_matches(|c: char| c == '"' || c == '\'');
-
-                                            if !output_name_cleaned.is_empty() {
-                                                let span_start =
-                                                    node_start + i + 3 + actual_pos + 6;
-                                                let span_end = span_start + step_id.len();
-
-                                                references.push((
-                                                    step_id.to_string(),
-                                                    output_name_cleaned.to_string(),
-                                                    Span {
-                                                        start: span_start,
-                                                        end: span_end,
-                                                    },
-                                                ));
-                                            }
-                                        }
-                                    }
+                                    references.push((
+                                        step_id.to_string(),
+                                        output_name_cleaned.to_string(),
+                                        Span {
+                                            start: span_start,
+                                            end: span_end,
+                                        },
+                                    ));
                                 }
-
-                                search_pos = actual_pos + 6 + step_id_end;
                             }
                         }
-
-                        i = j;
-                    } else {
-                        i += 1;
                     }
-                } else {
-                    i += 1;
+
+                    search_pos = actual_pos + 6 + step_id_end;
                 }
             }
         }
