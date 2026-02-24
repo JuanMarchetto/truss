@@ -13,6 +13,7 @@ edition = "2021"
 authors = ["Juan Patricio Marchetto"]
 license = "MIT"
 repository = "https://github.com/JuanMarchetto/truss"
+homepage = "https://github.com/JuanMarchetto/truss"
 description = "High-performance CI/CD pipeline validation engine for GitHub Actions workflows"
 keywords = ["github-actions", "ci-cd", "linter", "validation", "yaml"]
 categories = ["development-tools", "command-line-utilities"]
