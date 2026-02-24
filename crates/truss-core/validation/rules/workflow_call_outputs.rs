@@ -131,10 +131,7 @@ fn collect_job_names(jobs_node: Node, source: &str) -> HashSet<String> {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':');
+                    let key_cleaned = utils::clean_key(key_node, source);
                     names.insert(key_cleaned.to_string());
                 }
             }
@@ -158,11 +155,7 @@ fn collect_job_outputs(jobs_node: Node, source: &str) -> HashMap<String, HashSet
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let job_name = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':')
-                        .to_string();
+                    let job_name = utils::clean_key(key_node, source).to_string();
 
                     let job_value = utils::get_pair_value(node);
 
@@ -204,10 +197,7 @@ fn collect_output_names(node: Node, source: &str, names: &mut HashSet<String>) {
     match node.kind() {
         "block_mapping_pair" | "flow_pair" => {
             if let Some(key_node) = node.child(0) {
-                let key_text = utils::node_text(key_node, source);
-                let key_cleaned = key_text
-                    .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                    .trim_end_matches(':');
+                let key_cleaned = utils::clean_key(key_node, source);
                 names.insert(key_cleaned.to_string());
             }
         }

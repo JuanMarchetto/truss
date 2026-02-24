@@ -85,11 +85,7 @@ impl WorkflowCallSecretsRule {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let secret_name = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':')
-                        .to_string();
+                    let secret_name = utils::clean_key(key_node, source).to_string();
                     secrets.insert(secret_name);
                 }
             }
@@ -111,11 +107,7 @@ impl WorkflowCallSecretsRule {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let secret_name = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':')
-                        .to_string();
+                    let secret_name = utils::clean_key(key_node, source).to_string();
 
                     let secret_value = utils::get_pair_value(node);
 

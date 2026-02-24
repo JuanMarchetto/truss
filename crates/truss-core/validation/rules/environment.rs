@@ -24,10 +24,7 @@ impl ValidationRule for EnvironmentRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':');
+                        let key_cleaned = utils::clean_key(key_node, source);
                         if key_cleaned == "environment" {
                             let env_value = utils::get_pair_value(node);
                             if let Some(env_value_raw) = env_value {

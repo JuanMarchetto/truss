@@ -15,16 +15,13 @@ impl ValidationRule for JobIfExpressionRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        let root = tree.root_node();
-        let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
-            Some(v) => v,
+        let jobs_node = match utils::get_jobs_node(tree, source) {
+            Some(n) => n,
             None => return diagnostics,
         };
 
         // Collect all job names for reference validation
-        let job_names: HashSet<String> = collect_job_names(jobs_value, source);
-
-        let jobs_to_process = utils::unwrap_node(jobs_value);
+        let job_names: HashSet<String> = collect_job_names(jobs_node, source);
 
         fn check_job_if(
             node: Node,
@@ -35,11 +32,7 @@ impl ValidationRule for JobIfExpressionRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':')
-                            .to_string();
+                        let job_name = utils::clean_key(key_node, source).to_string();
 
                         if let Some(job_value_raw) = utils::get_pair_value(node) {
                             let job_value = utils::unwrap_node(job_value_raw);
@@ -180,7 +173,7 @@ impl ValidationRule for JobIfExpressionRule {
             }
         }
 
-        check_job_if(jobs_to_process, source, &job_names, &mut diagnostics);
+        check_job_if(jobs_node, source, &job_names, &mut diagnostics);
 
         diagnostics
     }
@@ -193,10 +186,7 @@ fn collect_job_names(jobs_node: Node, source: &str) -> HashSet<String> {
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':');
+                    let key_cleaned = utils::clean_key(key_node, source);
                     names.insert(key_cleaned.to_string());
                 }
             }

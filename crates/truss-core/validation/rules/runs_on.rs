@@ -14,9 +14,8 @@ impl ValidationRule for RunsOnRequiredRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        let root = tree.root_node();
-        let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
-            Some(v) => v,
+        let jobs_node = match utils::get_jobs_node(tree, source) {
+            Some(n) => n,
             None => return diagnostics,
         };
 
@@ -25,10 +24,7 @@ impl ValidationRule for RunsOnRequiredRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':');
+                        let key_cleaned = utils::clean_key(key_node, source);
 
                         // Get the job value node
                         let job_value = utils::get_pair_value(node);
@@ -96,9 +92,7 @@ impl ValidationRule for RunsOnRequiredRule {
             }
         }
 
-        let jobs_to_process = utils::unwrap_node(jobs_value);
-
-        check_job_runs_on(jobs_to_process, source, &mut diagnostics);
+        check_job_runs_on(jobs_node, source, &mut diagnostics);
 
         diagnostics
     }

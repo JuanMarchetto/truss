@@ -14,9 +14,8 @@ impl ValidationRule for JobNeedsRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        let root = tree.root_node();
-        let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
-            Some(v) => v,
+        let jobs_node = match utils::get_jobs_node(tree, source) {
+            Some(n) => n,
             None => return diagnostics,
         };
 
@@ -30,10 +29,7 @@ impl ValidationRule for JobNeedsRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':');
+                        let key_cleaned = utils::clean_key(key_node, source);
                         names.insert(key_cleaned.to_string());
                     }
                 }
@@ -46,9 +42,7 @@ impl ValidationRule for JobNeedsRule {
             }
         }
 
-        collect_job_names_set(jobs_value, source, &mut job_names);
-
-        let jobs_to_process = utils::unwrap_node(jobs_value);
+        collect_job_names_set(jobs_node, source, &mut job_names);
 
         fn extract_needs_values(needs_node: Node, source: &str) -> Vec<String> {
             let mut values = Vec::new();
@@ -110,10 +104,7 @@ impl ValidationRule for JobNeedsRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':');
+                        let key_cleaned = utils::clean_key(key_node, source);
                         if key_cleaned == "needs" {
                             if let Some(value_node_raw) = utils::get_pair_value(node) {
                                 let value_node = utils::unwrap_node(value_node_raw);
@@ -233,10 +224,7 @@ impl ValidationRule for JobNeedsRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let key_cleaned = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':');
+                        let key_cleaned = utils::clean_key(key_node, source);
                         if key_cleaned == "needs" {
                             if let Some(value_node_raw) = utils::get_pair_value(node) {
                                 let value_node = utils::unwrap_node(value_node_raw);
@@ -294,7 +282,7 @@ impl ValidationRule for JobNeedsRule {
             }
         }
 
-        collect_all_dependencies(jobs_to_process, source, &job_names, &mut dependencies);
+        collect_all_dependencies(jobs_node, source, &job_names, &mut dependencies);
 
         fn has_cycle(
             job: &str,
@@ -340,7 +328,7 @@ impl ValidationRule for JobNeedsRule {
             }
         }
 
-        process_job(jobs_to_process, source, &job_names, &mut diagnostics);
+        process_job(jobs_node, source, &job_names, &mut diagnostics);
 
         diagnostics
     }
