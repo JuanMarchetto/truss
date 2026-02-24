@@ -491,93 +491,26 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
                                     // Check if this is followed by .outputs
                                     let after_step_id = &after_steps[step_id_end..];
 
-                                    if let Some(after_outputs) =
-                                        after_step_id.strip_prefix(".outputs")
+                                    if let Some(after_dot) = after_step_id.strip_prefix(".outputs.")
                                     {
-                                        // Check if there's a property access after .outputs
-                                        let after_outputs_trimmed_raw = after_outputs.trim();
-
-                                        // Handle the case where we might get "s.result" instead of ".result"
-                                        // This happens when the slice is off by one character
-                                        let after_outputs_trimmed = if let Some(rest) =
-                                            after_outputs_trimmed_raw.strip_prefix("s.")
-                                        {
-                                            if !rest.is_empty() {
-                                                // Reconstruct with dot prefix
-                                                &after_outputs_trimmed_raw[1..]
-                                            } else {
-                                                after_outputs_trimmed_raw
-                                            }
-                                        } else {
-                                            after_outputs_trimmed_raw
-                                        };
-
-                                        // Check if after .outputs we have a property access
-                                        // Extract output name - handle both ".result" and "s.result" cases
-                                        // After normalization, after_outputs_trimmed should start with "."
-                                        let output_name = if let Some(after_dot) =
-                                            after_outputs_trimmed.strip_prefix('.')
-                                        {
-                                            // Extract output name after the dot
-                                            let output_name_end = after_dot
-                                                .find(|c: char| {
-                                                    c.is_whitespace()
-                                                        || c == '.'
-                                                        || c == '}'
-                                                        || c == ')'
-                                                        || c == ']'
-                                                        || c == '&'
-                                                        || c == '|'
-                                                        || c == '='
-                                                        || c == '!'
-                                                        || c == '<'
-                                                        || c == '>'
-                                                        || c == '['
-                                                })
-                                                .unwrap_or(after_dot.len());
-                                            &after_dot[..output_name_end]
-                                        } else if let Some(after_s_dot) =
-                                            after_outputs_trimmed.strip_prefix("s.")
-                                        {
-                                            // Handle the case where normalization didn't work (shouldn't happen but handle it)
-                                            let output_name_end = after_s_dot
-                                                .find(|c: char| {
-                                                    c.is_whitespace()
-                                                        || c == '.'
-                                                        || c == '}'
-                                                        || c == ')'
-                                                        || c == ']'
-                                                        || c == '&'
-                                                        || c == '|'
-                                                        || c == '='
-                                                        || c == '!'
-                                                        || c == '<'
-                                                        || c == '>'
-                                                        || c == '['
-                                                })
-                                                .unwrap_or(after_s_dot.len());
-                                            &after_s_dot[..output_name_end]
-                                        } else {
-                                            // Fallback: try to extract even if it doesn't start with "."
-                                            // This handles edge cases
-                                            let output_name_end = after_outputs_trimmed
-                                                .find(|c: char| {
-                                                    c.is_whitespace()
-                                                        || c == '.'
-                                                        || c == '}'
-                                                        || c == ')'
-                                                        || c == ']'
-                                                        || c == '&'
-                                                        || c == '|'
-                                                        || c == '='
-                                                        || c == '!'
-                                                        || c == '<'
-                                                        || c == '>'
-                                                        || c == '['
-                                                })
-                                                .unwrap_or(after_outputs_trimmed.len());
-                                            &after_outputs_trimmed[..output_name_end]
-                                        };
+                                        // Direct property access: steps.<id>.outputs.<name>
+                                        let output_name_end = after_dot
+                                            .find(|c: char| {
+                                                c.is_whitespace()
+                                                    || c == '.'
+                                                    || c == '}'
+                                                    || c == ')'
+                                                    || c == ']'
+                                                    || c == '&'
+                                                    || c == '|'
+                                                    || c == '='
+                                                    || c == '!'
+                                                    || c == '<'
+                                                    || c == '>'
+                                                    || c == '['
+                                            })
+                                            .unwrap_or(after_dot.len());
+                                        let output_name = &after_dot[..output_name_end];
 
                                         if !output_name.is_empty() {
                                             let span_start = node_start + i + 3 + actual_pos + 6;
@@ -591,30 +524,29 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
                                                     end: span_end,
                                                 },
                                             ));
-                                        } else if after_outputs_trimmed.starts_with("[") {
-                                            // Bracket notation - extract output name
-                                            if let Some(close_bracket) =
-                                                after_outputs_trimmed.find(']')
-                                            {
-                                                let output_name =
-                                                    &after_outputs_trimmed[1..close_bracket];
-                                                let output_name_cleaned = output_name
-                                                    .trim_matches(|c: char| c == '"' || c == '\'');
+                                        }
+                                    } else if let Some(after_bracket) =
+                                        after_step_id.strip_prefix(".outputs[")
+                                    {
+                                        // Bracket notation: steps.<id>.outputs["<name>"]
+                                        if let Some(close_bracket) = after_bracket.find(']') {
+                                            let output_name = &after_bracket[..close_bracket];
+                                            let output_name_cleaned = output_name
+                                                .trim_matches(|c: char| c == '"' || c == '\'');
 
-                                                if !output_name_cleaned.is_empty() {
-                                                    let span_start =
-                                                        node_start + i + 3 + actual_pos + 6;
-                                                    let span_end = span_start + step_id.len();
+                                            if !output_name_cleaned.is_empty() {
+                                                let span_start =
+                                                    node_start + i + 3 + actual_pos + 6;
+                                                let span_end = span_start + step_id.len();
 
-                                                    references.push((
-                                                        step_id.to_string(),
-                                                        output_name_cleaned.to_string(),
-                                                        Span {
-                                                            start: span_start,
-                                                            end: span_end,
-                                                        },
-                                                    ));
-                                                }
+                                                references.push((
+                                                    step_id.to_string(),
+                                                    output_name_cleaned.to_string(),
+                                                    Span {
+                                                        start: span_start,
+                                                        end: span_end,
+                                                    },
+                                                ));
                                             }
                                         }
                                     }

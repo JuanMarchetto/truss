@@ -178,3 +178,35 @@ jobs:
         "Valid step name with Unicode characters should not produce errors"
     );
 }
+
+#[test]
+fn test_step_name_with_comment_before_step() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - # This comment is between the dash and the step
+        name: Build project
+        run: echo "building"
+"#;
+
+    let result = engine.analyze(yaml);
+    let name_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("name")
+                && (d.message.contains("empty") || d.message.contains("long"))
+                && d.severity == Severity::Warning
+        })
+        .collect();
+
+    assert!(
+        name_errors.is_empty(),
+        "Valid step name with comment between dash and step should not produce warnings. Got: {:?}",
+        name_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}

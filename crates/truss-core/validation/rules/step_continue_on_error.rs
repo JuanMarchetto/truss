@@ -121,10 +121,19 @@ impl ValidationRule for StepContinueOnErrorRule {
             // block_sequence_item -> block_node -> block_mapping
             // block_sequence_item has: child(0) = "-" marker, child(1) = actual content
             if step_to_check.kind() == "block_sequence_item" {
-                // block_sequence_item contains the actual step content as child(1)
-                // child(0) is the "-" marker
-                if let Some(inner) = step_to_check.child(1) {
-                    step_to_check = inner;
+                // child(0) is the "-" marker, content follows (skip comments)
+                let mut found = false;
+                for i in 1..step_to_check.child_count() {
+                    if let Some(child) = step_to_check.child(i) {
+                        if child.kind() != "comment" {
+                            step_to_check = child;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if !found {
+                    return;
                 }
             }
             let step_to_check = utils::unwrap_node(step_to_check);

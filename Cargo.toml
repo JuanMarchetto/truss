@@ -10,6 +10,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.70"
 authors = ["Juan Patricio Marchetto"]
 license = "MIT"
 repository = "https://github.com/JuanMarchetto/truss"
@@ -17,3 +18,11 @@ homepage = "https://github.com/JuanMarchetto/truss"
 description = "High-performance CI/CD pipeline validation engine for GitHub Actions workflows"
 keywords = ["github-actions", "ci-cd", "linter", "validation", "yaml"]
 categories = ["development-tools", "command-line-utilities"]
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tree-sitter = "0.21"
+rayon = "1.8"
+clap = { version = "4", features = ["derive"] }
+criterion = "0.5"

@@ -16,14 +16,14 @@ name = "truss_core"
 path = "lib.rs"
 
 [dependencies]
-tree-sitter = "0.21"
+tree-sitter.workspace = true
 tree-sitter-yaml = "0.7"
-rayon = "1.8"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
-criterion = "0.5"
+criterion.workspace = true
 
 [[bench]]
 name = "parse"

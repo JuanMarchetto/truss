@@ -13,7 +13,7 @@ pub(crate) fn is_github_actions_workflow(tree: &Tree, source: &str) -> bool {
     let mut top_level_keys = Vec::new();
 
     fn extract_key_text(node: Node, source: &str) -> Option<String> {
-        let text = &source[node.start_byte()..node.end_byte()];
+        let text = source.get(node.start_byte()..node.end_byte())?;
         let cleaned = text
             .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
             .trim_end_matches(':');
@@ -93,7 +93,9 @@ pub(crate) fn find_value_for_key<'a>(
     match node.kind() {
         "block_mapping_pair" | "flow_pair" => {
             if let Some(key_node) = node.child(0) {
-                let key_text = &source[key_node.start_byte()..key_node.end_byte()];
+                let key_text = source
+                    .get(key_node.start_byte()..key_node.end_byte())
+                    .unwrap_or("");
                 let key_cleaned = key_text
                     .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                     .trim_end_matches(':');
@@ -147,7 +149,9 @@ pub(crate) fn key_exists(node: Node, source: &str, target_key: &str) -> bool {
     match node.kind() {
         "block_mapping_pair" | "flow_pair" => {
             if let Some(key_node) = node.child(0) {
-                let key_text = &source[key_node.start_byte()..key_node.end_byte()];
+                let key_text = source
+                    .get(key_node.start_byte()..key_node.end_byte())
+                    .unwrap_or("");
                 let key_cleaned = key_text
                     .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
                     .trim_end_matches(':');
@@ -169,9 +173,15 @@ pub(crate) fn key_exists(node: Node, source: &str, target_key: &str) -> bool {
     }
 }
 
-/// Helper to extract text from a node
+/// Helper to extract text from a node.
+///
+/// Returns an empty string if the byte offsets fall outside the source
+/// or land on a non-UTF-8 boundary.
 pub(crate) fn node_text(node: Node, source: &str) -> String {
-    source[node.start_byte()..node.end_byte()].to_string()
+    source
+        .get(node.start_byte()..node.end_byte())
+        .unwrap_or("")
+        .to_string()
 }
 
 /// Known GitHub Actions expression context names.

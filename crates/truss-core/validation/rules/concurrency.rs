@@ -121,11 +121,28 @@ fn validate_concurrency_node(
     let group_cleaned =
         group_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
 
-    // Group should be string or expression (starts with ${{)
+    // Group should be a string or expression, not a bare number.
+    // Skip values that start with ${{ (expressions) or with a known context prefix
+    // (e.g., "github.ref" looks numeric-with-dot but is actually a valid context reference).
     if !group_cleaned.starts_with("${{") {
-        // Try to parse as number - if it succeeds, it's invalid
-        if group_cleaned.parse::<f64>().is_ok() && !group_cleaned.contains('.') {
-            // It's a number, which is invalid
+        let has_context_prefix = [
+            "github.",
+            "env.",
+            "vars.",
+            "inputs.",
+            "secrets.",
+            "matrix.",
+            "needs.",
+            "job.",
+            "jobs.",
+            "steps.",
+            "runner.",
+            "strategy.",
+        ]
+        .iter()
+        .any(|prefix| group_cleaned.starts_with(prefix));
+
+        if !has_context_prefix && group_cleaned.parse::<f64>().is_ok() {
             diagnostics.push(Diagnostic {
                 message: format!(
                     "Concurrency 'group' at {} level must be a string or expression, not a number.",

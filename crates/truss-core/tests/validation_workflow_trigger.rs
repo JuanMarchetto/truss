@@ -107,6 +107,93 @@ fn test_workflow_trigger_invalid_event_type() {
 }
 
 #[test]
+fn test_workflow_trigger_valid_scalar_fork() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: fork
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Forked"
+"#;
+
+    let result = engine.analyze(yaml);
+    let trigger_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("event") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        trigger_errors.is_empty(),
+        "Scalar 'on: fork' should be a valid event type. Got errors: {:?}",
+        trigger_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_workflow_trigger_valid_scalar_create() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: create
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Branch created"
+"#;
+
+    let result = engine.analyze(yaml);
+    let trigger_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("event") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        trigger_errors.is_empty(),
+        "Scalar 'on: create' should be a valid event type. Got errors: {:?}",
+        trigger_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_workflow_trigger_valid_scalar_release() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: release
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Released"
+"#;
+
+    let result = engine.analyze(yaml);
+    let trigger_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("event") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        trigger_errors.is_empty(),
+        "Scalar 'on: release' should be a valid event type. Got errors: {:?}",
+        trigger_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_workflow_trigger_invalid_syntax() {
     let mut engine = TrussEngine::new();
     let yaml = "on: [push, ]"; // Invalid syntax

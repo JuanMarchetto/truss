@@ -128,3 +128,38 @@ jobs:
         "Number continue-on-error value should produce error"
     );
 }
+
+#[test]
+fn test_step_continue_on_error_with_comment_before_step() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - # This comment appears between dash and step content
+        continue-on-error: true
+        run: echo "may fail"
+"#;
+
+    let result = engine.analyze(yaml);
+    let continue_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("continue-on-error")
+                && (d.message.contains("invalid") || d.message.contains("boolean"))
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        continue_errors.is_empty(),
+        "Valid continue-on-error with comment between dash and step should not produce errors. Got: {:?}",
+        continue_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}

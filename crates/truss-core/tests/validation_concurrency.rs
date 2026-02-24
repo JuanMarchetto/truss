@@ -338,3 +338,71 @@ jobs:
         "Job-level concurrency missing required 'group' field should produce error"
     );
 }
+
+#[test]
+fn test_concurrency_invalid_float_group() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+concurrency:
+  group: 1.0
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Building"
+"#;
+
+    let result = engine.analyze(yaml);
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            (d.message.contains("concurrency") || d.message.contains("group"))
+                && (d.message.contains("number") || d.message.contains("string"))
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        !concurrency_errors.is_empty(),
+        "Float group value '1.0' should be flagged as invalid (not a string/expression)"
+    );
+}
+
+#[test]
+fn test_concurrency_valid_context_with_dot() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+concurrency:
+  group: github.ref
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Building"
+"#;
+
+    let result = engine.analyze(yaml);
+    let concurrency_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("number")
+                && d.message.contains("concurrency")
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        concurrency_errors.is_empty(),
+        "Context reference 'github.ref' should not be flagged as a number. Got: {:?}",
+        concurrency_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
