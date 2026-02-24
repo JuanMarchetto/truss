@@ -10,19 +10,51 @@ use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use truss_core::{Diagnostic as CoreDiagnostic, Severity as CoreSeverity, TrussEngine};
 
-/// LSP message types
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
+/// JSON-RPC message types for LSP communication.
+///
+/// We discriminate manually rather than using `serde(untagged)` because
+/// untagged deserialization is ambiguous: a notification (no `id`) would
+/// match `LspRequest` if `id` were `Option<Value>`.
 enum LspMessage {
     Request(LspRequest),
+    /// Server ignores incoming responses (we don't send requests to the client).
+    #[allow(dead_code)]
     Response(LspResponse),
     Notification(LspNotification),
+}
+
+/// Parse a raw JSON value into a typed `LspMessage`.
+///
+/// JSON-RPC discrimination rules:
+/// - Has `id` + `method` → Request
+/// - Has `id` (no `method`) → Response
+/// - Has `method` (no `id`) → Notification
+fn parse_lsp_message(value: Value) -> Option<LspMessage> {
+    let obj = value.as_object()?;
+    let has_id = obj.contains_key("id");
+    let has_method = obj.contains_key("method");
+
+    if has_id && has_method {
+        serde_json::from_value::<LspRequest>(value)
+            .ok()
+            .map(LspMessage::Request)
+    } else if has_id {
+        serde_json::from_value::<LspResponse>(value)
+            .ok()
+            .map(LspMessage::Response)
+    } else if has_method {
+        serde_json::from_value::<LspNotification>(value)
+            .ok()
+            .map(LspMessage::Notification)
+    } else {
+        None
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct LspRequest {
     jsonrpc: String,
-    id: Option<Value>,
+    id: Value,
     method: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     params: Option<Value>,
@@ -31,7 +63,7 @@ struct LspRequest {
 #[derive(Debug, Serialize, Deserialize)]
 struct LspResponse {
     jsonrpc: String,
-    id: Option<Value>,
+    id: Value,
     #[serde(skip_serializing_if = "Option::is_none")]
     result: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -59,7 +91,8 @@ struct LspServer {
     engine: TrussEngine,
     documents: HashMap<String, DocumentState>,
     initialized: bool,
-    shutdown: bool,
+    shutdown_requested: bool,
+    exit_received: bool,
 }
 
 struct DocumentState {
@@ -74,22 +107,23 @@ impl LspServer {
             engine: TrussEngine::new(),
             documents: HashMap::new(),
             initialized: false,
-            shutdown: false,
+            shutdown_requested: false,
+            exit_received: false,
         }
     }
 
-    fn handle_message(&mut self, message: LspMessage) -> Vec<LspMessage> {
+    fn handle_message(&mut self, message: LspMessage) -> Vec<LspOutgoing> {
         let mut responses = Vec::new();
 
         match message {
             LspMessage::Request(req) => {
                 if let Some(response) = self.handle_request(req) {
-                    responses.push(LspMessage::Response(response));
+                    responses.push(LspOutgoing::Response(response));
                 }
             }
             LspMessage::Notification(notif) => {
                 let notifications = self.handle_notification(notif);
-                responses.extend(notifications.into_iter().map(LspMessage::Notification));
+                responses.extend(notifications.into_iter().map(LspOutgoing::Notification));
             }
             LspMessage::Response(_) => {}
         }
@@ -122,11 +156,11 @@ impl LspServer {
                 })
             }
             "shutdown" => {
-                self.shutdown = true;
+                self.shutdown_requested = true;
                 Some(LspResponse {
                     jsonrpc: "2.0".to_string(),
                     id: req.id,
-                    result: Some(serde_json::Value::Null),
+                    result: Some(Value::Null),
                     error: None,
                 })
             }
@@ -201,7 +235,7 @@ impl LspServer {
                 }
             }
             "exit" => {
-                self.shutdown = true;
+                self.exit_received = true;
             }
             _ => {}
         }
@@ -365,22 +399,26 @@ fn byte_to_lsp_position(byte_offset: usize, text: &str) -> (u32, u32) {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct DidOpenTextDocumentParams {
     text_document: TextDocumentItem,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct DidChangeTextDocumentParams {
     text_document: VersionedTextDocumentIdentifier,
     content_changes: Vec<TextDocumentContentChangeEvent>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct DidCloseTextDocumentParams {
     text_document: TextDocumentIdentifier,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct TextDocumentItem {
     uri: String,
     #[allow(dead_code)]
@@ -405,8 +443,17 @@ struct TextDocumentContentChangeEvent {
     text: String,
 }
 
+/// Outgoing message (response or notification) to be serialized and sent.
+enum LspOutgoing {
+    Response(LspResponse),
+    Notification(LspNotification),
+}
+
 /// Run the LSP server on stdin/stdout.
-pub fn run() -> io::Result<()> {
+///
+/// Returns `Ok(true)` if shutdown was clean (shutdown request received before exit),
+/// `Ok(false)` if exit was received without a prior shutdown request.
+pub fn run() -> io::Result<bool> {
     let stdin = io::stdin();
     let mut reader = BufReader::new(stdin.lock());
     let mut stdout = io::stdout();
@@ -415,9 +462,16 @@ pub fn run() -> io::Result<()> {
     loop {
         // Read headers until empty line
         let mut content_length: Option<usize> = None;
+        let mut eof = false;
         loop {
             let mut line = String::new();
-            reader.read_line(&mut line)?;
+            let bytes_read = reader.read_line(&mut line)?;
+
+            // EOF — client disconnected
+            if bytes_read == 0 {
+                eof = true;
+                break;
+            }
 
             let trimmed = line.trim();
             if trimmed.is_empty() {
@@ -431,6 +485,10 @@ pub fn run() -> io::Result<()> {
             }
         }
 
+        if eof {
+            break;
+        }
+
         let content_length = match content_length {
             Some(len) if len > 0 => len,
             _ => continue,
@@ -440,13 +498,19 @@ pub fn run() -> io::Result<()> {
         let mut content = vec![0u8; content_length];
         reader.read_exact(&mut content)?;
 
-        if let Ok(message) = serde_json::from_slice::<LspMessage>(&content) {
+        let message = serde_json::from_slice::<Value>(&content)
+            .ok()
+            .and_then(parse_lsp_message);
+
+        if let Some(message) = message {
             let responses = server.handle_message(message);
 
-            for response in responses {
-                let json = serde_json::to_string(&response)?;
-                let header = format!("Content-Length: {}\r\n\r\n", json.len());
-                write!(stdout, "{}{}", header, json)?;
+            for outgoing in responses {
+                let json = match &outgoing {
+                    LspOutgoing::Response(r) => serde_json::to_string(r)?,
+                    LspOutgoing::Notification(n) => serde_json::to_string(n)?,
+                };
+                write!(stdout, "Content-Length: {}\r\n\r\n{}", json.len(), json)?;
                 stdout.flush()?;
             }
         } else {
@@ -460,15 +524,14 @@ pub fn run() -> io::Result<()> {
                 }
             });
             let json = serde_json::to_string(&error_response)?;
-            let header = format!("Content-Length: {}\r\n\r\n", json.len());
-            write!(stdout, "{}{}", header, json)?;
+            write!(stdout, "Content-Length: {}\r\n\r\n{}", json.len(), json)?;
             stdout.flush()?;
         }
 
-        if server.shutdown {
+        if server.exit_received {
             break;
         }
     }
 
-    Ok(())
+    Ok(server.shutdown_requested)
 }
