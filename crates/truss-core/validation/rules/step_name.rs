@@ -66,10 +66,20 @@ impl ValidationRule for StepNameRule {
         fn validate_step_name(step_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             let mut step_to_check = step_node;
 
-            // Handle block_sequence_item: child(0) is "-" marker, child(1) is actual content
+            // Handle block_sequence_item: child(0) is "-" marker, content follows (skip comments)
             if step_to_check.kind() == "block_sequence_item" {
-                if let Some(inner) = step_to_check.child(1) {
-                    step_to_check = inner;
+                let mut found = false;
+                for i in 1..step_to_check.child_count() {
+                    if let Some(child) = step_to_check.child(i) {
+                        if child.kind() != "comment" {
+                            step_to_check = child;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if !found {
+                    return;
                 }
             }
 

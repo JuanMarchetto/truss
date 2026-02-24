@@ -53,14 +53,12 @@ impl ValidationRule for StepValidationRule {
 
                                     let mut has_uses = false;
                                     let mut has_run = false;
-                                    let mut uses_value_node = None;
 
-                                    fn check_step_keys<'a>(
-                                        node: Node<'a>,
+                                    fn check_step_keys(
+                                        node: Node,
                                         source: &str,
                                         has_uses: &mut bool,
                                         has_run: &mut bool,
-                                        uses_value: &mut Option<Node<'a>>,
                                     ) {
                                         match node.kind() {
                                             "block_mapping_pair" | "flow_pair" => {
@@ -76,25 +74,9 @@ impl ValidationRule for StepValidationRule {
                                                         .trim_end_matches(':');
                                                     if key_cleaned == "uses" {
                                                         *has_uses = true;
-                                                        if let Some(value_node_raw) =
-                                                            utils::get_pair_value(node)
-                                                        {
-                                                            let value_node =
-                                                                utils::unwrap_node(value_node_raw);
-                                                            *uses_value = Some(value_node);
-                                                        }
                                                     } else if key_cleaned == "run" {
                                                         *has_run = true;
                                                     }
-                                                }
-                                            }
-                                            "block_node" | "block_mapping" | "flow_mapping" => {
-                                                let mut cursor = node.walk();
-                                                for child in node.children(&mut cursor) {
-                                                    check_step_keys(
-                                                        child, source, has_uses, has_run,
-                                                        uses_value,
-                                                    );
                                                 }
                                             }
                                             _ => {
@@ -102,7 +84,6 @@ impl ValidationRule for StepValidationRule {
                                                 for child in node.children(&mut cursor) {
                                                     check_step_keys(
                                                         child, source, has_uses, has_run,
-                                                        uses_value,
                                                     );
                                                 }
                                             }
@@ -114,7 +95,6 @@ impl ValidationRule for StepValidationRule {
                                         source,
                                         &mut has_uses,
                                         &mut has_run,
-                                        &mut uses_value_node,
                                     );
 
                                     if !has_uses && !has_run {
@@ -127,47 +107,6 @@ impl ValidationRule for StepValidationRule {
                                                 end: step_node.end_byte(),
                                             },
                                         });
-                                    }
-
-                                    if has_uses {
-                                        if let Some(uses_value) = uses_value_node {
-                                            let uses_text = utils::node_text(uses_value, source);
-                                            let uses_cleaned = uses_text.trim_matches(|c: char| {
-                                                c == '"' || c == '\'' || c.is_whitespace()
-                                            });
-                                            if !uses_cleaned.contains('@')
-                                                && !uses_cleaned.is_empty()
-                                            {
-                                                diagnostics.push(Diagnostic {
-                                                    message: format!("Invalid action reference format: '{}' (missing @ref)", uses_cleaned),
-                                                    severity: Severity::Warning,
-                                                    span: Span {
-                                                        start: uses_value.start_byte(),
-                                                        end: uses_value.end_byte(),
-                                                    },
-                                                });
-                                            }
-                                            if uses_cleaned.contains('@') {
-                                                let parts: Vec<&str> =
-                                                    uses_cleaned.split('@').collect();
-                                                if parts.len() == 2 {
-                                                    let action_part = parts[0];
-                                                    if action_part.starts_with("invalid/") {
-                                                        diagnostics.push(Diagnostic {
-                                                            message: format!(
-                                                                "Invalid action reference: '{}'",
-                                                                uses_cleaned
-                                                            ),
-                                                            severity: Severity::Warning,
-                                                            span: Span {
-                                                                start: uses_value.start_byte(),
-                                                                end: uses_value.end_byte(),
-                                                            },
-                                                        });
-                                                    }
-                                                }
-                                            }
-                                        }
                                     }
                                 }
 

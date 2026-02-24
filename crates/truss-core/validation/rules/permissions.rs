@@ -36,9 +36,6 @@ impl ValidationRule for PermissionsRule {
             "security-events",
             "statuses",
             "workflows",
-            "write-all",
-            "read-all",
-            "none",
         ];
 
         let valid_values = ["read", "write", "none"];

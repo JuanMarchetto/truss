@@ -18,7 +18,7 @@ path = "src/main.rs"
 
 [dependencies]
 truss-core = { path = "../truss-core" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tree-sitter = "0.21"
+serde.workspace = true
+serde_json.workspace = true
+tree-sitter.workspace = true
 

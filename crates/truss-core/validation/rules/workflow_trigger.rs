@@ -3,6 +3,45 @@ use super::super::ValidationRule;
 use crate::{Diagnostic, Severity, Span};
 use tree_sitter::Tree;
 
+/// All valid GitHub Actions event types.
+const VALID_EVENTS: &[&str] = &[
+    "push",
+    "pull_request",
+    "pull_request_target",
+    "pull_request_review",
+    "pull_request_review_comment",
+    "issues",
+    "issue_comment",
+    "label",
+    "milestone",
+    "project",
+    "project_card",
+    "project_column",
+    "repository_dispatch",
+    "workflow_dispatch",
+    "workflow_call",
+    "workflow_run",
+    "schedule",
+    "watch",
+    "fork",
+    "create",
+    "delete",
+    "deployment",
+    "deployment_status",
+    "page_build",
+    "public",
+    "registry_package",
+    "release",
+    "status",
+    "check_run",
+    "check_suite",
+    "discussion",
+    "discussion_comment",
+    "gollum",
+    "merge_group",
+    "branch_protection_rule",
+];
+
 /// Validates workflow trigger configuration.
 pub struct WorkflowTriggerRule;
 
@@ -84,48 +123,7 @@ impl ValidationRule for WorkflowTriggerRule {
                             .trim_end_matches(':')
                             .to_lowercase();
 
-                        // Comprehensive list of valid GitHub Actions event types
-                        let valid_events = [
-                            "push",
-                            "pull_request",
-                            "pull_request_target",
-                            "pull_request_review",
-                            "pull_request_review_comment",
-                            "issues",
-                            "issue_comment",
-                            "label",
-                            "milestone",
-                            "project",
-                            "project_card",
-                            "project_column",
-                            "repository_dispatch",
-                            "workflow_dispatch",
-                            "workflow_call",
-                            "workflow_run",
-                            "schedule",
-                            "watch",
-                            "fork",
-                            "create",
-                            "delete",
-                            "deployment",
-                            "deployment_status",
-                            "page_build",
-                            "public",
-                            "registry_package",
-                            "release",
-                            "status",
-                            "check_run",
-                            "check_suite",
-                            "discussion",
-                            "discussion_comment",
-                            "gollum",
-                            "merge_group",
-                            "pull_request_target",
-                            "workflow_call",
-                            "workflow_dispatch",
-                        ];
-
-                        if !valid_events.contains(&event_type.as_str()) && !event_type.is_empty() {
+                        if !VALID_EVENTS.contains(&event_type.as_str()) && !event_type.is_empty() {
                             diagnostics.push(Diagnostic {
                                 message: format!(
                                     "Invalid event type: '{}'. Valid event types include: push, pull_request, workflow_dispatch, schedule, workflow_call, and others.",
@@ -152,18 +150,9 @@ impl ValidationRule for WorkflowTriggerRule {
         // Validate event types in the on: mapping
         validate_event_types(on_to_check, source, &mut diagnostics);
 
-        // Also validate simple event text if present (for backward compatibility)
+        // Also validate simple event text if present (scalar on: value)
         if let Some(event_text) = event_text {
-            let valid_events = [
-                "push",
-                "pull_request",
-                "workflow_dispatch",
-                "schedule",
-                "repository_dispatch",
-                "workflow_run",
-                "workflow_call",
-            ];
-            if !valid_events.contains(&event_text.as_str())
+            if !VALID_EVENTS.contains(&event_text.as_str())
                 && !event_text.is_empty()
                 && !event_text.contains(':')
                 && !event_text.contains('[')

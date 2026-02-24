@@ -277,12 +277,18 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
         let mut found_any_cron = false;
         for item in schedule_to_check.children(&mut cursor) {
             let item_content = utils::unwrap_node(item);
-            // block_sequence_item children: "-" token, then content
+            // block_sequence_item children: "-" token, then content (skip comments)
             let actual_content = if item_content.kind() == "block_sequence_item" {
-                item_content
-                    .child(1)
-                    .map(|c| utils::unwrap_node(c))
-                    .unwrap_or(item_content)
+                let mut content = item_content;
+                for i in 1..item_content.child_count() {
+                    if let Some(child) = item_content.child(i) {
+                        if child.kind() != "comment" {
+                            content = child;
+                            break;
+                        }
+                    }
+                }
+                utils::unwrap_node(content)
             } else {
                 item_content
             };
