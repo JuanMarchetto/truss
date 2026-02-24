@@ -1,18 +1,18 @@
 # Contributing to Truss
 
-Thank you for your interest in contributing to Truss! This document provides guidelines and information to help you get started.
+Hey, thanks for wanting to contribute to Truss! Whether you're fixing a bug, adding a new validation rule, or just tidying something up, we appreciate the help. This guide should get you oriented quickly.
 
 ## Before You Start
 
-- Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) to understand the project's design principles
-- Check the [open issues](https://github.com/JuanMarchetto/truss/issues) for existing discussions or known bugs
-- For large changes, open an issue first to discuss the approach
+- Take a look at [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) so you have a feel for how the project is put together.
+- Browse the [open issues](https://github.com/JuanMarchetto/truss/issues) to see if someone's already working on the same thing or if there's a known bug.
+- If you're planning something big, it's worth opening an issue first so we can talk through the approach together.
 
 ## Development Setup
 
 ### Prerequisites
 
-- Rust 1.70+ (install via [rustup](https://rustup.rs/))
+- Rust 1.70+ (grab it from [rustup](https://rustup.rs/) if you haven't already)
 - `just` (recommended) or `make` for build automation
 
 ### Building
@@ -41,7 +41,7 @@ cargo test -p truss-core
 
 ### Code Quality Checks
 
-All of these must pass before submitting a PR:
+These all need to pass before you open a PR:
 
 ```bash
 # Lint
@@ -56,34 +56,40 @@ cargo check --workspace
 
 ## Project Principles
 
+These aren't arbitrary -- they keep the codebase manageable as we grow beyond 41 rules and counting.
+
 ### Core First
 
-All validation logic belongs in `truss-core`. The CLI, LSP, and WASM crates are thin adapters that should contain no business logic. If you're adding a validation rule, it goes in `truss-core/validation/rules/`.
+All validation logic lives in `truss-core`. The CLI, LSP, and WASM crates are thin adapters and shouldn't contain any business logic. If you're adding a validation rule, it belongs in `truss-core/validation/rules/`.
 
 ### Stateless Rules
 
-Validation rules must be stateless and independently testable. Each rule implements the `ValidationRule` trait and receives the parsed tree and source text. Rules should not depend on each other or maintain state between calls.
+Every rule should be stateless and independently testable. Each one implements the `ValidationRule` trait and receives the parsed tree along with the source text. Rules shouldn't depend on each other or hold onto state between calls.
 
 ### Performance Matters
 
-Performance is a first-class requirement. When adding or modifying rules:
+We take performance seriously. When you're adding or changing rules:
 - Avoid unnecessary allocations
-- Don't re-parse the tree — use the provided `Node` and walk the AST
+- Don't re-parse the tree -- use the provided `Node` and walk the AST
 - Run benchmarks before and after your changes: `cargo bench -p truss-core`
 
 ### Determinism
 
-The same input must always produce the same output. No randomness, no system-dependent behavior, no ordering that depends on hash maps.
+The same input must always produce the same output. No randomness, no system-dependent behavior, no ordering that depends on hash map iteration.
 
 ## Adding a Validation Rule
 
+This is the most common type of contribution. Here's the process:
+
 1. Create a new file in `crates/truss-core/validation/rules/`
 2. Implement the `ValidationRule` trait
-3. Register the rule in `crates/truss-core/lib.rs` (in the `TrussEngine::new()` constructor)
+3. Register the rule in `crates/truss-core/lib.rs` (inside the `TrussEngine::new()` constructor)
 4. Add tests in `crates/truss-core/tests/`
 5. Update `docs/VALIDATION_RULES.md`
 
 ### Rule Template
+
+Here's a skeleton to get you started:
 
 ```rust
 use super::super::utils;
@@ -113,6 +119,8 @@ impl ValidationRule for MyNewRule {
 ```
 
 ### Test Template
+
+And a matching test structure:
 
 ```rust
 use truss_core::{Severity, TrussEngine};
@@ -157,25 +165,25 @@ jobs:
 
 ## Submitting a Pull Request
 
-1. Fork the repository and create a branch from `main`
+1. Fork the repo and create a branch from `main`
 2. Make your changes
-3. Ensure all checks pass:
+3. Make sure everything passes:
    - `cargo test --workspace`
    - `cargo clippy --workspace -- -D warnings`
    - `cargo fmt --all -- --check`
-4. Write a clear PR description explaining what changed and why
+4. Write a clear PR description -- explain what you changed and, more importantly, why
 5. Link any related issues
 
 ## Reporting Bugs
 
-When filing an issue, please include:
-- The workflow YAML that triggers the bug (or a minimal reproduction)
-- Expected behavior vs actual behavior
-- Truss version (commit hash if building from source)
+If you've found a bug, please include:
+- The workflow YAML that triggers it (or a minimal reproduction)
+- What you expected to happen vs. what actually happened
+- Your Truss version (or the commit hash if you're building from source)
 
 ## AI-Generated Code Notice
 
-A significant portion of this codebase was AI-generated. If you find code that looks incorrect, overly complex, or inconsistent with Rust idioms, please don't hesitate to open an issue or submit a fix. Improving code quality is a valued contribution.
+A significant portion of this codebase was AI-generated. If you spot code that looks wrong, unnecessarily complicated, or un-idiomatic for Rust, please don't hesitate to open an issue or submit a fix. Cleaning things up is a genuinely valued contribution -- not a nitpick.
 
 ## License
 

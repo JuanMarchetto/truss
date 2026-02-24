@@ -1,21 +1,10 @@
 # CI Workflow Fixtures
 
-This directory contains GitHub Actions workflow fixtures used for
-**parsing, analysis, and benchmarking** in Truss.
+These are GitHub Actions workflow files we use for parsing, analysis, and benchmarking in Truss.
 
-The goal of these fixtures is **not** to execute CI jobs, but to represent
-real-world GitHub Actions workflows across a spectrum of complexity, in order
-to evaluate:
+They're not meant to actually run CI -- they exist so we can throw realistic workflows at Truss and see how it handles YAML parsing, expression evaluation, job graph construction, matrix logic, and conditionals under real-world conditions.
 
-- YAML parsing performance
-- Expression handling
-- Job graph construction
-- Matrix and conditional semantics
-- Behavior under realistic CI complexity
-
-All fixtures are **derived from real, widely used open-source repositories**.
-They are included here in adapted or reduced form for benchmarking and testing
-purposes only.
+All of them are adapted from real, widely-used open-source projects. We trimmed and tweaked them for our purposes, but they reflect the kind of complexity developers actually deal with.
 
 ---
 
@@ -23,93 +12,59 @@ purposes only.
 
 ### `simple.yml`
 
-**Complexity:** Simple  
-**Characteristics:**
-- Single job
-- Linear execution
-- No conditionals, matrices, or job dependencies
+**Complexity:** Simple
 
-**Source:**
-- Derived from the `licensed.yml` workflow in `actions/checkout`
+A single job, straight-line execution, no conditionals or matrices. Derived from the `licensed.yml` workflow in `actions/checkout`.
 
-This fixture serves as a **baseline** for correctness and performance.
+This is our baseline -- if something breaks here, we have bigger problems.
 
 ---
 
 ### `medium.yml`
 
-**Complexity:** Medium  
-**Characteristics:**
-- Scheduled (`cron`) triggers
-- Conditional step execution based on schedule identity
-- Single job with multiple execution paths
-- Scoped permissions
+**Complexity:** Medium
 
-**Source:**
-- Derived from the scheduled event processor workflow in `Azure/azure-sdk-for-js`
+A cron-triggered workflow with conditional step execution, scoped permissions, and multiple execution paths within a single job. Derived from a scheduled event processor in `Azure/azure-sdk-for-js`.
 
-This fixture represents common real-world automation workflows that include
-branching logic without introducing job graphs or matrices.
+This covers the kind of branching logic you see in most real automation workflows, without the added complexity of job graphs or matrices.
 
 ---
 
 ### `complex-static.yml`
 
-**Complexity:** Complex (static)  
-**Characteristics:**
-- Multiple jobs
-- Matrix strategies with conditional exclusions
-- Cross-job dependencies (`needs`)
-- Conditional execution (`if`)
-- Artifact handling and aggregation jobs
+**Complexity:** Complex (static)
 
-**Source:**
-- Derived from the primary CI workflow in `microsoft/TypeScript`
+Multiple jobs with matrix strategies, conditional exclusions, cross-job dependencies via `needs`, `if` conditions, and artifact handling. Derived from the main CI workflow in `microsoft/TypeScript`.
 
-All job definitions and matrices are statically defined in YAML.
+Everything here is statically defined in YAML -- no runtime generation involved.
 
 ---
 
 ### `complex-dynamic.yml`
 
-**Complexity:** Complex (dynamic)  
-**Characteristics:**
-- Runtime-generated job matrices
-- Cross-file CI configuration
-- Dynamic graph construction via job outputs
-- Advanced concurrency and environment gating
-- Partial static observability by design
+**Complexity:** Complex (dynamic)
 
-**Source:**
-- Derived from the primary CI workflow in `rust-lang/rust`
+Runtime-generated job matrices, cross-file CI configuration, dynamic graph construction through job outputs, advanced concurrency, and environment gating. Derived from the primary CI workflow in `rust-lang/rust`.
 
-This fixture represents the upper bound of GitHub Actions complexity commonly
-seen in large, long-lived repositories.
-
-Truss does **not** attempt to fully resolve runtime-generated matrices in this
-fixture. Instead, it is used to validate parsing, expression handling, and
-partial graph construction under extreme real-world conditions.
+This is about as complex as GitHub Actions gets in the wild. Truss doesn't try to fully resolve the runtime-generated matrices here. Instead, we use this fixture to validate that parsing, expression handling, and partial graph construction hold up under extreme conditions.
 
 ---
 
-## Notes on Provenance and Scope
+## Notes on Provenance
 
-- These fixtures are **not exact copies** of the original workflows.
-- External actions, scripts, and referenced files are intentionally **not**
-  resolved or executed.
-- The purpose of these fixtures is **static analysis**, not CI execution.
-- Cross-file resolution and runtime evaluation are explicitly **out of scope**
-  for Truss v0.
+- These are **not** exact copies of the original workflows.
+- External actions, scripts, and referenced files are intentionally left unresolved.
+- The purpose is static analysis, not CI execution.
+- Cross-file resolution and runtime evaluation are out of scope for Truss v0.
 
 ---
 
-## Why Real-World Fixtures
+## Why Real Workflows?
 
-Using real workflows ensures that Truss is evaluated against:
+Synthetic benchmarks are tidy but they miss the weird stuff. Using workflows from actual projects means we're testing against:
 
-- Actual patterns used in production CI systems
-- Edge cases that arise organically, not synthetically
-- The kinds of workflows developers interact with daily
+- Patterns that developers actually use in production
+- Edge cases that show up organically, not ones we thought to invent
+- The workflows people interact with every day
 
-This approach avoids artificial benchmarks and grounds Truss in practical,
-observable developer pain points.
+This keeps Truss grounded in real developer pain points rather than artificial scenarios.

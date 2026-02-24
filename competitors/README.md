@@ -1,38 +1,28 @@
 # Competitors
 
-This directory contains wrapper scripts for benchmarking Truss against other YAML/GitHub Actions validators and linters.
+Wrapper scripts for benchmarking Truss against other YAML and GitHub Actions validators.
 
-## Structure
-
-Each competitor should have its own directory with two scripts:
+## Layout
 
 ```
 competitors/
 ├── competitor-name/
-│   ├── run.sh          # Wrapper script for performance benchmarking
-│   └── capture.sh      # Script that outputs JSON results for comparison
-└── README.md           # This file
+│   ├── run.sh          # Performance benchmarking wrapper
+│   └── capture.sh      # Outputs JSON results for comparison
+└── README.md
 ```
 
 ## Adding a New Competitor
 
-1. Create a new directory: `competitors/your-competitor/`
-2. Create a `run.sh` script that:
-   - Accepts a YAML file path as the first argument
-   - Validates the file using the competitor tool
-   - Exits with code 0 on success, non-zero on failure
-   - Suppresses output (redirect to `/dev/null`) for benchmarking
-   - Handles cases where the tool is not installed
+1. Create a directory: `competitors/your-tool/`
 
-3. Create a `capture.sh` script that:
-   - Accepts a YAML file path as the first argument
-   - Outputs JSON results in the format expected by the comparison engine
-   - Includes timing information and error diagnostics
-   - See existing `capture.sh` scripts for examples
+2. Add a `run.sh` that takes a YAML file path as its first argument, validates it with the tool, and exits 0/non-zero. Suppress output for clean benchmarking. Handle the case where the tool isn't installed.
 
-4. Make the scripts executable: `chmod +x competitors/your-competitor/*.sh`
+3. Add a `capture.sh` that takes a YAML file path, runs the tool, and outputs structured JSON (timing, diagnostics, metadata). Look at the existing `capture.sh` scripts for the expected format.
 
-## Example Wrapper Script
+4. Make them executable: `chmod +x competitors/your-tool/*.sh`
+
+Here's a minimal `run.sh` template:
 
 ```bash
 #!/usr/bin/env bash
@@ -50,7 +40,6 @@ if [ ! -f "$YAML_FILE" ]; then
     exit 1
 fi
 
-# Check if tool is available and run it
 if command -v your-tool &> /dev/null; then
     your-tool "$YAML_FILE" > /dev/null 2>&1
     exit $?
@@ -62,14 +51,14 @@ exit 1
 
 ## Running Benchmarks
 
-The benchmarking system automatically discovers all competitors:
+The benchmarking system auto-discovers all competitors:
 
 ```bash
 just compare        # Compare against all competitors
 just compare-smoke  # Quick smoke test with simple fixture
 ```
 
-Or use the script directly:
+Or call the script directly:
 
 ```bash
 scripts/compare-competitors.sh [fixture-file] [warmup-runs] [output-file]
@@ -77,19 +66,15 @@ scripts/compare-competitors.sh [fixture-file] [warmup-runs] [output-file]
 
 ## Current Competitors
 
-- **actionlint**: Static checker for GitHub Actions workflow files
-  - `run.sh`: Performance benchmarking wrapper
-  - `capture.sh`: JSON result capture for comparison
-- **yamllint**: YAML linter that checks syntax and style
-  - `run.sh`: Performance benchmarking wrapper
-  - `capture.sh`: JSON result capture for comparison
-- **yaml-language-server**: LSP server for YAML validation
-  - `run.sh`: Performance benchmarking wrapper
-  - `capture.sh`: JSON result capture for comparison
+- **actionlint** -- Static checker for GitHub Actions workflow files
+- **yamllint** -- YAML linter for syntax and style
+- **yaml-language-server** -- LSP server for YAML validation
 
-## Result Capture Format
+Each has a `run.sh` for benchmarking and a `capture.sh` for structured result capture.
 
-The `capture.sh` scripts output JSON in the following format:
+## JSON Output Format
+
+The `capture.sh` scripts produce JSON like this:
 
 ```json
 {
@@ -115,6 +100,4 @@ The `capture.sh` scripts output JSON in the following format:
 }
 ```
 
-This format is used by the comparison engine in `scripts/compare-results.py` to analyze results across tools.
-
-
+The comparison engine in `scripts/compare-results.py` consumes this format to analyze results across tools.

@@ -1,10 +1,8 @@
 # Multifile Adversarial Testing Framework
 
-This directory contains the testing framework for comparing Truss against competitors (actionlint, yamllint, yaml-language-server) in complex multifile scenarios.
+This is where we pit Truss against the competition -- actionlint, yamllint, and yaml-language-server -- across real GitHub repositories with known workflow issues.
 
-## Overview
-
-The test suite evaluates both **correctness** (which errors each tool finds) and **performance** (execution time) across real-world GitHub repositories with known workflow issues.
+We're testing two things: **correctness** (does each tool catch the right errors?) and **performance** (how fast does it do it?).
 
 ## Directory Structure
 
@@ -16,86 +14,74 @@ test-suite/
 │   ├── actionlint/
 │   ├── yamllint/
 │   └── yaml-language-server/
-├── comparison/               # Comparison analysis and reports
+├── comparison/               # Analysis and reports
 │   ├── coverage.json        # Error detection coverage
 │   ├── performance.json     # Timing data
-│   └── reports/             # HTML/text reports
+│   └── reports/             # HTML and text reports
 └── repos.json               # Test repository configuration
 ```
 
-## Quick Start
+## Getting Started
 
-### 1. Setup Test Repositories
-
-Clone test repositories:
+### 1. Clone the test repos
 
 ```bash
-# Clone all repositories
+# All of them
 bash scripts/setup-test-repos.sh
 
-# Clone only high-priority repositories
+# Just the important ones
 bash scripts/setup-test-repos.sh high
 
-# List available repositories
+# See what's there
 bash scripts/manage-repos.sh list
 ```
 
-### 2. Run Full Test Suite
-
-Run validation on all repositories:
+### 2. Run the full suite
 
 ```bash
 bash scripts/run-full-suite.sh
 ```
 
-Or use the justfile command:
+Or via just:
 
 ```bash
 just test-multifile
 ```
 
-### 3. Run on Single Repository
-
-Test a specific repository:
+### 3. Test a single repo
 
 ```bash
 bash scripts/run-validation.sh test-suite/repos/rust-lang-rust
 ```
 
-Or use the justfile command:
+Or:
 
 ```bash
 just test-repo rust-lang-rust
 ```
 
-### 4. View Results
-
-After running the test suite, view the generated reports:
+### 4. Check the results
 
 ```bash
 # Markdown report
 cat test-suite/comparison/reports/summary.md
 
-# HTML report (open in browser)
+# HTML report
 open test-suite/comparison/reports/summary.html
 
-# JSON comparison data
+# Raw JSON
 cat test-suite/comparison/coverage.json | jq
 ```
 
-## Manual Steps
+## Doing Things Manually
 
-### Discover Workflows
-
-Find all workflow files in a repository:
+### Find workflows in a repo
 
 ```bash
 bash scripts/discover-workflows.sh test-suite/repos/rust-lang-rust
 ```
 
-### Run Individual Tool
-
-Run a specific tool on a file:
+### Run a single tool on a file
 
 ```bash
 # Truss
@@ -111,57 +97,40 @@ bash competitors/yamllint/capture.sh workflow.yml
 bash competitors/yaml-language-server/capture.sh workflow.yml
 ```
 
-### Compare Results
-
-Compare results from different tools:
+### Compare and report
 
 ```bash
+# Compare results across tools
 bash scripts/compare-results.py test-suite/results test-suite/comparison/coverage.json
-```
 
-### Generate Reports
-
-Generate reports from comparison data:
-
-```bash
+# Generate human-readable reports
 bash scripts/generate-report.py test-suite/comparison/coverage.json test-suite/comparison/reports
 ```
 
-## Repository Management
-
-Manage test repositories:
+## Managing Test Repos
 
 ```bash
-# Clone a repository
-bash scripts/manage-repos.sh clone owner/repo
-
-# Update a repository
-bash scripts/manage-repos.sh update repo-name
-
-# List all repositories
-bash scripts/manage-repos.sh list
-
-# Clean old repositories (older than 30 days)
-bash scripts/manage-repos.sh clean 30
+bash scripts/manage-repos.sh clone owner/repo   # Clone a new one
+bash scripts/manage-repos.sh update repo-name    # Pull latest
+bash scripts/manage-repos.sh list                # See what's cloned
+bash scripts/manage-repos.sh clean 30            # Remove repos older than 30 days
 ```
 
 ## Test Repositories
 
-The following repositories are configured in `repos.json`:
+These are configured in `repos.json`:
 
-1. **rust-lang/rust** - Complex dynamic matrices, large workflows
-2. **microsoft/TypeScript** - Multiple workflows, complex job dependencies
-3. **actions/checkout** - Simple but diverse workflow patterns
-4. **facebook/react** - Multiple workflow files, various triggers
-5. **pytorch/pytorch** - Complex matrix strategies
-6. **tensorflow/tensorflow** - Large number of workflow files
-7. **kubernetes/kubernetes** - Large-scale CI/CD patterns
+1. **rust-lang/rust** -- Complex dynamic matrices, large workflows
+2. **microsoft/TypeScript** -- Multiple workflows, complex job dependencies
+3. **actions/checkout** -- Simple but diverse workflow patterns
+4. **facebook/react** -- Multiple workflow files, various triggers
+5. **pytorch/pytorch** -- Complex matrix strategies
+6. **tensorflow/tensorflow** -- Lots of workflow files
+7. **kubernetes/kubernetes** -- Large-scale CI/CD patterns
 
-## Results Format
+## Output Formats
 
-### Tool Results (JSON)
-
-Each tool outputs results in the following format:
+### Per-tool results (JSON)
 
 ```json
 {
@@ -186,9 +155,7 @@ Each tool outputs results in the following format:
 }
 ```
 
-### Comparison Results (JSON)
-
-The comparison engine produces:
+### Comparison results (JSON)
 
 ```json
 {
@@ -220,41 +187,37 @@ The comparison engine produces:
 }
 ```
 
-## Success Metrics
+## What We're Looking For
 
-The test suite evaluates:
-
-1. **Coverage**: Truss finds ≥90% of errors found by actionlint
-2. **Performance**: Truss maintains 10-15x speed advantage
-3. **Unique Value**: Truss finds errors others miss (document cases)
-4. **Reliability**: Comparison runs complete without errors
-5. **Documentation**: Clear reports showing strengths/weaknesses
+1. **Coverage** -- Truss catches at least 90% of the errors actionlint finds
+2. **Performance** -- Truss maintains a 10-15x speed advantage
+3. **Unique finds** -- Errors Truss catches that others miss (we document these)
+4. **Reliability** -- The comparison pipeline runs cleanly end to end
+5. **Clarity** -- Reports that make strengths and weaknesses obvious
 
 ## Troubleshooting
 
 ### No workflow files found
 
-Ensure repositories are cloned:
+Make sure the repos are actually cloned:
 
 ```bash
 bash scripts/setup-test-repos.sh
 bash scripts/manage-repos.sh list
 ```
 
-### Tool not found errors
+### Tool not found
 
-Install missing tools:
+Install whatever's missing:
 
 ```bash
 # actionlint
 brew install actionlint
-# or
-go install github.com/rhymond/actionlint@latest
+# or: go install github.com/rhymond/actionlint@latest
 
 # yamllint
 pip install yamllint
-# or
-brew install yamllint
+# or: brew install yamllint
 
 # yaml-language-server
 npm install -g yaml-language-server
@@ -262,16 +225,14 @@ npm install -g yaml-language-server
 
 ### Permission denied
 
-Make scripts executable:
-
 ```bash
 chmod +x scripts/*.sh
 chmod +x competitors/*/capture.sh
 ```
 
-## Continuous Integration
+## Running in CI
 
-To run comparison tests in CI, add to `.github/workflows/test-comparison.yml`:
+Here's a workflow you can drop into `.github/workflows/test-comparison.yml`:
 
 ```yaml
 name: Test Comparison
@@ -299,11 +260,10 @@ jobs:
           path: test-suite/comparison/reports/
 ```
 
-## Future Enhancements
+## Ideas for Later
 
-- Machine learning for error message normalization
+- Smarter error message normalization (maybe ML-based)
 - Automated false positive detection
-- Integration with GitHub API to find repos with workflow issues
-- Historical tracking of comparison results
-- Web dashboard for results visualization
-
+- GitHub API integration to find repos with broken workflows
+- Historical tracking of results over time
+- A web dashboard for browsing comparison data
