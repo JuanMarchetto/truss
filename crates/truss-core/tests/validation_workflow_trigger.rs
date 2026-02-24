@@ -1,6 +1,6 @@
 //! Tests for WorkflowTriggerRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates `on:` trigger configuration in GitHub Actions workflows.
 

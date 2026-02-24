@@ -1,6 +1,6 @@
 //! Tests for StepEnvValidationRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates environment variable names and values at step level in GitHub Actions workflows.
 

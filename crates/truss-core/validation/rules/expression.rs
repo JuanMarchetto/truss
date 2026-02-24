@@ -18,76 +18,49 @@ impl ValidationRule for ExpressionValidationRule {
             return diagnostics;
         }
 
-        let mut pos = 0;
-        while let Some(start) = source[pos..].find("${{") {
-            let actual_start = pos + start;
-            let after_start = actual_start + 3;
+        for expr in utils::find_expressions(source) {
+            let inner = expr.inner.trim();
 
-            // Skip expressions inside YAML comments (# ... ${{ expr }})
-            let line_start = source[..actual_start]
-                .rfind('\n')
-                .map(|i| i + 1)
-                .unwrap_or(0);
-            let line_before = &source[line_start..actual_start];
-            if line_before.trim_start().starts_with('#') {
-                pos = after_start;
-                continue;
-            }
-
-            if let Some(end_offset) = source[after_start..].find("}}") {
-                let end = after_start + end_offset + 2;
-                let expr = &source[actual_start..end];
-
-                let inner = expr[3..expr.len() - 2].trim();
-                if inner.is_empty() {
-                    diagnostics.push(Diagnostic {
-                        message: "Empty expression".to_string(),
-                        severity: Severity::Error,
-                        span: Span {
-                            start: actual_start,
-                            end,
-                        },
-                    });
-                } else if !utils::is_valid_expression_syntax(inner) {
-                    diagnostics.push(Diagnostic {
-                        message: format!("Invalid expression syntax: '{}'", inner),
-                        severity: Severity::Error,
-                        span: Span {
-                            start: actual_start,
-                            end,
-                        },
-                    });
-                }
-
-                if inner.contains("github.nonexistent") || inner.contains("nonexistent.property") {
-                    diagnostics.push(Diagnostic {
-                        message: format!("Undefined context variable: {}", inner),
-                        severity: Severity::Warning,
-                        span: Span {
-                            start: actual_start,
-                            end,
-                        },
-                    });
-                }
-
-                // Validate operators
-                validate_expression_operators(inner, actual_start, end, &mut diagnostics);
-
-                // Validate function calls
-                validate_expression_functions(inner, actual_start, end, &mut diagnostics);
-
-                pos = end;
-            } else {
+            // Detect unclosed expressions: find_expressions sets end to
+            // source.len() when no closing }} is found.
+            let is_closed = source.get(expr.end.saturating_sub(2)..expr.end) == Some("}}");
+            if !is_closed {
                 diagnostics.push(Diagnostic {
                     message: "unclosed expression".to_string(),
                     severity: Severity::Error,
                     span: Span {
-                        start: actual_start,
-                        end: source.len().min(actual_start + 50),
+                        start: expr.start,
+                        end: source.len().min(expr.start + 50),
                     },
                 });
-                break;
+                continue;
             }
+
+            if inner.is_empty() {
+                diagnostics.push(Diagnostic {
+                    message: "Empty expression".to_string(),
+                    severity: Severity::Error,
+                    span: Span {
+                        start: expr.start,
+                        end: expr.end,
+                    },
+                });
+            } else if !utils::is_valid_expression_syntax(inner) {
+                diagnostics.push(Diagnostic {
+                    message: format!("Invalid expression syntax: '{}'", inner),
+                    severity: Severity::Error,
+                    span: Span {
+                        start: expr.start,
+                        end: expr.end,
+                    },
+                });
+            }
+
+            // Validate operators
+            validate_expression_operators(inner, expr.start, expr.end, &mut diagnostics);
+
+            // Validate function calls
+            validate_expression_functions(inner, expr.start, expr.end, &mut diagnostics);
         }
 
         diagnostics

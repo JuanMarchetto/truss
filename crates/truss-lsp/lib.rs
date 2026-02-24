@@ -260,7 +260,7 @@ impl LspServer {
             DocumentState {
                 text,
                 version,
-                tree: Some(tree),
+                tree,
             },
         );
 
@@ -304,14 +304,14 @@ impl LspServer {
         if let Some(doc) = self.documents.get_mut(&uri) {
             doc.text = new_text;
             doc.version = version;
-            doc.tree = Some(tree);
+            doc.tree = tree;
         } else {
             self.documents.insert(
                 uri.clone(),
                 DocumentState {
                     text: new_text,
                     version,
-                    tree: Some(tree),
+                    tree,
                 },
             );
         }

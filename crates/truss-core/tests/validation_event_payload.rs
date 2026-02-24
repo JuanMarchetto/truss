@@ -1,6 +1,6 @@
 //! Tests for EventPayloadValidationRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates event-specific fields in on: triggers in GitHub Actions workflows.
 

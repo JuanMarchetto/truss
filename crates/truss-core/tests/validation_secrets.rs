@@ -1,6 +1,6 @@
 //! Tests for SecretsValidationRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates secrets.* references in GitHub Actions workflows.
 

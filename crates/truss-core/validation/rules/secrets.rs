@@ -18,65 +18,8 @@ impl ValidationRule for SecretsValidationRule {
             return diagnostics;
         }
 
-        // Find all expressions in the source
-        // Expressions are in the format ${{ ... }}
-        let source_bytes = source.as_bytes();
-        let mut i = 0;
-
-        while i < source_bytes.len() {
-            // Look for ${{ pattern
-            if i + 3 < source_bytes.len()
-                && source_bytes[i] == b'$'
-                && source_bytes[i + 1] == b'{'
-                && source_bytes[i + 2] == b'{'
-            {
-                // Find the closing }}
-                let mut j = i + 3;
-                let mut brace_count = 2;
-                let mut found_closing = false;
-
-                while j < source_bytes.len() {
-                    if j + 1 < source_bytes.len()
-                        && source_bytes[j] == b'}'
-                        && source_bytes[j + 1] == b'}'
-                    {
-                        brace_count -= 2;
-                        if brace_count == 0 {
-                            found_closing = true;
-                            j += 2;
-                            break;
-                        }
-                        j += 2;
-                    } else if source_bytes[j] == b'{' {
-                        brace_count += 1;
-                        j += 1;
-                    } else if source_bytes[j] == b'}' {
-                        brace_count -= 1;
-                        j += 1;
-                    } else {
-                        j += 1;
-                    }
-                }
-
-                if found_closing {
-                    // Extract the expression content (between ${{ and }})
-                    let expr_start = i + 3;
-                    let expr_end = j - 2;
-
-                    if expr_start < expr_end && expr_end <= source_bytes.len() {
-                        let expr_text = &source[expr_start..expr_end];
-
-                        // Check for secret references
-                        self.check_secret_references(expr_text, i, j, &mut diagnostics);
-                    }
-
-                    i = j;
-                } else {
-                    i += 1;
-                }
-            } else {
-                i += 1;
-            }
+        for expr in utils::find_expressions(source) {
+            self.check_secret_references(expr.inner, expr.start, expr.end, &mut diagnostics);
         }
 
         diagnostics

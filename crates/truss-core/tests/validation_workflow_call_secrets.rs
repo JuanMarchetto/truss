@@ -1,6 +1,6 @@
 //! Tests for WorkflowCallSecretsRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates workflow_call secrets and their usage in GitHub Actions workflows.
 

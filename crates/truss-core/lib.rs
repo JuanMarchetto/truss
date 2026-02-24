@@ -117,32 +117,38 @@ impl TrussEngine {
     ///
     /// This is useful for LSP implementations that need to store the tree
     /// for incremental parsing on subsequent edits.
-    pub fn analyze_with_tree(&mut self, source: &str) -> (TrussResult, tree_sitter::Tree) {
+    ///
+    /// Returns `None` for the tree when parsing fails, so callers can
+    /// distinguish between a valid empty tree and a parse failure.
+    pub fn analyze_with_tree(&mut self, source: &str) -> (TrussResult, Option<tree_sitter::Tree>) {
         let tree = match self.parser.parse(source) {
             Ok(tree) => tree,
-            Err(_) => return (Self::parse_error_result(source), self.dummy_tree()),
+            Err(_) => return (Self::parse_error_result(source), None),
         };
 
         let result = self.rules.validate_parallel(&tree, source);
-        (result, tree)
+        (result, Some(tree))
     }
 
     /// Analyze with incremental parsing and return both diagnostics and the parsed tree.
     ///
     /// This is useful for LSP implementations that need to store the tree
     /// for incremental parsing on subsequent edits.
+    ///
+    /// Returns `None` for the tree when parsing fails, so callers can
+    /// distinguish between a valid empty tree and a parse failure.
     pub fn analyze_incremental_with_tree(
         &mut self,
         source: &str,
         old_tree: Option<&tree_sitter::Tree>,
-    ) -> (TrussResult, tree_sitter::Tree) {
+    ) -> (TrussResult, Option<tree_sitter::Tree>) {
         let tree = match self.parse_maybe_incremental(source, old_tree) {
             Ok(tree) => tree,
-            Err(_) => return (Self::parse_error_result(source), self.dummy_tree()),
+            Err(_) => return (Self::parse_error_result(source), None),
         };
 
         let result = self.rules.validate_parallel(&tree, source);
-        (result, tree)
+        (result, Some(tree))
     }
 
     fn parse_maybe_incremental(
@@ -167,12 +173,6 @@ impl TrussEngine {
                 },
             }],
         }
-    }
-
-    fn dummy_tree(&mut self) -> tree_sitter::Tree {
-        self.parser
-            .parse("")
-            .expect("BUG: tree-sitter failed to parse empty string; parser may be misconfigured")
     }
 
     /// Add a custom validation rule.

@@ -1,6 +1,6 @@
 //! Tests for ConcurrencyRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates concurrency syntax in GitHub Actions workflows.
 

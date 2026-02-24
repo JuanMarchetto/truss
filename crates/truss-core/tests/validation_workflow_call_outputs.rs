@@ -1,6 +1,6 @@
 //! Tests for WorkflowCallOutputsRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates workflow_call outputs are properly defined in GitHub Actions workflows.
 

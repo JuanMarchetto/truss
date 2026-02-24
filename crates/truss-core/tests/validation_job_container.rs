@@ -1,6 +1,6 @@
 //! Tests for JobContainerRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates container and services configurations in GitHub Actions workflows.
 

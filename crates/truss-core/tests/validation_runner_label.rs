@@ -1,6 +1,6 @@
 //! Tests for RunnerLabelRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates runs-on labels are valid GitHub-hosted runners or self-hosted runner groups in GitHub Actions workflows.
 

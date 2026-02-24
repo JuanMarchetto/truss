@@ -1,6 +1,6 @@
 //! Tests for StepWorkingDirectoryRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates working-directory paths in GitHub Actions workflows.
 

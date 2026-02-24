@@ -1,6 +1,6 @@
 //! Tests for StepIdUniquenessRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates that step IDs are unique within a job in GitHub Actions workflows.
 

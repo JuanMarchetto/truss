@@ -1,6 +1,6 @@
 //! Tests for StepContinueOnErrorRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates continue-on-error is a boolean in GitHub Actions workflows.
 

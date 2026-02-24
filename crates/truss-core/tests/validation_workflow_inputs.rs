@@ -1,6 +1,6 @@
 //! Tests for WorkflowInputsRule
 //!
-//! **Status:** Tests written first (TDD) - Rule not yet implemented
+//! **Status:** Rule implemented and tested
 //!
 //! Validates workflow_dispatch inputs in GitHub Actions workflows.
 
