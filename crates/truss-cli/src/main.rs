@@ -290,16 +290,26 @@ fn validate_files(
         all_results.push((path.to_string(), result));
     }
 
-    // Process files in parallel — each task gets its own engine
-    // (TrussEngine contains a mutable parser, so it can't be shared across threads)
-    let file_results: Vec<(String, Result<FileResult, TrussError>)> = file_paths
-        .par_iter()
-        .map(|path| {
-            let mut engine = TrussEngine::new();
-            let result = validate_file(&mut engine, path, quiet, json, severity_filter);
-            (path.to_string(), result)
-        })
-        .collect();
+    // For a single file, sequential is faster (avoids rayon thread pool overhead).
+    // For multiple files, parallel processing pays off.
+    let file_results: Vec<(String, Result<FileResult, TrussError>)> = if file_paths.len() <= 1 {
+        file_paths
+            .iter()
+            .map(|path| {
+                let result = validate_file(&mut engine, path, quiet, json, severity_filter);
+                (path.to_string(), result)
+            })
+            .collect()
+    } else {
+        file_paths
+            .par_iter()
+            .map(|path| {
+                let mut engine = TrussEngine::new();
+                let result = validate_file(&mut engine, path, quiet, json, severity_filter);
+                (path.to_string(), result)
+            })
+            .collect()
+    };
 
     all_results.extend(file_results);
 
