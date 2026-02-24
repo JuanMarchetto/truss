@@ -193,9 +193,7 @@ pub(crate) fn get_jobs_node<'a>(tree: &'a Tree, source: &'a str) -> Option<Node<
 /// Returns an empty string if the byte offsets fall outside the source
 /// or land on a non-UTF-8 boundary.
 pub(crate) fn node_text<'a>(node: Node, source: &'a str) -> &'a str {
-    source
-        .get(node.start_byte()..node.end_byte())
-        .unwrap_or("")
+    source.get(node.start_byte()..node.end_byte()).unwrap_or("")
 }
 
 /// Known GitHub Actions expression context names.
@@ -217,9 +215,7 @@ pub(crate) fn is_valid_expression_syntax(expr: &str) -> bool {
     }
 
     let has_context = KNOWN_CONTEXTS.iter().any(|ctx| {
-        expr.len() > ctx.len()
-            && expr.as_bytes()[ctx.len()] == b'.'
-            && expr.starts_with(ctx)
+        expr.len() > ctx.len() && expr.as_bytes()[ctx.len()] == b'.' && expr.starts_with(ctx)
     });
 
     let expr_lower = expr.to_lowercase();

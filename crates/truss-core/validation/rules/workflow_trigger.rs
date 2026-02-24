@@ -113,11 +113,7 @@ impl ValidationRule for WorkflowTriggerRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let event_type = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':')
-                            .to_lowercase();
+                        let event_type = utils::clean_key(key_node, source).to_lowercase();
 
                         if !VALID_EVENTS.contains(&event_type.as_str()) && !event_type.is_empty() {
                             diagnostics.push(Diagnostic {

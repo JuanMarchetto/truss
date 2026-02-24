@@ -14,13 +14,10 @@ impl ValidationRule for StepTimeoutRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        let root = tree.root_node();
-        let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
-            Some(v) => v,
+        let jobs_node = match utils::get_jobs_node(tree, source) {
+            Some(n) => n,
             None => return diagnostics,
         };
-
-        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn process_jobs(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
@@ -92,12 +89,7 @@ impl ValidationRule for StepTimeoutRule {
                     match node.kind() {
                         "block_mapping_pair" | "flow_pair" => {
                             if let Some(key_node) = node.child(0) {
-                                let key_text = utils::node_text(key_node, source);
-                                let key_cleaned = key_text
-                                    .trim_matches(|c: char| {
-                                        c == '"' || c == '\'' || c.is_whitespace()
-                                    })
-                                    .trim_end_matches(':');
+                                let key_cleaned = utils::clean_key(key_node, source);
                                 if key_cleaned == "timeout-minutes" {
                                     if let Some(timeout_node) = utils::get_pair_value(node) {
                                         validate_timeout_value(timeout_node, source, diagnostics);
@@ -201,7 +193,7 @@ impl ValidationRule for StepTimeoutRule {
             }
         }
 
-        process_jobs(jobs_to_process, source, &mut diagnostics);
+        process_jobs(jobs_node, source, &mut diagnostics);
 
         diagnostics
     }

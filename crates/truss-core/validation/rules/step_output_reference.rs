@@ -15,13 +15,10 @@ impl ValidationRule for StepOutputReferenceRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        let root = tree.root_node();
-        let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
-            Some(v) => v,
+        let jobs_node = match utils::get_jobs_node(tree, source) {
+            Some(n) => n,
             None => return diagnostics,
         };
-
-        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         let mut processed_jobs = HashSet::new();
 
@@ -36,11 +33,7 @@ impl ValidationRule for StepOutputReferenceRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':')
-                            .to_string();
+                        let job_name = utils::clean_key(key_node, source).to_string();
 
                         let job_value = utils::get_pair_value(node);
 
@@ -69,7 +62,7 @@ impl ValidationRule for StepOutputReferenceRule {
             }
         }
 
-        collect_all_step_ids(jobs_to_process, source, &mut all_step_ids_by_job);
+        collect_all_step_ids(jobs_node, source, &mut all_step_ids_by_job);
 
         fn process_jobs(
             node: Node,
@@ -81,11 +74,7 @@ impl ValidationRule for StepOutputReferenceRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':')
-                            .to_string();
+                        let job_name = utils::clean_key(key_node, source).to_string();
 
                         // Skip if we've already processed this job
                         if processed_jobs.contains(&job_name) {
@@ -269,7 +258,7 @@ impl ValidationRule for StepOutputReferenceRule {
         }
 
         process_jobs(
-            jobs_to_process,
+            jobs_node,
             source,
             &mut diagnostics,
             &mut processed_jobs,
@@ -411,7 +400,7 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
             let node_text = utils::node_text(node, source);
             let node_start = node.start_byte();
 
-            for expr in utils::find_expressions(&node_text) {
+            for expr in utils::find_expressions(node_text) {
                 let expr_offset = expr.start;
                 let expr_text = expr.inner;
 

@@ -31,14 +31,12 @@ impl ValidationRule for DeprecatedCommandsRule {
     fn validate(&self, tree: &Tree, source: &str) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        let root = tree.root_node();
-        let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
-            Some(v) => v,
+        let jobs_node = match utils::get_jobs_node(tree, source) {
+            Some(n) => n,
             None => return diagnostics,
         };
 
-        let jobs_to_process = utils::unwrap_node(jobs_value);
-        find_run_steps(jobs_to_process, source, &mut diagnostics);
+        find_run_steps(jobs_node, source, &mut diagnostics);
 
         diagnostics
     }
@@ -48,15 +46,12 @@ fn find_run_steps(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
     match node.kind() {
         "block_mapping_pair" | "flow_pair" => {
             if let Some(key_node) = node.child(0) {
-                let key_text = utils::node_text(key_node, source);
-                let key_cleaned = key_text
-                    .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                    .trim_end_matches(':');
+                let key_cleaned = utils::clean_key(key_node, source);
                 if key_cleaned == "run" {
                     if let Some(value_node) = utils::get_pair_value(node) {
                         let run_text = utils::node_text(value_node, source);
                         check_deprecated_commands(
-                            &run_text,
+                            run_text,
                             value_node.start_byte(),
                             value_node.end_byte(),
                             diagnostics,

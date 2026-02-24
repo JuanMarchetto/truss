@@ -23,22 +23,16 @@ impl ValidationRule for ConcurrencyRule {
         }
 
         // Check job-level concurrency
-        let jobs_value = match utils::find_value_for_key(root, source, "jobs") {
-            Some(v) => v,
+        let jobs_node = match utils::get_jobs_node(tree, source) {
+            Some(n) => n,
             None => return diagnostics,
         };
-
-        let jobs_to_process = utils::unwrap_node(jobs_value);
 
         fn process_jobs(node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let key_text = utils::node_text(key_node, source);
-                        let job_name = key_text
-                            .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                            .trim_end_matches(':')
-                            .to_string();
+                        let job_name = utils::clean_key(key_node, source).to_string();
 
                         // Get value node: last non-comment, non-":" child after the key
                         let mut job_value_opt = None;
@@ -80,7 +74,7 @@ impl ValidationRule for ConcurrencyRule {
             }
         }
 
-        process_jobs(jobs_to_process, source, &mut diagnostics);
+        process_jobs(jobs_node, source, &mut diagnostics);
 
         diagnostics
     }

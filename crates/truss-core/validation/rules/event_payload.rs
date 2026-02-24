@@ -135,10 +135,7 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':');
+                    let key_cleaned = utils::clean_key(key_node, source);
 
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
@@ -222,10 +219,7 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':');
+                    let key_cleaned = utils::clean_key(key_node, source);
 
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
@@ -533,10 +527,7 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':');
+                    let key_cleaned = utils::clean_key(key_node, source);
 
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
@@ -584,10 +575,7 @@ fn validate_workflow_dispatch_event(
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':');
+                    let key_cleaned = utils::clean_key(key_node, source);
 
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
@@ -631,10 +619,7 @@ fn validate_workflow_call_event(wc_node: Node, source: &str, diagnostics: &mut V
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':');
+                    let key_cleaned = utils::clean_key(key_node, source);
 
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
@@ -679,10 +664,7 @@ fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<
         match node.kind() {
             "block_mapping_pair" | "flow_pair" => {
                 if let Some(key_node) = node.child(0) {
-                    let key_text = utils::node_text(key_node, source);
-                    let key_cleaned = key_text
-                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                        .trim_end_matches(':');
+                    let key_cleaned = utils::clean_key(key_node, source);
 
                     if !valid_fields.contains(&key_cleaned) {
                         diagnostics.push(Diagnostic {
