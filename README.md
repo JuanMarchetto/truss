@@ -6,18 +6,19 @@ A fast GitHub Actions workflow validator written in Rust. Truss catches configur
 
 ## Why Truss?
 
-**It's fast.** Like, really fast. 15-35x faster than the alternatives:
+**It's fast.** Validates even complex workflows in under 6ms:
 
-| Tool | Language | Mean Time | vs Truss |
-|------|----------|-----------|----------|
-| **Truss** | Rust | **11.1ms** | baseline |
-| actionlint | Go | 165.7ms | 15x slower |
-| yamllint | Python | 210.9ms | 19x slower |
-| yaml-language-server | TypeScript | 381.7ms | 35x slower |
+| Fixture | Complexity | Mean Time |
+|---------|-----------|-----------|
+| Simple workflow | 14 lines, single job | **1.7 ms** |
+| Medium workflow | Multi-step, conditionals | **2.7 ms** |
+| Complex dynamic | Reusable calls, dynamic matrices | **4.2 ms** |
+| Complex static | Job matrices, containers, dependencies | **5.5 ms** |
+| All 4 files combined | Directory scan, parallel processing | **6.8 ms** |
 
-*Measured with Hyperfine on `complex-dynamic.yml`. See [benchmarks/hyperfine/compare.md](benchmarks/hyperfine/compare.md).*
+*Measured with Hyperfine (`--shell=none`, 100+ runs) on the release binary. See [benchmarks/](#running-benchmarks).*
 
-At 11ms, Truss is fast enough to validate workflows as you type — no perceptible lag in your editor.
+At under 5ms per file, Truss is fast enough to validate workflows as you type — no perceptible lag in your editor.
 
 ## What It Catches
 
@@ -174,30 +175,33 @@ Point your editor's LSP client at this binary for `.github/workflows/*.yml` file
 
 ### CLI Benchmarks (Hyperfine)
 
-End-to-end timing of `truss validate` vs competitors on the complex dynamic workflow fixture:
+End-to-end timing of `truss validate --quiet` with `--shell=none` for accurate sub-5ms measurement:
 
-| Tool | Mean | Min | Max | Relative |
-|------|------|-----|-----|----------|
-| **Truss** | **11.1ms** | 1.7ms | 17.9ms | 1.00x |
-| actionlint | 165.7ms | 144.5ms | 189.7ms | 14.98x |
-| yaml-language-server | 381.7ms | 263.9ms | 553.4ms | 34.51x |
-| yamllint | 210.9ms | 94.6ms | 276.7ms | 19.07x |
+| Fixture | Mean | Min | Max |
+|---------|------|-----|-----|
+| Simple (14 lines) | **1.7 ms** | 1.4 ms | 6.7 ms |
+| Medium (multi-step) | **2.7 ms** | 2.1 ms | 7.5 ms |
+| Complex dynamic (reusable calls) | **4.2 ms** | 3.5 ms | 8.2 ms |
+| Complex static (matrices) | **5.5 ms** | 4.6 ms | 10.6 ms |
+| All 4 files (directory scan) | **6.8 ms** | 5.3 ms | 11.6 ms |
 
 ### Core Engine Benchmarks (Criterion)
 
+Pure validation time (no I/O overhead):
+
 | Fixture | Mean | Description |
 |---------|------|-------------|
-| Simple | 225 us | Minimal workflow |
-| Medium | 984 us | Multi-step with branching |
-| Complex static | 3.66 ms | Matrix strategies, dependencies, containers |
-| Complex dynamic | 2.44 ms | Expressions, reusable calls, dynamic matrices |
+| Simple | 245 us | Minimal workflow |
+| Medium | 1.08 ms | Multi-step with branching |
+| Complex static | 3.71 ms | Matrix strategies, dependencies, containers |
+| Complex dynamic | 2.48 ms | Expressions, reusable calls, dynamic matrices |
 
 ### Running Benchmarks
 
 ```bash
 just bench          # Criterion (core engine)
 just bench-cli      # Hyperfine (CLI end-to-end)
-just compare        # Compare against competitors
+just compare        # Compare against competitors (requires actionlint, yamllint)
 ```
 
 ## Project Structure
@@ -209,7 +213,7 @@ truss/
 │   │   ├── lib.rs        # Engine with 41 registered rules
 │   │   ├── parser.rs     # tree-sitter YAML parser (incremental)
 │   │   ├── validation/   # 41 rule implementations
-│   │   ├── tests/        # 44 test files, 346 tests
+│   │   ├── tests/        # 44 test files, 347 tests
 │   │   └── benches/      # Criterion benchmarks
 │   ├── truss-cli/        # CLI — parallel processing, globs, stdin, JSON output
 │   ├── truss-lsp/        # Language Server Protocol adapter
@@ -233,7 +237,7 @@ just build-debug      # or: cargo build --workspace
 # Release build
 just build            # or: cargo build --workspace --release
 
-# Run all 346 tests
+# Run all 347 tests
 just test             # or: cargo test --workspace
 
 # Core tests only
@@ -244,7 +248,7 @@ just test-core        # or: cargo test -p truss-core
 
 Every push to `main` and every PR runs:
 - `cargo check --workspace`
-- `cargo test --workspace` (346 tests)
+- `cargo test --workspace` (347 tests)
 - `cargo clippy --workspace -- -D warnings`
 - `cargo fmt --all -- --check`
 
@@ -263,11 +267,11 @@ More details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Current Status
 
 **What's working:**
-- 41 validation rules, all tested (346 tests across 44 files)
+- 41 validation rules, all tested (347 tests across 44 test files)
 - LSP server with real-time diagnostics and incremental parsing
 - VS Code extension
 - CLI with parallel file processing, globs, stdin, severity filtering, JSON output
-- 15-35x faster than alternatives
+- Sub-5ms validation per file (release build)
 - CI pipeline (check, test, clippy, fmt)
 
 **Coming next:**

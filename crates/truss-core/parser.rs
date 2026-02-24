@@ -30,13 +30,18 @@ pub struct YamlParser {
 
 impl YamlParser {
     /// Create a new YAML parser.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the compiled-in tree-sitter YAML grammar fails to load.
+    /// This should never happen in practice since the grammar is statically
+    /// linked at compile time.
     pub fn new() -> Self {
         let mut parser = Parser::new();
-        // Initialize language using safe wrapper function
         let language = language_from_fn();
         parser
             .set_language(&language)
-            .expect("Failed to load tree-sitter YAML grammar");
+            .expect("Failed to load tree-sitter YAML grammar — this is a build-time bug");
 
         Self { parser }
     }

@@ -244,14 +244,7 @@ fn find_output_expressions(
                             // Check if this is followed by .outputs
                             let after_step_id = &after_steps[step_id_end..];
 
-                            if after_step_id.starts_with(".outputs") {
-                                // Check if there's a property access after .outputs
-                                // Skip exactly 7 characters for ".outputs"
-                                let after_outputs = if after_step_id.len() > 7 {
-                                    &after_step_id[7..]
-                                } else {
-                                    ""
-                                };
+                            if let Some(after_outputs) = after_step_id.strip_prefix(".outputs") {
                                 let after_outputs_trimmed = after_outputs.trim();
 
                                 // Calculate the actual span in the source

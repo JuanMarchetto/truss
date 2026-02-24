@@ -409,8 +409,8 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
     fn search_node(node: Node, source: &str, references: &mut Vec<(String, String, Span)>) {
         // Search in scalar nodes (which contain the actual text)
         if node.kind() == "plain_scalar"
-            || node.kind() == "double_quote_scalar"
-            || node.kind() == "single_quote_scalar"
+            || node.kind() == "double_quoted_scalar"
+            || node.kind() == "single_quoted_scalar"
         {
             let node_text = utils::node_text(node, source);
             let node_start = node.start_byte();

@@ -52,11 +52,16 @@ pub(crate) fn is_github_actions_workflow(tree: &Tree, source: &str) -> bool {
 
     find_top_level_keys(root, source, &mut top_level_keys, 0);
 
-    top_level_keys.iter().any(|key| {
-        let key_lower = key.to_lowercase();
-        let key_trimmed = key_lower.trim();
-        key_trimmed == "on" || key_trimmed == "jobs" || key_trimmed == "name"
-    })
+    // A GitHub Actions workflow must have `on` or `jobs` at the top level.
+    // `name` alone is not sufficient — many YAML files have a `name:` key.
+    let has_on = top_level_keys
+        .iter()
+        .any(|key| key.to_lowercase().trim() == "on");
+    let has_jobs = top_level_keys
+        .iter()
+        .any(|key| key.to_lowercase().trim() == "jobs");
+
+    has_on || has_jobs
 }
 
 /// Unwrap a block_node or flow_node to get its content child, skipping comments.

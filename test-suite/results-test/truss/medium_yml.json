@@ -2,8 +2,65 @@
   {
     "file": "/home/claw/.openclaw/workspace/truss/scripts/../benchmarks/fixtures/medium.yml",
     "valid": true,
-    "diagnostics": [],
-    "duration_ms": 0.940719,
+    "diagnostics": [
+      {
+        "message": "Environment variable 'GITHUB_TOKEN' uses reserved prefix 'GITHUB_'. Variables starting with 'GITHUB_' are reserved by GitHub Actions.",
+        "severity": "warning",
+        "span": {
+          "start": 3523,
+          "end": 3535
+        }
+      },
+      {
+        "message": "Environment variable 'GITHUB_TOKEN' uses reserved prefix 'GITHUB_'. Variables starting with 'GITHUB_' are reserved by GitHub Actions.",
+        "severity": "warning",
+        "span": {
+          "start": 3842,
+          "end": 3854
+        }
+      },
+      {
+        "message": "Environment variable 'GITHUB_TOKEN' uses reserved prefix 'GITHUB_'. Variables starting with 'GITHUB_' are reserved by GitHub Actions.",
+        "severity": "warning",
+        "span": {
+          "start": 4162,
+          "end": 4174
+        }
+      },
+      {
+        "message": "Environment variable 'GITHUB_TOKEN' uses reserved prefix 'GITHUB_'. Variables starting with 'GITHUB_' are reserved by GitHub Actions.",
+        "severity": "warning",
+        "span": {
+          "start": 4476,
+          "end": 4488
+        }
+      },
+      {
+        "message": "Environment variable 'GITHUB_TOKEN' uses reserved prefix 'GITHUB_'. Variables starting with 'GITHUB_' are reserved by GitHub Actions.",
+        "severity": "warning",
+        "span": {
+          "start": 4793,
+          "end": 4805
+        }
+      },
+      {
+        "message": "Environment variable 'GITHUB_TOKEN' uses reserved prefix 'GITHUB_'. Variables starting with 'GITHUB_' are reserved by GitHub Actions.",
+        "severity": "warning",
+        "span": {
+          "start": 5102,
+          "end": 5114
+        }
+      },
+      {
+        "message": "Environment variable 'GITHUB_TOKEN' uses reserved prefix 'GITHUB_'. Variables starting with 'GITHUB_' are reserved by GitHub Actions.",
+        "severity": "warning",
+        "span": {
+          "start": 5420,
+          "end": 5432
+        }
+      }
+    ],
+    "duration_ms": 1.160291,
     "metadata": {
       "file_size": 5641,
       "lines": 130
