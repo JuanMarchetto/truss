@@ -182,11 +182,10 @@ pub(crate) fn key_exists(node: Node, source: &str, target_key: &str) -> bool {
 ///
 /// Returns an empty string if the byte offsets fall outside the source
 /// or land on a non-UTF-8 boundary.
-pub(crate) fn node_text(node: Node, source: &str) -> String {
+pub(crate) fn node_text<'a>(node: Node, source: &'a str) -> &'a str {
     source
         .get(node.start_byte()..node.end_byte())
         .unwrap_or("")
-        .to_string()
 }
 
 /// Known GitHub Actions expression context names.
