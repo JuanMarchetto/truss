@@ -89,27 +89,28 @@ impl ValidationRule for WorkflowInputsRule {
             Vec::new()
         };
 
-        // Validate that all referenced inputs are defined
-        for (input_name, span) in input_references {
-            if !defined_inputs.contains_key(&input_name) {
-                diagnostics.push(Diagnostic {
-                    message: format!(
-                        "Reference to undefined input '{}'. Available inputs: {}",
-                        input_name,
-                        if defined_inputs.is_empty() {
-                            "none".to_string()
-                        } else {
+        // Validate that all referenced inputs are defined.
+        // Only check if inputs are actually defined — when workflow_dispatch has no
+        // inputs section, GitHub Actions returns empty string for any inputs.* reference,
+        // so we should not flag them as errors.
+        if !defined_inputs.is_empty() {
+            for (input_name, span) in input_references {
+                if !defined_inputs.contains_key(&input_name) {
+                    diagnostics.push(Diagnostic {
+                        message: format!(
+                            "Reference to undefined input '{}'. Available inputs: {}",
+                            input_name,
                             defined_inputs
                                 .keys()
                                 .cloned()
                                 .collect::<Vec<_>>()
                                 .join(", ")
-                        }
-                    ),
-                    severity: Severity::Error,
-                    span,
-                    rule_id: String::new(),
-                });
+                        ),
+                        severity: Severity::Error,
+                        span,
+                        rule_id: String::new(),
+                    });
+                }
             }
         }
 
@@ -336,6 +337,7 @@ impl WorkflowInputsRule {
                             || c == '<'
                             || c == '>'
                             || c == '.'
+                            || c == ','
                     })
                     .unwrap_or(after_inputs.len());
 

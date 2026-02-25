@@ -789,6 +789,283 @@ jobs:
 // 12. Unknown function false positive from format string parsing
 // ============================================================================
 
+// ============================================================================
+// 12a. Trailing comma in input references (format() function calls)
+// ============================================================================
+
+#[test]
+fn test_input_reference_with_trailing_comma_in_format() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on:
+  workflow_call:
+    inputs:
+      DOCKER_IMAGE:
+        type: string
+      DOCKER_IMAGE_TAG_PREFIX:
+        type: string
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build
+        run: echo "building"
+        env:
+          IMAGE: ${{ format('{0}:{1}', inputs.DOCKER_IMAGE, inputs.DOCKER_IMAGE_TAG_PREFIX) }}
+"#;
+
+    let result = engine.analyze(yaml);
+    let errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("undefined")
+                && d.message.contains("input")
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        errors.is_empty(),
+        "Input references with trailing comma in format() should not produce errors, got: {:?}",
+        errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+// ============================================================================
+// 12b. Artifact names with embedded ${{ }} expressions
+// ============================================================================
+
+#[test]
+fn test_artifact_name_with_embedded_expression_valid() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+          path: dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact_${{ matrix.cuda_version }}
+          path: output/
+      - uses: actions/download-artifact@v4
+        with:
+          name: triton-wheel-${{ matrix.py_vers }}-${{ matrix.device }}
+"#;
+
+    let result = engine.analyze(yaml);
+    let warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("invalid name format"))
+        .collect();
+
+    assert!(
+        warnings.is_empty(),
+        "Artifact names with embedded expressions should not be flagged, got: {:?}",
+        warnings.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+// ============================================================================
+// 12c. Concurrency group as bare number
+// ============================================================================
+
+#[test]
+fn test_concurrency_group_bare_number_valid() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+concurrency:
+  group: 1
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("Concurrency")
+                && d.message.contains("not a number")
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        errors.is_empty(),
+        "Bare number concurrency group should be valid (GitHub coerces to string), got: {:?}",
+        errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_concurrency_group_empty_still_errors() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+concurrency:
+  group: ""
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("empty group name") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        !errors.is_empty(),
+        "Empty concurrency group should still produce an error"
+    );
+}
+
+// ============================================================================
+// 12d. Secret reference without explicit secrets section
+// ============================================================================
+
+#[test]
+fn test_secret_reference_without_secrets_section_valid() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: true
+        type: string
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test
+        run: echo "testing"
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+"#;
+
+    let result = engine.analyze(yaml);
+    let errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("no secrets defined")
+                && d.message.contains("HF_TOKEN")
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        errors.is_empty(),
+        "Secret references without explicit secrets section should be valid (caller may use secrets: inherit), got: {:?}",
+        errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+// ============================================================================
+// 12e. Input reference in workflow_dispatch without defined inputs
+// ============================================================================
+
+#[test]
+fn test_workflow_dispatch_undefined_input_reference_valid() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test
+        run: echo "testing"
+        env:
+          HALT: ${{ inputs.halt-for-connection }}
+"#;
+
+    let result = engine.analyze(yaml);
+    let errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("input")
+                && d.message.contains("not defined")
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        errors.is_empty(),
+        "Input references with workflow_dispatch (no defined inputs) should be valid (evaluates to empty), got: {:?}",
+        errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+// ============================================================================
+// 12f. Trailing comma in secret references (format() calls)
+// ============================================================================
+
+#[test]
+fn test_secret_reference_with_trailing_comma_in_format() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on:
+  workflow_call:
+    secrets:
+      DB_HOST:
+        required: true
+      DB_PORT:
+        required: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect
+        run: echo "connecting"
+        env:
+          DB_URL: ${{ format('{0}:{1}', secrets.DB_HOST, secrets.DB_PORT) }}
+"#;
+
+    let result = engine.analyze(yaml);
+    let errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            d.message.contains("undefined")
+                && d.message.contains("secret")
+                && d.severity == Severity::Error
+        })
+        .collect();
+
+    assert!(
+        errors.is_empty(),
+        "Secret references with trailing comma in format() should not produce errors, got: {:?}",
+        errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+// ============================================================================
+// 13. Unknown function false positive from format string parsing
+// ============================================================================
+
 #[test]
 fn test_no_false_unknown_function_from_format() {
     let mut engine = TrussEngine::new();

@@ -102,9 +102,10 @@ impl ValidationRule for ArtifactValidationRule {
                                 // Get name text
                                 let name_text = utils::node_text(name_node, source);
 
-                                // Check if it's an expression - expressions are valid
+                                // Check if it contains an expression — names with embedded
+                                // expressions like "build-${{ github.sha }}" are valid
                                 let trimmed_name = name_text.trim();
-                                let is_expression = trimmed_name.starts_with("${{");
+                                let is_expression = trimmed_name.contains("${{");
 
                                 if !is_expression {
                                     // Clean the name text (remove quotes and whitespace)

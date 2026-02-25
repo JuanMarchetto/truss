@@ -70,17 +70,10 @@ impl ValidationRule for WorkflowCallSecretsRule {
                 continue;
             }
 
-            // If no secrets are defined (besides GITHUB_TOKEN) but secrets are referenced
+            // If no secrets are defined (besides GITHUB_TOKEN), the caller may be using
+            // `secrets: inherit` to pass all secrets through — don't flag this as an error.
             if defined_secrets.len() <= 1 {
-                diagnostics.push(Diagnostic {
-                    message: format!(
-                        "Secret '{}' is referenced but workflow_call has no secrets defined.",
-                        secret_name
-                    ),
-                    severity: Severity::Error,
-                    span,
-                    rule_id: String::new(),
-                });
+                continue;
             } else {
                 diagnostics.push(Diagnostic {
                     message: format!(
@@ -224,6 +217,7 @@ impl WorkflowCallSecretsRule {
                             || c == '<'
                             || c == '>'
                             || c == '.'
+                            || c == ','
                     })
                     .unwrap_or(after_secrets.len());
 

@@ -135,42 +135,20 @@ fn validate_concurrency_node(
     let group_cleaned =
         group_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
 
-    // Group should be a string or expression, not a bare number.
-    // Skip values that start with ${{ (expressions) or with a known context prefix
-    // (e.g., "github.ref" looks numeric-with-dot but is actually a valid context reference).
-    if !group_cleaned.starts_with("${{") {
-        let has_context_prefix = [
-            "github.",
-            "env.",
-            "vars.",
-            "inputs.",
-            "secrets.",
-            "matrix.",
-            "needs.",
-            "job.",
-            "jobs.",
-            "steps.",
-            "runner.",
-            "strategy.",
-        ]
-        .iter()
-        .any(|prefix| group_cleaned.starts_with(prefix));
-
-        if !has_context_prefix && group_cleaned.parse::<f64>().is_ok() {
-            diagnostics.push(Diagnostic {
-                message: format!(
-                    "Concurrency 'group' at {} level must be a string or expression, not a number.",
-                    context
-                ),
-                severity: Severity::Error,
-                span: Span {
-                    start: group_node.start_byte(),
-                    end: group_node.end_byte(),
-                },
-                rule_id: String::new(),
-            });
-        }
+    if group_cleaned.is_empty() {
+        diagnostics.push(Diagnostic {
+            message: format!("Concurrency at {} level has empty group name.", context),
+            severity: Severity::Error,
+            span: Span {
+                start: group_node.start_byte(),
+                end: group_node.end_byte(),
+            },
+            rule_id: String::new(),
+        });
     }
+
+    // Note: bare numbers like `group: 1` are valid — GitHub Actions coerces
+    // them to strings at runtime. No need to flag them as errors.
 
     // Check cancel-in-progress if present
     let cancel_value =
