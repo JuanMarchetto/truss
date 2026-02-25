@@ -284,10 +284,7 @@ fn validate_file(
     validate_source(engine, label, &content, opts)
 }
 
-fn validate_files(
-    paths: Vec<String>,
-    opts: &ValidateOptions,
-) -> Result<(), TrussError> {
+fn validate_files(paths: Vec<String>, opts: &ValidateOptions) -> Result<(), TrussError> {
     let expanded = expand_paths(&paths)?;
 
     if expanded.is_empty() {
