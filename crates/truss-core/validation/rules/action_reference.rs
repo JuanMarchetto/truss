@@ -152,7 +152,8 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
     }
 
     let owner_repo_parts: Vec<&str> = owner_repo.split('/').collect();
-    if owner_repo_parts.len() != 2 {
+    // GitHub Actions supports owner/repo@ref and owner/repo/path@ref (for actions in subdirectories)
+    if owner_repo_parts.len() < 2 {
         diagnostics.push(Diagnostic {
             message: format!(
                 "action reference '{}' has invalid format. Expected format: owner/repo@ref",

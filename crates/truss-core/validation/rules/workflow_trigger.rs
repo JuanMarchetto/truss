@@ -86,6 +86,8 @@ impl ValidationRule for WorkflowTriggerRule {
 
         let event_node = utils::unwrap_node(on_to_check);
 
+        // Only extract event_text for scalar nodes (not sequences or mappings,
+        // which are handled by validate_event_types)
         let event_text = if event_node.kind() == "plain_scalar"
             || event_node.kind() == "double_quoted_scalar"
             || event_node.kind() == "single_quoted_scalar"
@@ -95,15 +97,10 @@ impl ValidationRule for WorkflowTriggerRule {
                     .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace()),
             )
         } else {
-            let text = utils::node_text(event_node, source).trim();
-            if !text.is_empty() && !text.contains('\n') {
-                Some(text)
-            } else {
-                None
-            }
+            None
         };
 
-        // Validate event types - check all possible event types in the on: mapping
+        // Validate event types - check all possible event types in the on: mapping or sequence
         fn validate_event_types(
             node: tree_sitter::Node,
             source: &str,
@@ -131,6 +128,29 @@ impl ValidationRule for WorkflowTriggerRule {
                                 },
                             });
                         }
+                    }
+                }
+                // Handle scalar event types in sequences (e.g., `on: [push]` or `on: - push`)
+                "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
+                    let event_type = utils::node_text(node, source)
+                        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+
+                    if !VALID_EVENTS
+                        .iter()
+                        .any(|e| e.eq_ignore_ascii_case(event_type))
+                        && !event_type.is_empty()
+                    {
+                        diagnostics.push(Diagnostic {
+                            message: format!(
+                                "Invalid event type: '{}'. Valid event types include: push, pull_request, workflow_dispatch, schedule, workflow_call, and others.",
+                                event_type
+                            ),
+                            severity: Severity::Error,
+                            span: Span {
+                                start: node.start_byte(),
+                                end: node.end_byte(),
+                            },
+                        });
                     }
                 }
                 _ => {

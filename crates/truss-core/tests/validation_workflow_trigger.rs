@@ -215,3 +215,163 @@ fn test_workflow_trigger_invalid_syntax() {
         "Invalid trigger syntax should produce error"
     );
 }
+
+// === Regression tests for block sequence event types (Bug #5) ===
+
+#[test]
+fn test_workflow_trigger_valid_block_sequence_single() {
+    let mut engine = TrussEngine::new();
+    // Block sequence with single event: `on:\n  - push`
+    let yaml = r#"
+on:
+  - push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let trigger_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("Invalid event type") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        trigger_errors.is_empty(),
+        "Block sequence `on: - push` should be valid. Got: {:?}",
+        trigger_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_workflow_trigger_valid_block_sequence_multiple() {
+    let mut engine = TrussEngine::new();
+    // Block sequence with multiple events
+    let yaml = r#"
+on:
+  - push
+  - pull_request
+  - workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let trigger_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("Invalid event type") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        trigger_errors.is_empty(),
+        "Block sequence with multiple events should be valid. Got: {:?}",
+        trigger_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_workflow_trigger_valid_flow_sequence() {
+    let mut engine = TrussEngine::new();
+    // Flow sequence: `on: [push, pull_request]`
+    let yaml = r#"
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let trigger_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("Invalid event type") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        trigger_errors.is_empty(),
+        "Flow sequence `on: [push, pull_request]` should be valid. Got: {:?}",
+        trigger_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_workflow_trigger_invalid_event_in_block_sequence() {
+    let mut engine = TrussEngine::new();
+    // Invalid event type in block sequence should still be caught
+    let yaml = r#"
+on:
+  - push
+  - invalid_event_type
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Test"
+"#;
+
+    let result = engine.analyze(yaml);
+    let trigger_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("Invalid event type") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        !trigger_errors.is_empty(),
+        "Invalid event type in block sequence should be caught"
+    );
+    assert!(
+        trigger_errors
+            .iter()
+            .any(|d| d.message.contains("invalid_event_type")),
+        "Error should reference the invalid event type name"
+    );
+}
+
+#[test]
+fn test_workflow_trigger_valid_gollum_in_flow_sequence() {
+    let mut engine = TrussEngine::new();
+    // Less common event types should work in sequences too
+    let yaml = r#"
+on: [gollum]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Wiki changed"
+"#;
+
+    let result = engine.analyze(yaml);
+    let trigger_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("Invalid event type") && d.severity == Severity::Error)
+        .collect();
+
+    assert!(
+        trigger_errors.is_empty(),
+        "on: [gollum] should be valid. Got: {:?}",
+        trigger_errors
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}

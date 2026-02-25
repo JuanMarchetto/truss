@@ -123,7 +123,7 @@ impl WorkflowInputsRule {
                     if let Some(input_value_raw) = input_value {
                         let input_value = utils::unwrap_node(input_value_raw);
 
-                        // Find the type field
+                        // Find the type field (optional — defaults to "string")
                         let type_value = utils::find_value_for_key(input_value, source, "type");
                         if let Some(type_node) = type_value {
                             let type_text = utils::node_text(type_node, source);
@@ -136,6 +136,18 @@ impl WorkflowInputsRule {
                                     Span {
                                         start: type_node.start_byte(),
                                         end: type_node.end_byte(),
+                                    },
+                                ),
+                            );
+                        } else {
+                            // Input without explicit type — defaults to "string" in GitHub Actions
+                            inputs.insert(
+                                input_name,
+                                (
+                                    "string".to_string(),
+                                    Span {
+                                        start: key_node.start_byte(),
+                                        end: key_node.end_byte(),
                                     },
                                 ),
                             );

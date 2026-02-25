@@ -458,3 +458,116 @@ jobs:
         "Action reference missing slash between owner and repo should produce error or warning"
     );
 }
+
+// === Regression tests for action subpath support (Bug #1) ===
+
+#[test]
+fn test_action_reference_valid_subpath() {
+    let mut engine = TrussEngine::new();
+    // GitHub Actions supports owner/repo/path@ref for actions in subdirectories
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/codeql-action/init@v3
+"#;
+
+    let result = engine.analyze(yaml);
+    let action_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("action") && d.message.contains("invalid format"))
+        .collect();
+
+    assert!(
+        action_errors.is_empty(),
+        "Action reference with subpath (owner/repo/path@ref) should be valid. Got: {:?}",
+        action_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_action_reference_valid_deep_subpath() {
+    let mut engine = TrussEngine::new();
+    // Deep subpath like microsoft/typescript-bot-test-triggerer/.github/actions/post-workflow-result@master
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: microsoft/typescript-bot-test-triggerer/.github/actions/post-workflow-result@master
+"#;
+
+    let result = engine.analyze(yaml);
+    let action_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("action") && d.message.contains("invalid format"))
+        .collect();
+
+    assert!(
+        action_errors.is_empty(),
+        "Action reference with deep subpath should be valid. Got: {:?}",
+        action_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_action_reference_valid_cache_subpath() {
+    let mut engine = TrussEngine::new();
+    // actions/cache/restore@v4 and actions/cache/save@v4 are common
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache/restore@v4
+      - run: echo "build"
+      - uses: actions/cache/save@v4
+"#;
+
+    let result = engine.analyze(yaml);
+    let action_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("action") && d.message.contains("invalid format"))
+        .collect();
+
+    assert!(
+        action_errors.is_empty(),
+        "actions/cache/restore@v4 and actions/cache/save@v4 should be valid. Got: {:?}",
+        action_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_action_reference_valid_codeql_subpath_with_sha() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/codeql-action/init@9e907b5e64f6b83e7804b09294d44122997950d6
+      - uses: github/codeql-action/autobuild@9e907b5e64f6b83e7804b09294d44122997950d6
+      - uses: github/codeql-action/analyze@9e907b5e64f6b83e7804b09294d44122997950d6
+"#;
+
+    let result = engine.analyze(yaml);
+    let action_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("action") && d.message.contains("invalid format"))
+        .collect();
+
+    assert!(
+        action_errors.is_empty(),
+        "CodeQL action subpaths with SHA should be valid. Got: {:?}",
+        action_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}

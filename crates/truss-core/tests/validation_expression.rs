@@ -233,3 +233,87 @@ jobs:
         "Valid nested expression should not produce errors"
     );
 }
+
+// === Regression tests for case-insensitive context names (Bug #3) ===
+
+#[test]
+fn test_expression_uppercase_github_context() {
+    let mut engine = TrussEngine::new();
+    // GITHUB.repository_owner is valid — contexts are case-insensitive
+    let yaml = r#"
+on: [gollum]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: '${{ GITHUB.repository_owner }}/my-repo'
+"#;
+
+    let result = engine.analyze(yaml);
+    let expr_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("Invalid expression") || d.message.contains("GITHUB"))
+        .collect();
+
+    assert!(
+        expr_errors.is_empty(),
+        "GITHUB.repository_owner (uppercase) should be a valid context reference. Got: {:?}",
+        expr_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_expression_mixed_case_context() {
+    let mut engine = TrussEngine::new();
+    // Mixed case like GitHub.ref should also work
+    let yaml = r#"
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ GitHub.ref }}"
+"#;
+
+    let result = engine.analyze(yaml);
+    let expr_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("Invalid expression") && d.message.contains("GitHub"))
+        .collect();
+
+    assert!(
+        expr_errors.is_empty(),
+        "GitHub.ref (mixed case) should be valid. Got: {:?}",
+        expr_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_expression_uppercase_env_context() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ ENV.MY_VAR }}"
+"#;
+
+    let result = engine.analyze(yaml);
+    let expr_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("Invalid expression") && d.message.contains("ENV"))
+        .collect();
+
+    assert!(
+        expr_errors.is_empty(),
+        "ENV.MY_VAR (uppercase) should be valid. Got: {:?}",
+        expr_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
