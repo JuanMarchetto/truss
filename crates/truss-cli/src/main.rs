@@ -215,6 +215,7 @@ struct ValidateOptions<'a> {
     severity_filter: SeverityFilter,
     ignore_rules: &'a [String],
     only_rules: &'a [String],
+    config: &'a TrussConfig,
 }
 
 fn validate_source(
@@ -298,7 +299,7 @@ fn validate_files(paths: Vec<String>, opts: &ValidateOptions) -> Result<(), Trus
     // Apply config ignore patterns
     let expanded: Vec<String> = expanded
         .into_iter()
-        .filter(|p| p == "-" || !config.is_ignored(p))
+        .filter(|p| p == "-" || !opts.config.is_ignored(p))
         .collect();
 
     if expanded.is_empty() {
@@ -409,16 +410,8 @@ fn main() {
             config: config_path,
             no_config,
         } => {
-            let opts = ValidateOptions {
-                quiet,
-                json,
-                severity_filter: severity.unwrap_or(SeverityFilter::Info),
-                ignore_rules: &ignore_rules,
-                only_rules: &only_rules,
-            };
-
             if paths.is_empty() {
-                if !opts.quiet && !opts.json {
+                if !quiet && !json {
                     eprintln!("Error: No files provided. Run 'truss validate --help' for usage.");
                 }
                 std::process::exit(EXIT_USAGE);
@@ -447,6 +440,16 @@ fn main() {
             } else {
                 TrussConfig::default()
             };
+
+            let opts = ValidateOptions {
+                quiet,
+                json,
+                severity_filter: severity.unwrap_or(SeverityFilter::Info),
+                ignore_rules: &ignore_rules,
+                only_rules: &only_rules,
+                config: &config,
+            };
+
             if let Err(e) = validate_files(paths, &opts) {
                 if !opts.quiet && !opts.json {
                     eprintln!("Error: {}", e);
