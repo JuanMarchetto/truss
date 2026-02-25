@@ -77,7 +77,33 @@ impl ValidationRule for JobContainerRule {
         ) {
             let container_to_check = utils::unwrap_node(container_node);
 
-            // Check image field (required)
+            // Container can be a plain string (the image name directly) or a mapping with `image` key
+            // e.g., `container: ubuntu:20.04` or `container: ${{ matrix.container }}`
+            match container_to_check.kind() {
+                "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" => {
+                    // Container is specified as a plain string — this IS the image, which is valid
+                    let text = utils::node_text(container_to_check, source);
+                    let cleaned =
+                        text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+                    if cleaned.is_empty() {
+                        diagnostics.push(Diagnostic {
+                            message: format!(
+                                "Job '{}' container has empty image. Container image is required.",
+                                job_name
+                            ),
+                            severity: Severity::Error,
+                            span: Span {
+                                start: container_to_check.start_byte(),
+                                end: container_to_check.end_byte(),
+                            },
+                        });
+                    }
+                    return;
+                }
+                _ => {}
+            }
+
+            // Check image field (required for mapping-style containers)
             let image_value = utils::find_value_for_key(container_to_check, source, "image");
             if image_value.is_none() {
                 diagnostics.push(Diagnostic {

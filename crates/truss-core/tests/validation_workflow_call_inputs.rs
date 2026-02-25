@@ -278,3 +278,75 @@ jobs:
         "Valid workflow_call input with default value should not produce errors"
     );
 }
+
+// === Regression tests for inputs without type field (Bug #2) ===
+
+#[test]
+fn test_workflow_call_inputs_without_type_field() {
+    let mut engine = TrussEngine::new();
+    // workflow_call inputs without `type` field should default to string
+    let yaml = r#"
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+      version:
+        description: 'Version to deploy'
+        required: false
+        default: 'latest'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploying ${{ inputs.environment }} version ${{ inputs.version }}"
+"#;
+
+    let result = engine.analyze(yaml);
+    let input_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("undefined") && d.message.contains("input"))
+        .collect();
+
+    assert!(
+        input_errors.is_empty(),
+        "workflow_call inputs without type field should be recognized (default to string). Got: {:?}",
+        input_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_workflow_call_inputs_mixed_typed_and_untyped() {
+    let mut engine = TrussEngine::new();
+    let yaml = r#"
+on:
+  workflow_call:
+    inputs:
+      typed_input:
+        type: string
+        description: 'Has explicit type'
+      untyped_input:
+        description: 'No explicit type'
+        required: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ inputs.typed_input }} ${{ inputs.untyped_input }}"
+"#;
+
+    let result = engine.analyze(yaml);
+    let input_errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("undefined") && d.message.contains("input"))
+        .collect();
+
+    assert!(
+        input_errors.is_empty(),
+        "Mix of typed and untyped workflow_call inputs should all be recognized. Got: {:?}",
+        input_errors.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}

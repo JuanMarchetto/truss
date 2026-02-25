@@ -214,8 +214,12 @@ pub(crate) fn is_valid_expression_syntax(expr: &str) -> bool {
         return false;
     }
 
+    // GitHub Actions contexts are case-insensitive (e.g., GITHUB.repository_owner is valid)
+    let expr_lower = expr.to_ascii_lowercase();
     let has_context = KNOWN_CONTEXTS.iter().any(|ctx| {
-        expr.len() > ctx.len() && expr.as_bytes()[ctx.len()] == b'.' && expr.starts_with(ctx)
+        expr_lower.len() > ctx.len()
+            && expr_lower.as_bytes()[ctx.len()] == b'.'
+            && expr_lower.starts_with(ctx)
     });
 
     let has_function = expr.contains("contains(")
@@ -252,7 +256,7 @@ pub(crate) fn is_valid_expression_syntax(expr: &str) -> bool {
     // Check if expression contains a dot but doesn't start with a known context
     // (e.g., "invalid.expression" should be rejected)
     if expr.contains('.') && !has_context {
-        let first_token = expr
+        let first_token = expr_lower
             .split(|c: char| {
                 c.is_whitespace() || matches!(c, '&' | '|' | '=' | '!' | '<' | '>' | '(' | '[')
             })
