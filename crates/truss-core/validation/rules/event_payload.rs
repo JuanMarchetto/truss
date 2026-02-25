@@ -76,12 +76,11 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
         "tags-ignore",
     ];
 
-    // Check for branches + branches-ignore conflict
-    let has_branches_plain = utils::find_value_for_key(push_to_check, source, "branches").is_some();
-    let has_branches_ignore =
-        utils::find_value_for_key(push_to_check, source, "branches-ignore").is_some();
-    if has_branches_plain && has_branches_ignore {
-        if let Some(bi_node) = utils::find_value_for_key(push_to_check, source, "branches-ignore") {
+    // Check for mutually exclusive filter conflicts (cache lookups)
+    let branches_node = utils::find_value_for_key(push_to_check, source, "branches");
+    let branches_ignore_node = utils::find_value_for_key(push_to_check, source, "branches-ignore");
+    if branches_node.is_some() {
+        if let Some(bi_node) = branches_ignore_node {
             diagnostics.push(Diagnostic {
                 message: "Cannot use both 'branches' and 'branches-ignore' on the same event. They are mutually exclusive.".to_string(),
                 severity: Severity::Error,
@@ -93,11 +92,10 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
         }
     }
 
-    // Check for tags + tags-ignore conflict
-    let has_tags_plain = utils::find_value_for_key(push_to_check, source, "tags").is_some();
-    let has_tags_ignore = utils::find_value_for_key(push_to_check, source, "tags-ignore").is_some();
-    if has_tags_plain && has_tags_ignore {
-        if let Some(ti_node) = utils::find_value_for_key(push_to_check, source, "tags-ignore") {
+    let tags_node = utils::find_value_for_key(push_to_check, source, "tags");
+    let tags_ignore_node = utils::find_value_for_key(push_to_check, source, "tags-ignore");
+    if tags_node.is_some() {
+        if let Some(ti_node) = tags_ignore_node {
             diagnostics.push(Diagnostic {
                 message: "Cannot use both 'tags' and 'tags-ignore' on the same event. They are mutually exclusive.".to_string(),
                 severity: Severity::Error,
@@ -109,12 +107,10 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
         }
     }
 
-    // Check for paths + paths-ignore conflict
-    let has_paths = utils::find_value_for_key(push_to_check, source, "paths").is_some();
-    let has_paths_ignore =
-        utils::find_value_for_key(push_to_check, source, "paths-ignore").is_some();
-    if has_paths && has_paths_ignore {
-        if let Some(pi_node) = utils::find_value_for_key(push_to_check, source, "paths-ignore") {
+    let paths_node = utils::find_value_for_key(push_to_check, source, "paths");
+    let paths_ignore_node = utils::find_value_for_key(push_to_check, source, "paths-ignore");
+    if paths_node.is_some() {
+        if let Some(pi_node) = paths_ignore_node {
             diagnostics.push(Diagnostic {
                 message: "Cannot use both 'paths' and 'paths-ignore' on the same event. They are mutually exclusive.".to_string(),
                 severity: Severity::Error,
@@ -168,12 +164,11 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
 fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Vec<Diagnostic>) {
     let pr_to_check = utils::unwrap_node(pr_node);
 
-    // Check for branches + branches-ignore conflict
-    let has_branches_plain = utils::find_value_for_key(pr_to_check, source, "branches").is_some();
-    let has_branches_ignore =
-        utils::find_value_for_key(pr_to_check, source, "branches-ignore").is_some();
-    if has_branches_plain && has_branches_ignore {
-        if let Some(bi_node) = utils::find_value_for_key(pr_to_check, source, "branches-ignore") {
+    // Check for mutually exclusive filter conflicts (cache lookups)
+    let branches_node = utils::find_value_for_key(pr_to_check, source, "branches");
+    let branches_ignore_node = utils::find_value_for_key(pr_to_check, source, "branches-ignore");
+    if branches_node.is_some() {
+        if let Some(bi_node) = branches_ignore_node {
             diagnostics.push(Diagnostic {
                 message: "Cannot use both 'branches' and 'branches-ignore' on the same event. They are mutually exclusive.".to_string(),
                 severity: Severity::Error,
@@ -185,11 +180,10 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
         }
     }
 
-    // Check for paths + paths-ignore conflict
-    let has_paths = utils::find_value_for_key(pr_to_check, source, "paths").is_some();
-    let has_paths_ignore = utils::find_value_for_key(pr_to_check, source, "paths-ignore").is_some();
-    if has_paths && has_paths_ignore {
-        if let Some(pi_node) = utils::find_value_for_key(pr_to_check, source, "paths-ignore") {
+    let paths_node = utils::find_value_for_key(pr_to_check, source, "paths");
+    let paths_ignore_node = utils::find_value_for_key(pr_to_check, source, "paths-ignore");
+    if paths_node.is_some() {
+        if let Some(pi_node) = paths_ignore_node {
             diagnostics.push(Diagnostic {
                 message: "Cannot use both 'paths' and 'paths-ignore' on the same event. They are mutually exclusive.".to_string(),
                 severity: Severity::Error,

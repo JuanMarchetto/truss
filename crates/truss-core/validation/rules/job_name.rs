@@ -88,7 +88,10 @@ impl ValidationRule for JobNameRule {
                 });
             }
 
-            if reserved_names.contains(&name_trimmed.to_lowercase().as_str()) {
+            if reserved_names
+                .iter()
+                .any(|r| r.eq_ignore_ascii_case(name_trimmed))
+            {
                 diagnostics.push(Diagnostic {
                     message: format!(
                         "Reserved name cannot be used as job name: '{}'",

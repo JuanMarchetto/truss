@@ -229,7 +229,8 @@ impl ValidationRule for ArtifactValidationRule {
                                 if !compression_cleaned.starts_with("${{") {
                                     let valid_levels = ["fastest", "fast", "default", "best"];
                                     let is_valid_string = valid_levels
-                                        .contains(&compression_cleaned.to_lowercase().as_str());
+                                        .iter()
+                                        .any(|l| l.eq_ignore_ascii_case(compression_cleaned));
 
                                     if !is_valid_string {
                                         match compression_cleaned.parse::<i64>() {

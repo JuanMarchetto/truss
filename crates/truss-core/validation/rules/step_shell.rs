@@ -138,7 +138,9 @@ impl ValidationRule for StepShellRule {
 
             // Known valid shells
             let known_shells = ["bash", "pwsh", "python", "sh", "cmd", "powershell"];
-            let is_known = known_shells.contains(&shell_cleaned.to_lowercase().as_str());
+            let is_known = known_shells
+                .iter()
+                .any(|s| s.eq_ignore_ascii_case(shell_cleaned));
 
             // Check for custom shell format (should contain {0} placeholder)
             let is_custom = shell_cleaned.contains("{0}");

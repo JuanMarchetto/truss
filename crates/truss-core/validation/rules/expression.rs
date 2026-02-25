@@ -150,7 +150,9 @@ fn validate_expression_functions(
             let func_name = expr[func_start + 1..actual_pos].trim();
             if !func_name.is_empty() {
                 let is_valid = valid_functions.contains(&func_name)
-                    || case_insensitive_functions.contains(&func_name.to_lowercase().as_str());
+                    || case_insensitive_functions
+                        .iter()
+                        .any(|f| f.eq_ignore_ascii_case(func_name));
                 if !is_valid {
                     diagnostics.push(Diagnostic {
                         message: format!(

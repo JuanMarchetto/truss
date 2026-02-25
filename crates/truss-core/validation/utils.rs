@@ -218,14 +218,13 @@ pub(crate) fn is_valid_expression_syntax(expr: &str) -> bool {
         expr.len() > ctx.len() && expr.as_bytes()[ctx.len()] == b'.' && expr.starts_with(ctx)
     });
 
-    let expr_lower = expr.to_lowercase();
     let has_function = expr.contains("contains(")
         || expr.contains("startsWith(")
         || expr.contains("endsWith(")
         || expr.contains("format(")
         || expr.contains("join(")
-        || expr_lower.contains("tojson(")
-        || expr_lower.contains("fromjson(")
+        || contains_ignore_ascii_case(expr, "tojson(")
+        || contains_ignore_ascii_case(expr, "fromjson(")
         || expr.contains("hashFiles(")
         || expr.contains("success()")
         || expr.contains("failure()")
@@ -284,11 +283,10 @@ pub(crate) fn is_valid_expression_syntax(expr: &str) -> bool {
 
 /// Check if expression may always evaluate to true.
 pub(crate) fn is_potentially_always_true(expr: &str) -> bool {
-    let expr_lower = expr.to_lowercase();
-    expr_lower == "true"
-        || expr_lower == "!false"
-        || expr_lower.contains("|| true")
-        || expr_lower.contains("true ||")
+    expr.eq_ignore_ascii_case("true")
+        || expr.eq_ignore_ascii_case("!false")
+        || contains_ignore_ascii_case(expr, "|| true")
+        || contains_ignore_ascii_case(expr, "true ||")
 }
 
 /// An extracted `${{ ... }}` expression with its byte offsets in the source.
@@ -382,9 +380,19 @@ pub(crate) fn find_expressions(source: &str) -> Vec<Expression<'_>> {
 
 /// Check if expression may always evaluate to false.
 pub(crate) fn is_potentially_always_false(expr: &str) -> bool {
-    let expr_lower = expr.to_lowercase();
-    expr_lower == "false"
-        || expr_lower == "!true"
-        || expr_lower.contains("&& false")
-        || expr_lower.contains("false &&")
+    expr.eq_ignore_ascii_case("false")
+        || expr.eq_ignore_ascii_case("!true")
+        || contains_ignore_ascii_case(expr, "&& false")
+        || contains_ignore_ascii_case(expr, "false &&")
+}
+
+/// Case-insensitive substring search without allocating a new String.
+fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
+    if needle.len() > haystack.len() {
+        return false;
+    }
+    haystack
+        .as_bytes()
+        .windows(needle.len())
+        .any(|window| window.eq_ignore_ascii_case(needle.as_bytes()))
 }
