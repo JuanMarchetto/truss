@@ -405,10 +405,11 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
                 let expr_text = expr.inner;
 
                 // Look for steps.*.outputs.* references
-                let expr_lower = expr_text.to_lowercase();
                 let mut search_pos = 0;
 
-                while let Some(pos) = expr_lower[search_pos..].find("steps.") {
+                while let Some(pos) =
+                    utils::find_ignore_ascii_case(&expr_text[search_pos..], "steps.")
+                {
                     let actual_pos = search_pos + pos;
                     let after_steps = &expr_text[actual_pos + 6..];
 

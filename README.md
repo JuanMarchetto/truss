@@ -6,19 +6,17 @@ A fast GitHub Actions workflow validator written in Rust. Truss catches configur
 
 ## Why Truss?
 
-**It's fast.** Validates even complex workflows in under 6ms:
+**It's fast.** Validates even complex workflows in under 6ms. Performance is comparable to actionlint (Go) and 30-60x faster than yamllint (Python):
 
-| Fixture | Complexity | Mean Time |
-|---------|-----------|-----------|
-| Simple workflow | 14 lines, single job | **1.7 ms** |
-| Medium workflow | Multi-step, conditionals | **2.7 ms** |
-| Complex dynamic | Reusable calls, dynamic matrices | **4.2 ms** |
-| Complex static | Job matrices, containers, dependencies | **5.5 ms** |
-| All 4 files combined | Directory scan, parallel processing | **6.8 ms** |
+| Fixture | Truss | actionlint | yamllint |
+|---------|-------|------------|----------|
+| Simple (14 lines) | **1.7 ms** | 2.6 ms | 103 ms |
+| Complex dynamic (reusable calls) | 3.7 ms | **3.7 ms** | 140 ms |
+| Complex static (matrices, containers) | 5.0 ms | **4.0 ms** | 153 ms |
 
-*Measured with Hyperfine (`--shell=none`, 100+ runs) on the release binary. See [benchmarks/](#running-benchmarks).*
+*Measured with [Hyperfine](https://github.com/sharkdp/hyperfine) (`--shell=none`, 200 runs, `--warmup 10`) on an Intel i5-7500T @ 2.70GHz, 8GB RAM, Linux 6.17. This is one particular benchmark on one particular machine — your results may vary. See [benchmarks/](#running-benchmarks) for how to reproduce.*
 
-At under 5ms per file, Truss is fast enough to validate workflows as you type — no perceptible lag in your editor.
+At under 6ms per file, Truss is fast enough to validate workflows as you type — no perceptible lag in your editor.
 
 ## What It Catches
 
@@ -175,26 +173,27 @@ Point your editor's LSP client at this binary for `.github/workflows/*.yml` file
 
 ### CLI Benchmarks (Hyperfine)
 
-End-to-end timing of `truss validate --quiet` with `--shell=none` for accurate sub-5ms measurement:
+End-to-end timing of `truss validate --quiet` with `--shell=none`, 200 runs:
 
 | Fixture | Mean | Min | Max |
 |---------|------|-----|-----|
-| Simple (14 lines) | **1.7 ms** | 1.4 ms | 6.7 ms |
-| Medium (multi-step) | **2.7 ms** | 2.1 ms | 7.5 ms |
-| Complex dynamic (reusable calls) | **4.2 ms** | 3.5 ms | 8.2 ms |
-| Complex static (matrices) | **5.5 ms** | 4.6 ms | 10.6 ms |
-| All 4 files (directory scan) | **6.8 ms** | 5.3 ms | 11.6 ms |
+| Simple (14 lines) | **1.7 ms** | 1.4 ms | 3.5 ms |
+| Medium (multi-step) | **2.5 ms** | 2.0 ms | 4.5 ms |
+| Complex dynamic (reusable calls) | **3.8 ms** | 3.3 ms | 5.8 ms |
+| Complex static (matrices) | **5.0 ms** | 4.4 ms | 7.7 ms |
+| All 4 files (directory scan) | **5.9 ms** | 4.8 ms | 10.6 ms |
 
-### Core Engine Benchmarks (Criterion)
+### Comparison vs. Other Tools
 
-Pure validation time (no I/O overhead):
+All three tools were benchmarked on the same machine (Intel i5-7500T @ 2.70GHz, 8GB RAM, Linux 6.17) with Hyperfine (`--shell=none`, 200 runs, `--warmup 10`). This is one particular benchmark on one particular machine — your results may vary.
 
-| Fixture | Mean | Description |
-|---------|------|-------------|
-| Simple | 245 us | Minimal workflow |
-| Medium | 1.08 ms | Multi-step with branching |
-| Complex static | 3.71 ms | Matrix strategies, dependencies, containers |
-| Complex dynamic | 2.48 ms | Expressions, reusable calls, dynamic matrices |
+| Fixture | Truss (Rust) | actionlint (Go) | yamllint (Python) |
+|---------|-------------|-----------------|-------------------|
+| Simple | **1.7 ms** | 2.6 ms | 103 ms |
+| Complex dynamic | 3.7 ms | **3.7 ms** | 140 ms |
+| Complex static | 5.0 ms | **4.0 ms** | 153 ms |
+
+Truss and actionlint are in the same performance class (single-digit milliseconds). Truss is faster on simple files; actionlint is faster on complex ones. Both are 30-60x faster than yamllint. Note that yamllint only checks YAML syntax, while Truss and actionlint both do semantic validation of GitHub Actions workflows.
 
 ### Running Benchmarks
 
@@ -271,7 +270,7 @@ More details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - LSP server with real-time diagnostics and incremental parsing
 - VS Code extension
 - CLI with parallel file processing, globs, stdin, severity filtering, JSON output
-- Sub-5ms validation per file (release build)
+- Sub-6ms validation per file, comparable to actionlint
 - CI pipeline (check, test, clippy, fmt)
 
 **Coming next:**

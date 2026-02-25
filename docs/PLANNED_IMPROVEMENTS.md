@@ -1,20 +1,6 @@
 # Planned Improvements
 
-This list came out of a full code review and gap analysis we did in February 2026, comparing truss against the GitHub Actions docs and actionlint. The good news: all the critical and high-priority bugs have been fixed, and we added new rules for security and deprecated commands. What's left is mostly architectural cleanup, quality-of-life stuff, and hardening work that will make the codebase easier to maintain going forward.
-
----
-
-## Recently Addressed (This PR)
-
-These gaps came up during research into the GitHub Actions docs, actionlint, and community best practices. All of them have been addressed:
-
-- **Script injection detection** -- new `script_injection` rule warns when untrusted inputs (`github.event.pull_request.title`, `.body`, `.head.ref`, `github.head_ref`, etc.) flow directly into `run:` blocks via `${{ }}` expressions
-- **Deprecated workflow command detection** -- new `deprecated_commands` rule flags `::set-output`, `::save-state`, `::set-env`, `::add-path` usage in run scripts
-- **Step `uses`/`run` mutual exclusion** -- the `step` rule now catches when a step has both `uses` and `run` (previously it only checked that at least one was present)
-- **Filter conflict detection** -- the `event_payload` rule now detects `branches` + `branches-ignore`, `paths` + `paths-ignore`, `tags` + `tags-ignore` on the same event
-- **GITHUB_ env var prefix** -- the `step_env` rule warns when user-defined env vars use the reserved `GITHUB_` prefix
-- **Enhanced cron validation** -- cron field ranges are now properly validated (minute 0-59, hour 0-23, day 1-31, month 1-12, weekday 0-6), not just the field count
-- **Complete PR activity types** -- added the missing valid `pull_request` activity types: `edited`, `ready_for_review`, `converted_to_draft`, `auto_merge_enabled`, `auto_merge_disabled`, `enqueued`, `dequeued`, `milestoned`, `demilestoned`, `locked`, `unlocked`
+This list came out of a full code review and gap analysis comparing truss against the GitHub Actions docs and actionlint. What's here is architectural cleanup, quality-of-life improvements, and hardening work that will make the codebase easier to maintain going forward.
 
 ---
 
