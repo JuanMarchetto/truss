@@ -26,11 +26,9 @@ impl ValidationRule for WorkflowCallOutputsRule {
         // Find workflow_call
         let workflow_call_value = utils::find_value_for_key(on_to_check, source, "workflow_call");
 
-        if workflow_call_value.is_none() {
+        let Some(workflow_call) = workflow_call_value else {
             return diagnostics;
-        }
-
-        let workflow_call = workflow_call_value.unwrap();
+        };
         let call_to_check = utils::unwrap_node(workflow_call);
 
         // Collect all job names and their outputs for reference validation

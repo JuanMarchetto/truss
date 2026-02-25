@@ -33,6 +33,10 @@ benchmarks/hyperfine/*.md
 
 # AI assistant instructions (may contain credentials)
 CLAUDE.md
+.agents/
+.claude/
+skills/
+skills-lock.json
 
 # OS files
 Thumbs.db
