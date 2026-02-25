@@ -286,11 +286,11 @@ pub(crate) fn is_valid_expression_syntax(expr: &str) -> bool {
 }
 
 /// Check if expression may always evaluate to true.
+///
+/// Only matches bare `true` or `!false` — not complex expressions that
+/// happen to contain the substring "true" (e.g., `inputs.force == true || steps.check.outputs.result`).
 pub(crate) fn is_potentially_always_true(expr: &str) -> bool {
-    expr.eq_ignore_ascii_case("true")
-        || expr.eq_ignore_ascii_case("!false")
-        || contains_ignore_ascii_case(expr, "|| true")
-        || contains_ignore_ascii_case(expr, "true ||")
+    expr.eq_ignore_ascii_case("true") || expr.eq_ignore_ascii_case("!false")
 }
 
 /// An extracted `${{ ... }}` expression with its byte offsets in the source.
@@ -383,11 +383,11 @@ pub(crate) fn find_expressions(source: &str) -> Vec<Expression<'_>> {
 }
 
 /// Check if expression may always evaluate to false.
+///
+/// Only matches bare `false` or `!true` — not complex expressions that
+/// happen to contain the substring "false".
 pub(crate) fn is_potentially_always_false(expr: &str) -> bool {
-    expr.eq_ignore_ascii_case("false")
-        || expr.eq_ignore_ascii_case("!true")
-        || contains_ignore_ascii_case(expr, "&& false")
-        || contains_ignore_ascii_case(expr, "false &&")
+    expr.eq_ignore_ascii_case("false") || expr.eq_ignore_ascii_case("!true")
 }
 
 /// Case-insensitive substring search without allocating a new String.

@@ -204,8 +204,10 @@ fn validate_concurrency_node(
             let cancel_cleaned =
                 cancel_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
 
-            // cancel-in-progress should be boolean (true/false)
-            if cancel_cleaned != "true" && cancel_cleaned != "false" {
+            // Expression values (e.g., ${{ github.event_name != 'push' }}) are valid
+            if cancel_cleaned.starts_with("${{") {
+                // Expression — skip boolean validation
+            } else if cancel_cleaned != "true" && cancel_cleaned != "false" {
                 // Try to parse as boolean
                 if cancel_cleaned.parse::<bool>().is_err() {
                     diagnostics.push(Diagnostic {

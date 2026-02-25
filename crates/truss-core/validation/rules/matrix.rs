@@ -139,7 +139,8 @@ impl ValidationRule for MatrixStrategyRule {
             ) {
                 match node.kind() {
                     "block_mapping" | "flow_mapping" => {
-                        *has_matrix_keys = true;
+                        // Don't set has_matrix_keys here — the container itself
+                        // isn't a key. Individual pairs set it in the branch below.
                         let mut cursor = node.walk();
                         for child in node.children(&mut cursor) {
                             check_matrix_structure(
@@ -255,7 +256,11 @@ impl ValidationRule for MatrixStrategyRule {
                 &mut diagnostics,
             );
 
-            let is_valid_structure = has_matrix_keys || has_include || has_exclude;
+            // Check if matrix is an expression (e.g., fromJSON(...))
+            let matrix_text = utils::node_text(matrix_to_check, source);
+            let is_expression = matrix_text.trim().contains("${{");
+
+            let is_valid_structure = has_matrix_keys || has_include || has_exclude || is_expression;
 
             if !is_valid_structure {
                 diagnostics.push(Diagnostic {
@@ -359,9 +364,9 @@ fn is_valid_matrix_key_name(key_name: &str) -> bool {
 /// Validates matrix array elements (basic type validation)
 fn validate_matrix_array_elements(
     array_node: Node,
-    source: &str,
-    key_name: &str,
-    diagnostics: &mut Vec<Diagnostic>,
+    _source: &str,
+    _key_name: &str,
+    _diagnostics: &mut Vec<Diagnostic>,
 ) {
     let mut cursor = array_node.walk();
     for child in array_node.children(&mut cursor) {
@@ -413,22 +418,10 @@ fn validate_matrix_array_elements(
                 // Nested arrays are valid
             }
             _ => {
-                // Other types might be invalid
-                let value_text = utils::node_text(element_to_check, source);
-                if !value_text.contains("${{") && !value_text.trim().is_empty() {
-                    diagnostics.push(Diagnostic {
-                        message: format!(
-                            "Matrix key '{}' has potentially invalid array element type. Matrix values should be strings, numbers, or expressions.",
-                            key_name
-                        ),
-                        severity: Severity::Warning,
-                        span: Span {
-                            start: element_to_check.start_byte(),
-                            end: element_to_check.end_byte(),
-                        },
-                        rule_id: String::new(),
-                    });
-                }
+                // Other node types (integer_scalar, boolean_scalar, null_scalar,
+                // tag, anchor, alias, etc.) are valid in matrix arrays.
+                // Tree-sitter YAML can produce various node kinds depending on
+                // the YAML content; we only flag truly empty/whitespace-only nodes.
             }
         }
     }

@@ -115,21 +115,9 @@ impl ValidationRule for StepEnvValidationRule {
                                             });
                                         }
 
-                                        // Check for reserved GITHUB_ prefix
-                                        if key_cleaned.starts_with("GITHUB_") {
-                                            diagnostics.push(Diagnostic {
-                                                message: format!(
-                                                    "Environment variable '{}' uses reserved prefix 'GITHUB_'. Variables starting with 'GITHUB_' are reserved by GitHub Actions.",
-                                                    key_cleaned
-                                                ),
-                                                severity: Severity::Warning,
-                                                span: Span {
-                                                    start: key_node.start_byte(),
-                                                    end: key_node.end_byte(),
-                                                },
-                                                rule_id: String::new(),
-                                            });
-                                        }
+                                        // Note: GITHUB_* env vars are commonly passed through
+                                        // (e.g., GITHUB_TOKEN, GITHUB_RUN_ID) and GitHub Actions
+                                        // does not prevent setting them. Don't warn on this pattern.
                                     }
                                 }
                             }

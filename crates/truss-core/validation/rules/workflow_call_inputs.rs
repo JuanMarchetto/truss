@@ -68,6 +68,20 @@ impl ValidationRule for WorkflowCallInputsRule {
             self.collect_input_definitions(inputs_to_check, source, &mut defined_inputs);
         }
 
+        // Also collect inputs from workflow_dispatch if it coexists —
+        // inputs.* references are valid for either trigger's inputs.
+        if let Some(dispatch_value) =
+            utils::find_value_for_key(on_to_check, source, "workflow_dispatch")
+        {
+            let dispatch_to_check = utils::unwrap_node(dispatch_value);
+            if let Some(dispatch_inputs) =
+                utils::find_value_for_key(dispatch_to_check, source, "inputs")
+            {
+                let dispatch_inputs_node = utils::unwrap_node(dispatch_inputs);
+                self.collect_input_definitions(dispatch_inputs_node, source, &mut defined_inputs);
+            }
+        }
+
         // Validate input types and properties
         for (input_name, (input_type, type_span)) in &defined_inputs {
             if !self.is_valid_input_type(input_type) {

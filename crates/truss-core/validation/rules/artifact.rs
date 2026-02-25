@@ -134,7 +134,7 @@ impl ValidationRule for ArtifactValidationRule {
                                         if !is_valid_artifact_name_format(name_cleaned) {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
-                                                    "Artifact action '{}' has invalid name format: '{}'. Artifact names should contain only alphanumeric characters, hyphens, underscores, and dots.",
+                                                    "Artifact action '{}' has invalid name format: '{}'. Artifact names should contain only alphanumeric characters, hyphens, underscores, dots, and spaces.",
                                                     uses_cleaned, name_cleaned
                                                 ),
                                                 severity: Severity::Warning,
@@ -293,5 +293,5 @@ fn is_valid_artifact_name_format(name: &str) -> bool {
     }
 
     name.chars()
-        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == ' ')
 }

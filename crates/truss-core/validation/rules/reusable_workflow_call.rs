@@ -73,8 +73,11 @@ impl ValidationRule for ReusableWorkflowCallRule {
 
                                     // Check if it's a reusable workflow call (contains .github/workflows/)
                                     if uses_cleaned.contains(".github/workflows/") {
+                                        // Local workflow references (starting with ./) don't need @ref
+                                        let is_local = uses_cleaned.starts_with("./");
+
                                         // Validate format: owner/repo/.github/workflows/file.yml@ref
-                                        if !uses_cleaned.contains('@') {
+                                        if !uses_cleaned.contains('@') && !is_local {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
                                                     "Job '{}' reusable workflow call '{}' is missing @ref. Format: owner/repo/.github/workflows/file.yml@ref",
