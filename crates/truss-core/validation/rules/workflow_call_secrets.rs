@@ -58,6 +58,7 @@ impl ValidationRule for WorkflowCallSecretsRule {
                     ),
                     severity: Severity::Error,
                     span,
+                    rule_id: String::new(),
                 });
             } else if !defined_secrets.contains(&secret_name) {
                 diagnostics.push(Diagnostic {
@@ -72,6 +73,7 @@ impl ValidationRule for WorkflowCallSecretsRule {
                     ),
                     severity: Severity::Error,
                     span,
+                    rule_id: String::new(),
                 });
             }
         }
@@ -135,6 +137,7 @@ impl WorkflowCallSecretsRule {
                                         start: required_node.start_byte(),
                                         end: required_node.end_byte(),
                                     },
+                                    rule_id: String::new(),
                                 });
                             }
                         }
@@ -158,6 +161,7 @@ impl WorkflowCallSecretsRule {
                                         start: description_node.start_byte(),
                                         end: description_node.end_byte(),
                                     },
+                                    rule_id: String::new(),
                                 });
                             }
                         }

@@ -132,6 +132,7 @@ impl ValidationRule for StepShellRule {
                         start: shell_node.start_byte(),
                         end: shell_node.end_byte(),
                     },
+                    rule_id: String::new(),
                 });
                 return;
             }
@@ -156,6 +157,7 @@ impl ValidationRule for StepShellRule {
                         start: shell_node.start_byte(),
                         end: shell_node.end_byte(),
                     },
+                    rule_id: String::new(),
                 });
             }
         }

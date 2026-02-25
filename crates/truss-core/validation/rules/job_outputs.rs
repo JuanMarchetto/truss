@@ -65,6 +65,7 @@ impl ValidationRule for JobOutputsRule {
                                                 ),
                                                 severity: Severity::Error,
                                                 span,
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }
@@ -79,6 +80,7 @@ impl ValidationRule for JobOutputsRule {
                                             message: msg,
                                             severity: Severity::Error,
                                             span,
+                                            rule_id: String::new(),
                                         });
                                     }
                                 }

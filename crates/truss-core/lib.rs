@@ -176,6 +176,7 @@ impl TrussEngine {
                 message: "Failed to parse YAML".to_string(),
                 severity: Severity::Error,
                 span: Span { start: 0, end },
+                rule_id: String::new(),
             }],
         }
     }
@@ -221,6 +222,12 @@ pub struct Diagnostic {
     pub message: String,
     pub severity: Severity,
     pub span: Span,
+    /// Identifier of the rule that produced this diagnostic.
+    ///
+    /// Matches the value returned by `ValidationRule::name()`.
+    /// Empty when the diagnostic is synthetic (e.g., parse errors).
+    #[serde(default)]
+    pub rule_id: String,
 }
 
 /// Severity level of a diagnostic.
@@ -241,11 +248,19 @@ pub struct Span {
 
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[{:?}] {} ({}..{})",
-            self.severity, self.message, self.span.start, self.span.end
-        )
+        if self.rule_id.is_empty() {
+            write!(
+                f,
+                "[{:?}] {} ({}..{})",
+                self.severity, self.message, self.span.start, self.span.end
+            )
+        } else {
+            write!(
+                f,
+                "[{:?}] [{}] {} ({}..{})",
+                self.severity, self.rule_id, self.message, self.span.start, self.span.end
+            )
+        }
     }
 }
 

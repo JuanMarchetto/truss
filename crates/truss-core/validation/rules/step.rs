@@ -96,6 +96,7 @@ impl ValidationRule for StepValidationRule {
                                                 start: step_node.start_byte(),
                                                 end: step_node.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                     } else if has_uses && has_run {
                                         diagnostics.push(Diagnostic {
@@ -106,6 +107,7 @@ impl ValidationRule for StepValidationRule {
                                                 start: step_node.start_byte(),
                                                 end: step_node.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                     }
                                 }

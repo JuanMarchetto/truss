@@ -58,6 +58,7 @@ impl ValidationRule for WorkflowInputsRule {
                     ),
                     severity: Severity::Error,
                     span: *type_span,
+                    rule_id: String::new(),
                 });
             }
         }
@@ -97,6 +98,7 @@ impl ValidationRule for WorkflowInputsRule {
                     ),
                     severity: Severity::Error,
                     span,
+                    rule_id: String::new(),
                 });
             }
         }
@@ -208,6 +210,7 @@ impl WorkflowInputsRule {
                                         start: required_node.start_byte(),
                                         end: required_node.end_byte(),
                                     },
+                                    rule_id: String::new(),
                                 });
                             }
                         }
@@ -245,6 +248,7 @@ impl WorkflowInputsRule {
                                                         start: default_node.start_byte(),
                                                         end: default_node.end_byte(),
                                                     },
+                                                    rule_id: String::new(),
                                                 });
                                             }
                                         }
@@ -279,6 +283,7 @@ impl WorkflowInputsRule {
                                         start: description_node.start_byte(),
                                         end: description_node.end_byte(),
                                     },
+                                    rule_id: String::new(),
                                 });
                             }
                         }

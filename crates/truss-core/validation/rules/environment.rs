@@ -50,6 +50,7 @@ impl ValidationRule for EnvironmentRule {
                                                         start: actual_env_value.start_byte(),
                                                         end: actual_env_value.end_byte(),
                                                     },
+                                                    rule_id: String::new(),
                                                 });
                                             }
                                         }
@@ -84,6 +85,7 @@ impl ValidationRule for EnvironmentRule {
                                                                     start: field_key_node.start_byte(),
                                                                     end: field_key_node.end_byte(),
                                                                 },
+                                                                rule_id: String::new(),
                                                             });
                                                         }
 
@@ -110,6 +112,7 @@ impl ValidationRule for EnvironmentRule {
                                                                             start: name_value.start_byte(),
                                                                             end: name_value.end_byte(),
                                                                         },
+                                                                        rule_id: String::new(),
                                                                     });
                                                                 }
                                                             }

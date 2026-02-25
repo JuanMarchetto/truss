@@ -32,6 +32,7 @@ impl ValidationRule for WorkflowNameRule {
                     start: name_value.start_byte(),
                     end: name_value.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
 
@@ -46,6 +47,7 @@ impl ValidationRule for WorkflowNameRule {
                     start: name_value.start_byte(),
                     end: name_value.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
 

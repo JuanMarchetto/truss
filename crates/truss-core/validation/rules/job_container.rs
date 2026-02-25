@@ -96,6 +96,7 @@ impl ValidationRule for JobContainerRule {
                                 start: container_to_check.start_byte(),
                                 end: container_to_check.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                     return;
@@ -116,6 +117,7 @@ impl ValidationRule for JobContainerRule {
                         start: container_to_check.start_byte(),
                         end: container_to_check.end_byte(),
                     },
+                    rule_id: String::new(),
                 });
             } else if let Some(image_node) = image_value {
                 let image_text = utils::node_text(image_node, source);
@@ -133,6 +135,7 @@ impl ValidationRule for JobContainerRule {
                             start: image_node.start_byte(),
                             end: image_node.end_byte(),
                         },
+                        rule_id: String::new(),
                     });
                 }
             }
@@ -218,6 +221,7 @@ impl ValidationRule for JobContainerRule {
                                     start: node.start_byte(),
                                     end: node.end_byte(),
                                 },
+                                rule_id: String::new(),
                             });
                         }
                     }

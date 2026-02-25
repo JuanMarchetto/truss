@@ -67,6 +67,7 @@ impl ValidationRule for TimeoutRule {
                                                 start: timeout_node.start_byte(),
                                                 end: timeout_node.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                         return;
                                     }
@@ -86,6 +87,7 @@ impl ValidationRule for TimeoutRule {
                                                         start: timeout_node.start_byte(),
                                                         end: timeout_node.end_byte(),
                                                     },
+                                                    rule_id: String::new(),
                                                 });
                                             } else if value == 0.0 {
                                                 // Zero value
@@ -99,6 +101,7 @@ impl ValidationRule for TimeoutRule {
                                                         start: timeout_node.start_byte(),
                                                         end: timeout_node.end_byte(),
                                                     },
+                                                    rule_id: String::new(),
                                                 });
                                             }
                                             // Positive values (including decimals) are valid
@@ -116,6 +119,7 @@ impl ValidationRule for TimeoutRule {
                                                     start: timeout_node.start_byte(),
                                                     end: timeout_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }

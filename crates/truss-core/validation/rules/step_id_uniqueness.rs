@@ -49,6 +49,7 @@ impl ValidationRule for StepIdUniquenessRule {
                                             ),
                                             severity: Severity::Warning,
                                             span: *span,
+                                            rule_id: String::new(),
                                         });
                                     }
 
@@ -61,6 +62,7 @@ impl ValidationRule for StepIdUniquenessRule {
                                             ),
                                             severity: Severity::Error,
                                             span: *span,
+                                            rule_id: String::new(),
                                         });
                                     } else {
                                         seen.insert(step_id.clone());

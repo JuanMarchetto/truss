@@ -67,7 +67,16 @@ impl RuleSet {
             .rules
             .par_iter()
             .filter(|rule| is_workflow || !rule.requires_workflow())
-            .flat_map(|rule| rule.validate(tree, source))
+            .flat_map(|rule| {
+                let rule_name = rule.name().to_string();
+                rule.validate(tree, source)
+                    .into_iter()
+                    .map(move |mut d| {
+                        d.rule_id = rule_name.clone();
+                        d
+                    })
+                    .collect::<Vec<_>>()
+            })
             .collect();
 
         let mut diagnostics = all_diagnostics;

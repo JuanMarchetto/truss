@@ -97,6 +97,7 @@ impl ValidationRule for StepIfExpressionRule {
                                 start: if_node.start_byte(),
                                 end: if_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
 
@@ -112,6 +113,7 @@ impl ValidationRule for StepIfExpressionRule {
                                 start: if_node.start_byte(),
                                 end: if_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     } else if utils::is_potentially_always_false(inner) {
                         diagnostics.push(Diagnostic {
@@ -124,6 +126,7 @@ impl ValidationRule for StepIfExpressionRule {
                                 start: if_node.start_byte(),
                                 end: if_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }

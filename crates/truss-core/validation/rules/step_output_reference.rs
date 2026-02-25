@@ -133,6 +133,7 @@ impl ValidationRule for StepOutputReferenceRule {
                                                     ),
                                                     severity: Severity::Error,
                                                     span,
+                                                    rule_id: String::new(),
                                                 });
                                                 continue; // Skip rest of validation
                                             }
@@ -157,6 +158,7 @@ impl ValidationRule for StepOutputReferenceRule {
                                                     ),
                                                     severity: Severity::Error,
                                                     span,
+                                                    rule_id: String::new(),
                                                 });
                                                 found_in_other_job = true;
                                                 break;
@@ -174,6 +176,7 @@ impl ValidationRule for StepOutputReferenceRule {
                                                     ),
                                                     severity: Severity::Error,
                                                     span,
+                                                    rule_id: String::new(),
                                                 });
                                             } else {
                                                 diagnostics.push(Diagnostic {
@@ -183,6 +186,7 @@ impl ValidationRule for StepOutputReferenceRule {
                                                     ),
                                                     severity: Severity::Error,
                                                     span,
+                                                    rule_id: String::new(),
                                                 });
                                             }
                                         }
@@ -207,6 +211,7 @@ impl ValidationRule for StepOutputReferenceRule {
                                                     ),
                                                     severity: Severity::Error,
                                                     span,
+                                                    rule_id: String::new(),
                                                 });
                                             }
                                         }
@@ -219,6 +224,7 @@ impl ValidationRule for StepOutputReferenceRule {
                                                 ),
                                                 severity: Severity::Warning,
                                                 span,
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }

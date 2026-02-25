@@ -99,6 +99,7 @@ impl ValidationRule for StepNameRule {
                                 start: name_node.start_byte(),
                                 end: name_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     } else if name_cleaned.len() > 100 {
                         // Warn if very long
@@ -112,6 +113,7 @@ impl ValidationRule for StepNameRule {
                                 start: name_node.start_byte(),
                                 end: name_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }

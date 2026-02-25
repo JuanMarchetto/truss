@@ -86,6 +86,7 @@ impl ValidationRule for StepWorkingDirectoryRule {
                                 start: working_dir_node.start_byte(),
                                 end: working_dir_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     } else {
                         // Basic path format validation
@@ -105,6 +106,7 @@ impl ValidationRule for StepWorkingDirectoryRule {
                                     start: working_dir_node.start_byte(),
                                     end: working_dir_node.end_byte(),
                                 },
+                                rule_id: String::new(),
                             });
                         }
 
@@ -123,6 +125,7 @@ impl ValidationRule for StepWorkingDirectoryRule {
                                     start: working_dir_node.start_byte(),
                                     end: working_dir_node.end_byte(),
                                 },
+                                rule_id: String::new(),
                             });
                         }
                     }

@@ -56,6 +56,7 @@ impl ValidationRule for PermissionsRule {
                                 start: node.start_byte(),
                                 end: node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }
@@ -83,6 +84,7 @@ impl ValidationRule for PermissionsRule {
                                             start: key_node.start_byte(),
                                             end: key_node.end_byte(),
                                         },
+                                        rule_id: String::new(),
                                     });
                                 }
 
@@ -100,6 +102,7 @@ impl ValidationRule for PermissionsRule {
                                                 start: value_node.start_byte(),
                                                 end: value_node.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                     }
                                 }

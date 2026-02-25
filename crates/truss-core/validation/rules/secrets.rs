@@ -77,6 +77,7 @@ impl SecretsValidationRule {
                         start: expr_start + 3 + secret_ref_start,
                         end: expr_start + 3 + secret_ref_end,
                     },
+                    rule_id: String::new(),
                 });
 
                 search_pos = secret_ref_end;
@@ -132,6 +133,7 @@ impl SecretsValidationRule {
                             start: expr_start + 3 + actual_pos,
                             end: expr_start + 3 + actual_pos + 7 + identifier_end,
                         },
+                        rule_id: String::new(),
                     });
 
                     search_pos = actual_pos + 7 + identifier_end;
@@ -170,6 +172,7 @@ impl SecretsValidationRule {
                                     start: expr_start + 3 + actual_pos + 7 + 1,
                                     end: expr_start + 3 + actual_pos + 7 + 1 + name_end,
                                 },
+                                rule_id: String::new(),
                             });
                         }
 

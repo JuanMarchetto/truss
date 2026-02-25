@@ -71,6 +71,7 @@ impl ValidationRule for WorkflowCallOutputsRule {
                         ),
                         severity: Severity::Error,
                         span,
+                        rule_id: String::new(),
                     });
                 }
             }
@@ -85,6 +86,7 @@ impl ValidationRule for WorkflowCallOutputsRule {
                         ),
                         severity: Severity::Error,
                         span,
+                        rule_id: String::new(),
                     });
                 } else {
                     // Check if the job output exists
@@ -103,6 +105,7 @@ impl ValidationRule for WorkflowCallOutputsRule {
                                 ),
                                 severity: Severity::Error,
                                 span,
+                                rule_id: String::new(),
                             });
                         }
                     } else {
@@ -114,6 +117,7 @@ impl ValidationRule for WorkflowCallOutputsRule {
                             ),
                             severity: Severity::Error,
                             span,
+                            rule_id: String::new(),
                         });
                     }
                 }

@@ -50,6 +50,7 @@ impl ValidationRule for GitHubActionsSchemaRule {
                     start: 0,
                     end: source.len().min(100),
                 },
+                rule_id: String::new(),
             });
         }
 
