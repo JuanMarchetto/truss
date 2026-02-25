@@ -5,6 +5,8 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
 use std::time::Instant;
+use std::path::PathBuf;
+use truss_core::config::TrussConfig;
 use truss_core::TrussEngine;
 
 /// Exit code: one or more files had validation errors.
@@ -42,6 +44,14 @@ enum Commands {
         /// Minimum severity level to display and fail on
         #[arg(long, value_enum)]
         severity: Option<SeverityFilter>,
+
+        /// Path to .truss.yml config file (auto-discovered if not specified)
+        #[arg(long, value_name = "PATH")]
+        config: Option<PathBuf>,
+
+        /// Disable config file auto-discovery
+        #[arg(long)]
+        no_config: bool,
     },
 }
 
@@ -268,8 +278,15 @@ fn validate_files(
     quiet: bool,
     json: bool,
     severity_filter: SeverityFilter,
+    config: &TrussConfig,
 ) -> Result<(), TrussError> {
     let expanded = expand_paths(&paths)?;
+
+    // Apply config ignore patterns
+    let expanded: Vec<String> = expanded
+        .into_iter()
+        .filter(|p| p == "-" || !config.is_ignored(p))
+        .collect();
 
     if expanded.is_empty() {
         return Err(TrussError::Usage(
@@ -374,6 +391,8 @@ fn main() {
             quiet,
             json,
             severity,
+            config: config_path,
+            no_config,
         } => {
             let severity_filter = severity.unwrap_or(SeverityFilter::Info);
 
@@ -384,7 +403,31 @@ fn main() {
                 std::process::exit(EXIT_USAGE);
             }
 
-            if let Err(e) = validate_files(paths, quiet, json, severity_filter) {
+            // Load config: explicit path > auto-discover > empty default
+            let config = if let Some(path) = config_path {
+                match TrussConfig::from_file(&path) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        std::process::exit(EXIT_USAGE);
+                    }
+                }
+            } else if !no_config {
+                let cwd = std::env::current_dir().unwrap_or_default();
+                match TrussConfig::discover(&cwd) {
+                    Some(path) => {
+                        if !quiet && !json {
+                            eprintln!("Using config: {}", path.display());
+                        }
+                        TrussConfig::from_file(&path).unwrap_or_default()
+                    }
+                    None => TrussConfig::default(),
+                }
+            } else {
+                TrussConfig::default()
+            };
+
+            if let Err(e) = validate_files(paths, quiet, json, severity_filter, &config) {
                 if !quiet && !json {
                     eprintln!("Error: {}", e);
                 }

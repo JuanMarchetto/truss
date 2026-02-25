@@ -3,6 +3,7 @@
 //! Core validation and analysis engine for CI/CD pipelines.
 //! This crate is editor-agnostic and fully deterministic.
 
+pub mod config;
 mod parser;
 mod validation;
 
