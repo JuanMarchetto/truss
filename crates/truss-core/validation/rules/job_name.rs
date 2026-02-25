@@ -54,6 +54,7 @@ impl ValidationRule for JobNameRule {
                     message: format!("duplicate job name: '{}'", name),
                     severity: Severity::Error,
                     span: *span,
+                    rule_id: String::new(),
                 });
             } else {
                 seen.insert(name.clone());
@@ -73,6 +74,7 @@ impl ValidationRule for JobNameRule {
                     ),
                     severity: Severity::Warning,
                     span: *span,
+                    rule_id: String::new(),
                 });
             }
 
@@ -85,6 +87,7 @@ impl ValidationRule for JobNameRule {
                     ),
                     severity: Severity::Error,
                     span: *span,
+                    rule_id: String::new(),
                 });
             }
 
@@ -99,6 +102,7 @@ impl ValidationRule for JobNameRule {
                     ),
                     severity: Severity::Error,
                     span: *span,
+                    rule_id: String::new(),
                 });
             }
         }

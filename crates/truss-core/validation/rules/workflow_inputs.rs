@@ -58,6 +58,7 @@ impl ValidationRule for WorkflowInputsRule {
                     ),
                     severity: Severity::Error,
                     span: *type_span,
+                    rule_id: String::new(),
                 });
             }
         }
@@ -97,6 +98,7 @@ impl ValidationRule for WorkflowInputsRule {
                     ),
                     severity: Severity::Error,
                     span,
+                    rule_id: String::new(),
                 });
             }
         }

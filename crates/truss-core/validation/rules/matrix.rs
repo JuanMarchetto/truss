@@ -120,6 +120,7 @@ impl ValidationRule for MatrixStrategyRule {
                     message: "matrix cannot be empty".to_string(),
                     severity: Severity::Error,
                     span,
+                    rule_id: String::new(),
                 });
                 continue;
             }
@@ -262,6 +263,7 @@ impl ValidationRule for MatrixStrategyRule {
                         .to_string(),
                     severity: Severity::Error,
                     span,
+                    rule_id: String::new(),
                 });
             }
 

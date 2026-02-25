@@ -58,6 +58,7 @@ impl ValidationRule for WorkflowCallSecretsRule {
                     ),
                     severity: Severity::Error,
                     span,
+                    rule_id: String::new(),
                 });
             } else if !defined_secrets.contains(&secret_name) {
                 diagnostics.push(Diagnostic {
@@ -72,6 +73,7 @@ impl ValidationRule for WorkflowCallSecretsRule {
                     ),
                     severity: Severity::Error,
                     span,
+                    rule_id: String::new(),
                 });
             }
         }
