@@ -3,9 +3,8 @@ use glob::glob;
 use rayon::prelude::*;
 use std::fs;
 use std::io::{self, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
-use std::path::PathBuf;
 use truss_core::config::TrussConfig;
 use truss_core::TrussEngine;
 
