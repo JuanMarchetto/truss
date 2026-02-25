@@ -281,7 +281,16 @@ fn validate_file(
 ) -> Result<FileResult, TrussError> {
     let content = read_source(path)?;
     let label = if path == "-" { "<stdin>" } else { path };
-    validate_source(engine, label, &content, quiet, json, severity_filter, ignore_rules, only_rules)
+    validate_source(
+        engine,
+        label,
+        &content,
+        quiet,
+        json,
+        severity_filter,
+        ignore_rules,
+        only_rules,
+    )
 }
 
 fn validate_files(
@@ -309,7 +318,15 @@ fn validate_files(
     // Process stdin first (sequential, reuse one engine)
     let mut engine = TrussEngine::new();
     for path in &stdin_paths {
-        let result = validate_file(&mut engine, path, quiet, json, severity_filter, ignore_rules, only_rules);
+        let result = validate_file(
+            &mut engine,
+            path,
+            quiet,
+            json,
+            severity_filter,
+            ignore_rules,
+            only_rules,
+        );
         all_results.push((path.to_string(), result));
     }
 
@@ -319,7 +336,15 @@ fn validate_files(
         file_paths
             .iter()
             .map(|path| {
-                let result = validate_file(&mut engine, path, quiet, json, severity_filter, ignore_rules, only_rules);
+                let result = validate_file(
+                    &mut engine,
+                    path,
+                    quiet,
+                    json,
+                    severity_filter,
+                    ignore_rules,
+                    only_rules,
+                );
                 (path.to_string(), result)
             })
             .collect()
@@ -328,7 +353,15 @@ fn validate_files(
             .par_iter()
             .map(|path| {
                 let mut engine = TrussEngine::new();
-                let result = validate_file(&mut engine, path, quiet, json, severity_filter, ignore_rules, only_rules);
+                let result = validate_file(
+                    &mut engine,
+                    path,
+                    quiet,
+                    json,
+                    severity_filter,
+                    ignore_rules,
+                    only_rules,
+                );
                 (path.to_string(), result)
             })
             .collect()
@@ -409,7 +442,14 @@ fn main() {
                 std::process::exit(EXIT_USAGE);
             }
 
-            if let Err(e) = validate_files(paths, quiet, json, severity_filter, &ignore_rules, &only_rules) {
+            if let Err(e) = validate_files(
+                paths,
+                quiet,
+                json,
+                severity_filter,
+                &ignore_rules,
+                &only_rules,
+            ) {
                 if !quiet && !json {
                     eprintln!("Error: {}", e);
                 }
