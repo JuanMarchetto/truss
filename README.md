@@ -216,11 +216,11 @@ End-to-end timing of `truss validate --quiet` with `--shell=none`, 200 runs:
 
 | Fixture | Mean | Min | Max |
 |---------|------|-----|-----|
-| Simple (14 lines) | **1.7 ms** | 1.4 ms | 3.5 ms |
-| Medium (multi-step) | **2.5 ms** | 2.0 ms | 4.5 ms |
-| Complex dynamic (reusable calls) | **3.8 ms** | 3.3 ms | 5.8 ms |
-| Complex static (matrices) | **5.0 ms** | 4.4 ms | 7.7 ms |
-| All 4 files (directory scan) | **5.9 ms** | 4.8 ms | 10.6 ms |
+| Simple (14 lines) | **1.7 ms** | 1.4 ms | 4.4 ms |
+| Medium (multi-step) | **2.4 ms** | 2.1 ms | 5.9 ms |
+| Complex dynamic (reusable calls) | **3.7 ms** | 3.3 ms | 5.1 ms |
+| Complex static (matrices) | **4.9 ms** | 4.4 ms | 6.3 ms |
+| All 4 files (directory scan) | **5.7 ms** | 5.0 ms | 7.8 ms |
 
 ### Head-to-Head: Truss vs. actionlint vs. yamllint
 
@@ -229,8 +229,8 @@ All tools benchmarked on the same machine (Intel i5-7500T @ 2.70GHz, 8GB RAM, Li
 | Fixture | Truss (Rust) | actionlint (Go) | yamllint (Python) |
 |---------|-------------|-----------------|-------------------|
 | Simple | **1.7 ms** | 2.6 ms | 103 ms |
-| Complex dynamic | 3.7 ms | **3.7 ms** | 140 ms |
-| Complex static | 5.0 ms | **4.0 ms** | 153 ms |
+| Complex dynamic | **3.7 ms** | 3.7 ms | 140 ms |
+| Complex static | 4.9 ms | **4.0 ms** | 153 ms |
 
 On individual fixtures, Truss and actionlint are in the same performance class (single-digit milliseconds). Truss is faster on simple files; actionlint is faster on complex ones. Both are 30-60x faster than yamllint. On larger batches (271 real-world files), Truss averages 1.7ms/file vs. actionlint's 6.8ms/file — a **3.9x advantage** that comes from Truss's lower per-file overhead, LTO-optimized binary, and parallel rule execution.
 
