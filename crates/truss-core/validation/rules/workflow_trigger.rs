@@ -92,11 +92,10 @@ impl ValidationRule for WorkflowTriggerRule {
         {
             Some(
                 utils::node_text(event_node, source)
-                    .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
-                    .to_lowercase(),
+                    .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace()),
             )
         } else {
-            let text = utils::node_text(event_node, source).trim().to_lowercase();
+            let text = utils::node_text(event_node, source).trim();
             if !text.is_empty() && !text.contains('\n') {
                 Some(text)
             } else {
@@ -113,9 +112,13 @@ impl ValidationRule for WorkflowTriggerRule {
             match node.kind() {
                 "block_mapping_pair" | "flow_pair" => {
                     if let Some(key_node) = node.child(0) {
-                        let event_type = utils::clean_key(key_node, source).to_lowercase();
+                        let event_type = utils::clean_key(key_node, source);
 
-                        if !VALID_EVENTS.contains(&event_type.as_str()) && !event_type.is_empty() {
+                        if !VALID_EVENTS
+                            .iter()
+                            .any(|e| e.eq_ignore_ascii_case(event_type))
+                            && !event_type.is_empty()
+                        {
                             diagnostics.push(Diagnostic {
                                 message: format!(
                                     "Invalid event type: '{}'. Valid event types include: push, pull_request, workflow_dispatch, schedule, workflow_call, and others.",
@@ -144,7 +147,9 @@ impl ValidationRule for WorkflowTriggerRule {
 
         // Also validate simple event text if present (scalar on: value)
         if let Some(event_text) = event_text {
-            if !VALID_EVENTS.contains(&event_text.as_str())
+            if !VALID_EVENTS
+                .iter()
+                .any(|e| e.eq_ignore_ascii_case(event_text))
                 && !event_text.is_empty()
                 && !event_text.contains(':')
                 && !event_text.contains('[')

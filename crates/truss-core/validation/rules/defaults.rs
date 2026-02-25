@@ -90,7 +90,9 @@ fn validate_defaults(
 
             if !shell_cleaned.starts_with("${{") {
                 let known_shells = ["bash", "pwsh", "python", "sh", "cmd", "powershell"];
-                let is_known = known_shells.contains(&shell_cleaned.to_lowercase().as_str());
+                let is_known = known_shells
+                    .iter()
+                    .any(|s| s.eq_ignore_ascii_case(shell_cleaned));
                 let is_custom = shell_cleaned.contains("{0}");
 
                 if !is_known && !is_custom && !shell_cleaned.is_empty() {
