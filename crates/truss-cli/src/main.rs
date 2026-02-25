@@ -201,15 +201,19 @@ struct FileMetadata {
     lines: usize,
 }
 
+struct ValidateOptions<'a> {
+    quiet: bool,
+    json: bool,
+    severity_filter: SeverityFilter,
+    ignore_rules: &'a [String],
+    only_rules: &'a [String],
+}
+
 fn validate_source(
     engine: &mut TrussEngine,
     label: &str,
     content: &str,
-    quiet: bool,
-    json: bool,
-    severity_filter: SeverityFilter,
-    ignore_rules: &[String],
-    only_rules: &[String],
+    opts: &ValidateOptions,
 ) -> Result<FileResult, TrussError> {
     let file_size = content.len() as u64;
     let lines = content.lines().count();
@@ -222,13 +226,13 @@ fn validate_source(
     let filtered: Vec<truss_core::Diagnostic> = result
         .diagnostics
         .into_iter()
-        .filter(|d| severity_filter.includes(d.severity))
+        .filter(|d| opts.severity_filter.includes(d.severity))
         .filter(|d| {
-            if !only_rules.is_empty() {
-                return only_rules.iter().any(|r| r == &d.rule_id);
+            if !opts.only_rules.is_empty() {
+                return opts.only_rules.iter().any(|r| r == &d.rule_id);
             }
-            if !ignore_rules.is_empty() {
-                return !ignore_rules.iter().any(|r| r == &d.rule_id);
+            if !opts.ignore_rules.is_empty() {
+                return !opts.ignore_rules.iter().any(|r| r == &d.rule_id);
             }
             true
         })
@@ -238,7 +242,7 @@ fn validate_source(
         .iter()
         .any(|d| d.severity == truss_core::Severity::Error);
 
-    if json {
+    if opts.json {
         return Ok(FileResult {
             file: label.to_string(),
             valid,
@@ -249,13 +253,13 @@ fn validate_source(
     }
 
     if valid {
-        if !quiet {
+        if !opts.quiet {
             println!("✓ Valid: {}", label);
             for diagnostic in &filtered {
                 println!("  {}", diagnostic);
             }
         }
-    } else if !quiet {
+    } else if !opts.quiet {
         for diagnostic in &filtered {
             eprintln!("  {}", diagnostic);
         }
@@ -273,33 +277,16 @@ fn validate_source(
 fn validate_file(
     engine: &mut TrussEngine,
     path: &str,
-    quiet: bool,
-    json: bool,
-    severity_filter: SeverityFilter,
-    ignore_rules: &[String],
-    only_rules: &[String],
+    opts: &ValidateOptions,
 ) -> Result<FileResult, TrussError> {
     let content = read_source(path)?;
     let label = if path == "-" { "<stdin>" } else { path };
-    validate_source(
-        engine,
-        label,
-        &content,
-        quiet,
-        json,
-        severity_filter,
-        ignore_rules,
-        only_rules,
-    )
+    validate_source(engine, label, &content, opts)
 }
 
 fn validate_files(
     paths: Vec<String>,
-    quiet: bool,
-    json: bool,
-    severity_filter: SeverityFilter,
-    ignore_rules: &[String],
-    only_rules: &[String],
+    opts: &ValidateOptions,
 ) -> Result<(), TrussError> {
     let expanded = expand_paths(&paths)?;
 
@@ -318,15 +305,7 @@ fn validate_files(
     // Process stdin first (sequential, reuse one engine)
     let mut engine = TrussEngine::new();
     for path in &stdin_paths {
-        let result = validate_file(
-            &mut engine,
-            path,
-            quiet,
-            json,
-            severity_filter,
-            ignore_rules,
-            only_rules,
-        );
+        let result = validate_file(&mut engine, path, opts);
         all_results.push((path.to_string(), result));
     }
 
@@ -336,15 +315,7 @@ fn validate_files(
         file_paths
             .iter()
             .map(|path| {
-                let result = validate_file(
-                    &mut engine,
-                    path,
-                    quiet,
-                    json,
-                    severity_filter,
-                    ignore_rules,
-                    only_rules,
-                );
+                let result = validate_file(&mut engine, path, opts);
                 (path.to_string(), result)
             })
             .collect()
@@ -353,15 +324,7 @@ fn validate_files(
             .par_iter()
             .map(|path| {
                 let mut engine = TrussEngine::new();
-                let result = validate_file(
-                    &mut engine,
-                    path,
-                    quiet,
-                    json,
-                    severity_filter,
-                    ignore_rules,
-                    only_rules,
-                );
+                let result = validate_file(&mut engine, path, opts);
                 (path.to_string(), result)
             })
             .collect()
@@ -393,19 +356,19 @@ fn validate_files(
                 if matches!(e, TrussError::Io(_)) {
                     has_io_error = true;
                 }
-                if !quiet && !json {
+                if !opts.quiet && !opts.json {
                     eprintln!("Error validating {}: {}", path, e);
                 }
             }
         }
     }
 
-    if json {
+    if opts.json {
         let json_output = serde_json::to_string_pretty(&file_results).map_err(|e| {
             TrussError::Io(io::Error::other(format!("Failed to serialize JSON: {}", e)))
         })?;
         println!("{}", json_output);
-    } else if !quiet && expanded.len() > 1 {
+    } else if !opts.quiet && expanded.len() > 1 {
         println!(
             "\nSummary: {} passed, {} failed",
             success_count, error_count
@@ -433,24 +396,23 @@ fn main() {
             ignore_rules,
             only_rules,
         } => {
-            let severity_filter = severity.unwrap_or(SeverityFilter::Info);
+            let opts = ValidateOptions {
+                quiet,
+                json,
+                severity_filter: severity.unwrap_or(SeverityFilter::Info),
+                ignore_rules: &ignore_rules,
+                only_rules: &only_rules,
+            };
 
             if paths.is_empty() {
-                if !quiet && !json {
+                if !opts.quiet && !opts.json {
                     eprintln!("Error: No files provided. Run 'truss validate --help' for usage.");
                 }
                 std::process::exit(EXIT_USAGE);
             }
 
-            if let Err(e) = validate_files(
-                paths,
-                quiet,
-                json,
-                severity_filter,
-                &ignore_rules,
-                &only_rules,
-            ) {
-                if !quiet && !json {
+            if let Err(e) = validate_files(paths, &opts) {
+                if !opts.quiet && !opts.json {
                     eprintln!("Error: {}", e);
                 }
                 std::process::exit(e.exit_code());
