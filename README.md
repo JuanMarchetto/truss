@@ -6,19 +6,17 @@ A fast GitHub Actions workflow validator written in Rust. Truss catches configur
 
 ## Why Truss?
 
-**It's fast.** Validates even complex workflows in under 6ms:
+**It's fast.** Validates any workflow in under 1ms:
 
 | Fixture | Complexity | Mean Time |
 |---------|-----------|-----------|
-| Simple workflow | 14 lines, single job | **1.7 ms** |
-| Medium workflow | Multi-step, conditionals | **2.7 ms** |
-| Complex dynamic | Reusable calls, dynamic matrices | **4.2 ms** |
-| Complex static | Job matrices, containers, dependencies | **5.5 ms** |
-| All 4 files combined | Directory scan, parallel processing | **6.8 ms** |
+| Simple workflow | 14 lines, single job | **0.86 ms** |
+| Complex workflow | Matrices, containers, dependencies | **0.88 ms** |
+| 5 files combined | Batch processing, parallel validation | **0.89 ms** |
 
-*Measured with Hyperfine (`--shell=none`, 100+ runs) on the release binary. See [benchmarks/](#running-benchmarks).*
+*Measured with Hyperfine (`--shell=none`, 100 runs) on the release binary. See [benchmarks/](#running-benchmarks).*
 
-At under 5ms per file, Truss is fast enough to validate workflows as you type — no perceptible lag in your editor.
+At sub-millisecond per file, Truss is fast enough to validate workflows as you type — zero perceptible lag in your editor.
 
 ## What It Catches
 
@@ -175,15 +173,26 @@ Point your editor's LSP client at this binary for `.github/workflows/*.yml` file
 
 ### CLI Benchmarks (Hyperfine)
 
-End-to-end timing of `truss validate --quiet` with `--shell=none` for accurate sub-5ms measurement:
+End-to-end timing with `--shell=none` for accurate sub-millisecond measurement:
 
 | Fixture | Mean | Min | Max |
 |---------|------|-----|-----|
-| Simple (14 lines) | **1.7 ms** | 1.4 ms | 6.7 ms |
-| Medium (multi-step) | **2.7 ms** | 2.1 ms | 7.5 ms |
-| Complex dynamic (reusable calls) | **4.2 ms** | 3.5 ms | 8.2 ms |
-| Complex static (matrices) | **5.5 ms** | 4.6 ms | 10.6 ms |
-| All 4 files (directory scan) | **6.8 ms** | 5.3 ms | 11.6 ms |
+| Simple (14 lines) | **0.86 ms** | 0.75 ms | 1.05 ms |
+| Complex (matrices, containers) | **0.88 ms** | 0.81 ms | 1.06 ms |
+| Batch (5 files, parallel) | **0.89 ms** | 0.78 ms | 1.10 ms |
+
+### Optimization History
+
+Three rounds of performance optimization reduced end-to-end latency by **87%**:
+
+| Tier | Key Changes | Simple | Complex | Batch (5) |
+|------|-------------|--------|---------|-----------|
+| Baseline | Initial release | 1.8 ms | 4.2 ms | 6.8 ms |
+| Tier 1 | Cache workflow detection, skip rayon for single files | 1.6 ms | 3.9 ms | 5.9 ms |
+| Tier 2 | Zero-copy `node_text()`, shared utilities, allocation elimination | 0.87 ms | 0.88 ms | 0.91 ms |
+| Tier 3 | Borrowed collections, case-insensitive byte matching, cached lookups | **0.85 ms** | **0.88 ms** | **0.89 ms** |
+
+Key techniques: zero-copy string slicing into source buffer (`&str` instead of `String`), shared `get_jobs_node()` and `clean_key()` utilities, `eq_ignore_ascii_case()` byte comparisons, borrowed `HashSet<&str>`/`HashMap<&str, Vec<&str>>` for dependency graphs, cached `find_value_for_key()` results, LTO + single codegen unit in release profile.
 
 ### Core Engine Benchmarks (Criterion)
 
@@ -271,7 +280,7 @@ More details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - LSP server with real-time diagnostics and incremental parsing
 - VS Code extension
 - CLI with parallel file processing, globs, stdin, severity filtering, JSON output
-- Sub-5ms validation per file (release build)
+- Sub-1ms validation per file (release build, 87% faster than initial release)
 - CI pipeline (check, test, clippy, fmt)
 
 **Coming next:**

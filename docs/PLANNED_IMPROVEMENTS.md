@@ -4,9 +4,17 @@ This list came out of a full code review and gap analysis we did in February 202
 
 ---
 
-## Recently Addressed (This PR)
+## Recently Addressed
 
-These gaps came up during research into the GitHub Actions docs, actionlint, and community best practices. All of them have been addressed:
+### Performance Optimization (PRs #22, #23, #24)
+
+Three tiers of performance optimization reduced end-to-end CLI latency by **87%** (from 6.8ms to 0.89ms for batch validation):
+
+- **Tier 1: Engine-level** -- Cache `is_github_actions_workflow()` check once per validation (was called 39 times), skip rayon thread pool overhead for single files
+- **Tier 2: Zero-copy strings & shared utilities** -- Changed `node_text()` from `String` to `&str` (zero allocation), added `get_jobs_node()` and `clean_key()` utilities (migrated 35 rules, eliminated ~257 lines), removed `format!()` allocation in expression validation hot path
+- **Tier 3: Borrowed collections & byte-level comparisons** -- Converted `HashSet<String>`/`HashMap<String, Vec<String>>` to `&str` variants in job_needs cycle detection, added `contains_ignore_ascii_case()` byte-level sliding window (no String allocation), cached `find_value_for_key()` results to eliminate 12 duplicate tree traversals in event_payload, replaced 11 `.to_lowercase()` allocations with `eq_ignore_ascii_case()`
+
+### Validation Rules & Security (PR #3)
 
 - **Script injection detection** -- new `script_injection` rule warns when untrusted inputs (`github.event.pull_request.title`, `.body`, `.head.ref`, `github.head_ref`, etc.) flow directly into `run:` blocks via `${{ }}` expressions
 - **Deprecated workflow command detection** -- new `deprecated_commands` rule flags `::set-output`, `::save-state`, `::set-env`, `::add-path` usage in run scripts
@@ -137,6 +145,86 @@ When someone uses `with:` on a `uses:` step, it'd be nice to validate that the i
 ### 16. SHA pinning recommendations
 
 Warn when third-party actions use tag references (`@v3`) instead of SHA pinning (`@abc123...`). This is a security best practice that a lot of teams care about.
+
+---
+
+## Remaining Performance Optimizations
+
+Current state: all scenarios complete in **under 1ms** (0.85-0.89ms). The process startup floor is ~700-800µs, meaning actual validation logic takes only ~100-150µs. Diminishing returns ahead -- the gains below are measured in microseconds.
+
+### Already Done (Tiers 1-3)
+- [x] Cache `is_github_actions_workflow()` once per run (was 39 redundant calls)
+- [x] Skip rayon for single-file validation
+- [x] Zero-copy `node_text()` returning `&str` instead of `String`
+- [x] Shared `get_jobs_node()` utility (25 rules migrated)
+- [x] Shared `clean_key()` utility (52 call sites migrated)
+- [x] Eliminate `format!()` in expression syntax hot path
+- [x] Eliminate `Vec<String>` allocation in `is_github_actions_workflow()`
+- [x] Borrowed `HashSet<&str>`/`HashMap<&str, Vec<&str>>` in job_needs
+- [x] `contains_ignore_ascii_case()` byte-level comparison (no String allocation)
+- [x] Cached `find_value_for_key()` results in event_payload (12 fewer tree walks)
+- [x] `eq_ignore_ascii_case()` for 11 list lookups across 8 rules
+
+### Tier 4: Remaining Allocation Reduction
+
+**4a. Convert remaining `HashSet<String>` / `Vec<String>` to borrowed variants**
+- 72 remaining `.to_string()` calls across rule files
+- Largest offenders: `step_output_reference.rs` (14), `workflow_call_outputs.rs` (7), `job_outputs.rs` (5)
+- **Estimated gain:** 5-15µs per complex workflow
+- **Complexity:** Medium -- requires lifetime annotations threading through nested functions
+- **Trade-off:** More complex function signatures; some `.to_string()` calls are in error-path `format!()` messages which are unavoidable and acceptable
+
+**4b. Replace remaining `.to_lowercase()` with `eq_ignore_ascii_case()`**
+- 8 remaining calls: `secrets.rs`, `workflow_call_outputs.rs` (x2), `workflow_call_inputs.rs`, `workflow_call_secrets.rs`, `workflow_inputs.rs`, `job_outputs.rs`, `step_output_reference.rs`
+- **Estimated gain:** 2-5µs (8 fewer String allocations)
+- **Complexity:** Low
+- **Trade-off:** None
+
+### Tier 5: Shared Tree Traversal Visitor
+
+**5a. Extract `visit_jobs()` / `visit_steps()` utilities**
+- 25+ rules implement nearly identical recursive job-finding traversal
+- 15+ rules additionally traverse into steps with the same pattern
+- A shared visitor would eliminate ~60 duplicated match blocks
+- **Estimated gain:** 10-30µs from better instruction cache locality; ~500 lines of code removed
+- **Complexity:** High -- must handle the variety of callback shapes (some rules need key+value, some need the pair node, some need nested contexts)
+- **Trade-off:** Rules become shorter but lose self-contained readability; debugging traversal issues becomes harder since logic is split between visitor and callback
+
+### Tier 6: Engine-Level Structural Changes
+
+**6a. Reuse `TrussEngine` across files in CLI parallel path**
+- Currently creates a new engine (and tree-sitter parser) per file in the rayon path
+- Thread-local engine pool would eliminate repeated parser initialization
+- **Estimated gain:** 20-50µs per file in batch mode
+- **Complexity:** Medium -- needs `thread_local!` or `rayon::ThreadPool` scoping
+- **Trade-off:** More stateful CLI; parser state from previous file could theoretically leak (though tree-sitter handles this correctly)
+
+**6b. Pre-compute shared data across rules**
+- Several rules independently look up the same keys (e.g., multiple rules call `find_value_for_key(root, "on")`)
+- A pre-computed context struct with commonly-needed nodes could be passed to all rules
+- **Estimated gain:** 10-20µs (eliminates ~30 redundant `find_value_for_key` calls)
+- **Complexity:** High -- changes the `ValidationRule` trait signature, affects all 41 rules
+- **Trade-off:** Rules lose independence; the context struct becomes a coupling point
+
+**6c. Lazy diagnostic message formatting**
+- 146 `format!()` calls for diagnostic messages allocate even when diagnostics are filtered by severity
+- Deferring formatting to display time would eliminate allocations for filtered diagnostics
+- **Estimated gain:** 5-15µs when using `--severity error` (skips warning message formatting)
+- **Complexity:** High -- requires changing `Diagnostic.message` from `String` to a lazy type
+- **Trade-off:** More complex `Diagnostic` type; marginal gain since most users see all diagnostics
+
+### Summary Table
+
+| Tier | Optimization | Est. Gain | Complexity | Worth It? |
+|------|-------------|-----------|------------|-----------|
+| 4a | Remaining `String` → `&str` | 5-15µs | Medium | Yes for clean code; marginal perf |
+| 4b | Remaining `.to_lowercase()` | 2-5µs | Low | Yes -- easy win |
+| 5a | Shared visitor pattern | 10-30µs | High | Yes for maintainability; moderate perf |
+| 6a | Reuse engine in CLI | 20-50µs | Medium | Yes for batch workloads |
+| 6b | Pre-computed context | 10-20µs | High | Maybe -- high coupling cost |
+| 6c | Lazy diagnostic formatting | 5-15µs | High | No -- rarely filtered |
+
+**Bottom line:** We've captured ~95% of the available performance gains. The remaining opportunities total ~50-130µs combined, against a ~700-800µs process startup floor. Further work should prioritize **code maintainability** (Tier 5a visitor pattern) and **batch throughput** (Tier 6a engine reuse) over raw single-file latency.
 
 ---
 
