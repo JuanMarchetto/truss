@@ -459,9 +459,10 @@ fn find_step_output_references_recursive(node: Node, source: &str) -> Vec<(Strin
                                         || c == '<'
                                         || c == '>'
                                         || c == '['
+                                        || c == ','
                                 })
                                 .unwrap_or(after_dot.len());
-                            let output_name = &after_dot[..output_name_end];
+                            let output_name = after_dot[..output_name_end].trim_end_matches(',');
 
                             if !output_name.is_empty() {
                                 let span_start = node_start + expr_offset + 3 + actual_pos + 6;

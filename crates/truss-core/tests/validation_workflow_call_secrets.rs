@@ -156,18 +156,18 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
+    // When workflow_call has no secrets section, the caller may use `secrets: inherit`
+    // to pass all secrets through — so we don't flag secret references as errors.
     let secret_errors: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| {
-            (d.message.contains("secret") || d.message.contains("workflow_call"))
-                && d.severity == Severity::Error
-        })
+        .filter(|d| d.message.contains("no secrets defined") && d.severity == Severity::Error)
         .collect();
 
     assert!(
-        !secret_errors.is_empty(),
-        "Secret reference without workflow_call secrets definition should produce error"
+        secret_errors.is_empty(),
+        "Secret references without secrets section should be valid (caller may use secrets: inherit), got: {:?}",
+        secret_errors
     );
 }
 

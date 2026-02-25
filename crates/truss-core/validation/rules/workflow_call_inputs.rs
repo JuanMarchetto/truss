@@ -27,30 +27,27 @@ impl ValidationRule for WorkflowCallInputsRule {
         let workflow_call_value = utils::find_value_for_key(on_to_check, source, "workflow_call");
 
         if workflow_call_value.is_none() {
-            // Check if inputs are referenced without workflow_call
-            // But first check if workflow_dispatch is present - if so, inputs.* references are valid
-            // and should be handled by WorkflowInputsRule instead
-            let workflow_dispatch_value =
-                utils::find_value_for_key(on_to_check, source, "workflow_dispatch");
-            if workflow_dispatch_value.is_none() {
-                // No workflow_call and no workflow_dispatch - inputs.* references are invalid
-                let input_references = self.find_input_references(source);
-                if !input_references.is_empty() {
-                    for (input_name, span) in input_references {
-                        diagnostics.push(Diagnostic {
-                            message: format!(
-                                "Reference to input '{}' but workflow_call trigger is not defined",
-                                input_name
-                            ),
-                            severity: Severity::Error,
-                            span,
-                            rule_id: String::new(),
-                        });
-                    }
-                }
+            // No workflow_call — if workflow_dispatch is present, inputs.* references
+            // are valid (GitHub Actions returns empty string for undeclared inputs).
+            // Only flag input references when neither trigger is present.
+            // Use key_exists because workflow_dispatch may have no value (null).
+            if utils::key_exists(on_to_check, source, "workflow_dispatch") {
+                // workflow_dispatch is present — inputs.* references are valid
+                return diagnostics;
             }
-            // If workflow_dispatch is present, inputs.* references are valid for workflow_dispatch
-            // and will be validated by WorkflowInputsRule, so we don't report errors here
+            // No workflow_call and no workflow_dispatch — inputs.* references are invalid
+            let input_references = self.find_input_references(source);
+            for (input_name, span) in input_references {
+                diagnostics.push(Diagnostic {
+                    message: format!(
+                        "Reference to input '{}' but workflow_call trigger is not defined",
+                        input_name
+                    ),
+                    severity: Severity::Error,
+                    span,
+                    rule_id: String::new(),
+                });
+            }
             return diagnostics;
         }
 
@@ -66,6 +63,20 @@ impl ValidationRule for WorkflowCallInputsRule {
             let inputs_to_check = utils::unwrap_node(inputs_node);
 
             self.collect_input_definitions(inputs_to_check, source, &mut defined_inputs);
+        }
+
+        // Also collect inputs from workflow_dispatch if it coexists —
+        // inputs.* references are valid for either trigger's inputs.
+        if let Some(dispatch_value) =
+            utils::find_value_for_key(on_to_check, source, "workflow_dispatch")
+        {
+            let dispatch_to_check = utils::unwrap_node(dispatch_value);
+            if let Some(dispatch_inputs) =
+                utils::find_value_for_key(dispatch_to_check, source, "inputs")
+            {
+                let dispatch_inputs_node = utils::unwrap_node(dispatch_inputs);
+                self.collect_input_definitions(dispatch_inputs_node, source, &mut defined_inputs);
+            }
         }
 
         // Validate input types and properties
@@ -336,6 +347,7 @@ impl WorkflowCallInputsRule {
                             || c == '<'
                             || c == '>'
                             || c == '.'
+                            || c == ','
                     })
                     .unwrap_or(after_inputs.len());
 

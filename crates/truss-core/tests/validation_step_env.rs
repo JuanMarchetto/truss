@@ -199,7 +199,7 @@ jobs:
 }
 
 #[test]
-fn test_step_env_github_prefix_warning() {
+fn test_step_env_github_prefix_no_false_positive() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
 on: push
@@ -224,18 +224,13 @@ jobs:
         .collect();
 
     assert!(
-        !prefix_warnings.is_empty(),
-        "Env var with GITHUB_ prefix should produce warning. Got: {:?}",
-        result
-            .diagnostics
-            .iter()
-            .map(|d| &d.message)
-            .collect::<Vec<_>>()
+        prefix_warnings.is_empty(),
+        "GITHUB_ env vars should not produce warnings (passing through is valid)"
     );
 }
 
 #[test]
-fn test_step_env_github_prefix_exact_match() {
+fn test_step_env_github_prefix_no_warning() {
     let mut engine = TrussEngine::new();
     let yaml = r#"
 on: push
@@ -260,8 +255,8 @@ jobs:
         .collect();
 
     assert!(
-        !prefix_warnings.is_empty(),
-        "GITHUB_TOKEN should trigger reserved prefix warning"
+        prefix_warnings.is_empty(),
+        "GITHUB_TOKEN should not trigger reserved prefix warning (passing through is valid)"
     );
 }
 

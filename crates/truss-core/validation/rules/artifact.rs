@@ -102,9 +102,10 @@ impl ValidationRule for ArtifactValidationRule {
                                 // Get name text
                                 let name_text = utils::node_text(name_node, source);
 
-                                // Check if it's an expression - expressions are valid
+                                // Check if it contains an expression — names with embedded
+                                // expressions like "build-${{ github.sha }}" are valid
                                 let trimmed_name = name_text.trim();
-                                let is_expression = trimmed_name.starts_with("${{");
+                                let is_expression = trimmed_name.contains("${{");
 
                                 if !is_expression {
                                     // Clean the name text (remove quotes and whitespace)
@@ -134,7 +135,7 @@ impl ValidationRule for ArtifactValidationRule {
                                         if !is_valid_artifact_name_format(name_cleaned) {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
-                                                    "Artifact action '{}' has invalid name format: '{}'. Artifact names should contain only alphanumeric characters, hyphens, underscores, and dots.",
+                                                    "Artifact action '{}' has invalid name format: '{}'. Artifact names should contain only alphanumeric characters, hyphens, underscores, dots, and spaces.",
                                                     uses_cleaned, name_cleaned
                                                 ),
                                                 severity: Severity::Warning,
@@ -293,5 +294,5 @@ fn is_valid_artifact_name_format(name: &str) -> bool {
     }
 
     name.chars()
-        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == ' ')
 }

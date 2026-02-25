@@ -48,6 +48,16 @@ impl ValidationRule for WorkflowInputsRule {
             self.collect_input_definitions(inputs_to_check, source, &mut defined_inputs);
         }
 
+        // Also collect inputs from workflow_call if it coexists —
+        // inputs.* references are valid for either trigger's inputs.
+        if let Some(call_value) = utils::find_value_for_key(on_to_check, source, "workflow_call") {
+            let call_to_check = utils::unwrap_node(call_value);
+            if let Some(call_inputs) = utils::find_value_for_key(call_to_check, source, "inputs") {
+                let call_inputs_node = utils::unwrap_node(call_inputs);
+                self.collect_input_definitions(call_inputs_node, source, &mut defined_inputs);
+            }
+        }
+
         // Validate input types and properties
         for (input_name, (input_type, type_span)) in &defined_inputs {
             if !self.is_valid_input_type(input_type) {
@@ -79,27 +89,28 @@ impl ValidationRule for WorkflowInputsRule {
             Vec::new()
         };
 
-        // Validate that all referenced inputs are defined
-        for (input_name, span) in input_references {
-            if !defined_inputs.contains_key(&input_name) {
-                diagnostics.push(Diagnostic {
-                    message: format!(
-                        "Reference to undefined input '{}'. Available inputs: {}",
-                        input_name,
-                        if defined_inputs.is_empty() {
-                            "none".to_string()
-                        } else {
+        // Validate that all referenced inputs are defined.
+        // Only check if inputs are actually defined — when workflow_dispatch has no
+        // inputs section, GitHub Actions returns empty string for any inputs.* reference,
+        // so we should not flag them as errors.
+        if !defined_inputs.is_empty() {
+            for (input_name, span) in input_references {
+                if !defined_inputs.contains_key(&input_name) {
+                    diagnostics.push(Diagnostic {
+                        message: format!(
+                            "Reference to undefined input '{}'. Available inputs: {}",
+                            input_name,
                             defined_inputs
                                 .keys()
                                 .cloned()
                                 .collect::<Vec<_>>()
                                 .join(", ")
-                        }
-                    ),
-                    severity: Severity::Error,
-                    span,
-                    rule_id: String::new(),
-                });
+                        ),
+                        severity: Severity::Error,
+                        span,
+                        rule_id: String::new(),
+                    });
+                }
             }
         }
 
@@ -326,6 +337,7 @@ impl WorkflowInputsRule {
                             || c == '<'
                             || c == '>'
                             || c == '.'
+                            || c == ','
                     })
                     .unwrap_or(after_inputs.len());
 

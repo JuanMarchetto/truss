@@ -219,26 +219,21 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
-    // Group should be string or expression, not number
+    // Bare numbers are valid — GitHub Actions coerces them to strings at runtime.
     let concurrency_errors: Vec<_> = result
         .diagnostics
         .iter()
         .filter(|d| {
             (d.message.contains("concurrency") || d.message.contains("group"))
-                && (d.message.contains("invalid") || d.message.contains("string"))
+                && d.message.contains("not a number")
                 && d.severity == Severity::Error
         })
         .collect();
 
-    // Note: ConcurrencyRule is not yet implemented
-    // When implemented, this should produce an error
     assert!(
-        !concurrency_errors.is_empty()
-            || result
-                .diagnostics
-                .iter()
-                .any(|d| d.message.contains("expression")),
-        "Invalid group type (number instead of string/expression) should produce error"
+        concurrency_errors.is_empty(),
+        "Number group values should be valid (GitHub coerces to string), got: {:?}",
+        concurrency_errors
     );
 }
 
@@ -355,19 +350,21 @@ jobs:
 "#;
 
     let result = engine.analyze(yaml);
+    // Float numbers are valid — GitHub Actions coerces them to strings at runtime.
     let concurrency_errors: Vec<_> = result
         .diagnostics
         .iter()
         .filter(|d| {
             (d.message.contains("concurrency") || d.message.contains("group"))
-                && (d.message.contains("number") || d.message.contains("string"))
+                && d.message.contains("not a number")
                 && d.severity == Severity::Error
         })
         .collect();
 
     assert!(
-        !concurrency_errors.is_empty(),
-        "Float group value '1.0' should be flagged as invalid (not a string/expression)"
+        concurrency_errors.is_empty(),
+        "Float group values should be valid (GitHub coerces to string), got: {:?}",
+        concurrency_errors
     );
 }
 

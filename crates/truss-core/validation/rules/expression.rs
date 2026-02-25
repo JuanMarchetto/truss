@@ -87,24 +87,36 @@ fn validate_expression_operators(
     }
 
     // Check for invalid assignment operators (expressions are read-only)
-    if expr.contains("=")
+    // Skip if `=` appears inside single-quoted string literals (e.g., format('--tag={0}', ...))
+    if expr.contains('=')
         && !expr.contains("==")
         && !expr.contains("!=")
         && !expr.contains("<=")
         && !expr.contains(">=")
     {
-        // Might be assignment - warn
-        if expr.matches('=').count() == 1 && !expr.contains("${{") {
+        // Check if the `=` is inside a single-quoted string
+        let eq_in_string = {
+            let mut in_string = false;
+            let mut found_outside = false;
+            for ch in expr.chars() {
+                if ch == '\'' {
+                    in_string = !in_string;
+                } else if ch == '=' && !in_string {
+                    found_outside = true;
+                    break;
+                }
+            }
+            !found_outside
+        };
+
+        if !eq_in_string && expr.matches('=').count() == 1 && !expr.contains("${{") {
             diagnostics.push(Diagnostic {
                 message: format!(
                     "Potentially invalid operator in expression: '{}'. Expressions are read-only and cannot use assignment operators.",
                     expr
                 ),
                 severity: Severity::Warning,
-                span: Span {
-                    start,
-                    end,
-                },
+                span: Span { start, end },
                 rule_id: String::new(),
             });
         }
@@ -151,9 +163,13 @@ fn validate_expression_functions(
                 || c == '('
                 || c == '['
                 || c == '.'
+                || c == '\''
+                || c == '"'
+                || c == '$'
+                || c == ','
         }) {
             let func_name = expr[func_start + 1..actual_pos].trim();
-            if !func_name.is_empty() {
+            if !func_name.is_empty() && func_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
                 let is_valid = valid_functions.contains(&func_name)
                     || case_insensitive_functions
                         .iter()

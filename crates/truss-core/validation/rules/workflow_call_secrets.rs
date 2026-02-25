@@ -31,6 +31,7 @@ impl ValidationRule for WorkflowCallSecretsRule {
 
         // Extract defined secrets (workflow_call may exist with or without a value)
         let mut defined_secrets: HashSet<String> = HashSet::new();
+        let mut has_secrets_inherit = false;
 
         if let Some(workflow_call) = utils::find_value_for_key(on_to_check, source, "workflow_call")
         {
@@ -39,9 +40,24 @@ impl ValidationRule for WorkflowCallSecretsRule {
 
             if let Some(secrets_node) = secrets_value {
                 let secrets_to_check = utils::unwrap_node(secrets_node);
-                self.collect_secret_definitions(secrets_to_check, source, &mut defined_secrets);
-                self.validate_secret_properties(secrets_to_check, source, &mut diagnostics);
+
+                // Check for `secrets: inherit` pattern
+                let secrets_text = utils::node_text(secrets_to_check, source);
+                if secrets_text.trim().eq_ignore_ascii_case("inherit") {
+                    has_secrets_inherit = true;
+                } else {
+                    self.collect_secret_definitions(secrets_to_check, source, &mut defined_secrets);
+                    self.validate_secret_properties(secrets_to_check, source, &mut diagnostics);
+                }
             }
+        }
+
+        // GITHUB_TOKEN is always implicitly available — add it so references don't error
+        defined_secrets.insert("GITHUB_TOKEN".to_string());
+
+        // If secrets: inherit is used, all caller secrets are passed through — skip reference validation
+        if has_secrets_inherit {
+            return diagnostics;
         }
 
         // Find all secrets.* references in expressions
@@ -49,24 +65,23 @@ impl ValidationRule for WorkflowCallSecretsRule {
 
         // Validate that all referenced secrets are defined
         for (secret_name, span) in secret_references {
-            // If no secrets are defined but secrets are referenced, that's an error
-            if defined_secrets.is_empty() {
-                diagnostics.push(Diagnostic {
-                    message: format!(
-                        "Secret '{}' is referenced but workflow_call has no secrets defined.",
-                        secret_name
-                    ),
-                    severity: Severity::Error,
-                    span,
-                    rule_id: String::new(),
-                });
-            } else if !defined_secrets.contains(&secret_name) {
+            // GITHUB_TOKEN is always available (already in defined_secrets)
+            if defined_secrets.contains(&secret_name) {
+                continue;
+            }
+
+            // If no secrets are defined (besides GITHUB_TOKEN), the caller may be using
+            // `secrets: inherit` to pass all secrets through — don't flag this as an error.
+            if defined_secrets.len() <= 1 {
+                continue;
+            } else {
                 diagnostics.push(Diagnostic {
                     message: format!(
                         "Reference to undefined workflow_call secret '{}'. Available secrets: {}",
                         secret_name,
                         defined_secrets
                             .iter()
+                            .filter(|s| s.as_str() != "GITHUB_TOKEN")
                             .cloned()
                             .collect::<Vec<_>>()
                             .join(", ")
@@ -202,6 +217,7 @@ impl WorkflowCallSecretsRule {
                             || c == '<'
                             || c == '>'
                             || c == '.'
+                            || c == ','
                     })
                     .unwrap_or(after_secrets.len());
 

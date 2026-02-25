@@ -6,16 +6,16 @@ A fast GitHub Actions workflow validator written in Rust. Truss catches configur
 
 ## Why Truss?
 
-**It's fast and accurate.** We tested Truss, [actionlint](https://github.com/rhysd/actionlint), [yamllint](https://github.com/adrienverge/yamllint), and [yaml-language-server](https://github.com/redhat-developer/yaml-language-server) against **68 production workflow files** from [rust-lang/rust](https://github.com/rust-lang/rust) and [microsoft/TypeScript](https://github.com/microsoft/TypeScript):
+**It's fast and accurate.** We tested Truss, [actionlint](https://github.com/rhysd/actionlint), [yamllint](https://github.com/adrienverge/yamllint), and [yaml-language-server](https://github.com/redhat-developer/yaml-language-server) against **271 production workflow files** from 7 major open-source projects ([pytorch/pytorch](https://github.com/pytorch/pytorch), [rust-lang/rust](https://github.com/rust-lang/rust), [tensorflow/tensorflow](https://github.com/tensorflow/tensorflow), [facebook/react](https://github.com/facebook/react), [microsoft/TypeScript](https://github.com/microsoft/TypeScript), [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes), [actions/checkout](https://github.com/actions/checkout)):
 
 | Tool | Language | Errors | False Positives | Avg Time | Total Time |
 |------|----------|--------|-----------------|----------|------------|
-| **Truss** | Rust | **0** | **0** | **1.2 ms** | **162 ms** |
-| actionlint | Go | 0 | 0 | 6.3 ms | 429 ms |
-| yaml-language-server | TypeScript | 0 | 0 | 95 ms | 6,465 ms |
-| yamllint | Python | 0 | n/a (style only) | 114 ms | 7,758 ms |
+| **Truss** | Rust | **0** | **0** | **1.7 ms** | **471 ms** |
+| actionlint | Go | 0 | 0 | 6.8 ms | 1,840 ms |
+| yaml-language-server | TypeScript | 0 | 0 | 101 ms | 27,277 ms |
+| yamllint | Python | 0 | n/a (style only) | 123 ms | 33,453 ms |
 
-All tools reported **zero errors** on 68 real-world files — a clean bill of health across the board. The key differentiator is speed: Truss processes each file in ~1.2ms on average, making it **5.3x faster** than actionlint, **80x faster** than yaml-language-server, and **96x faster** than yamllint.
+All tools reported **zero errors** on 271 real-world files — a clean bill of health across the board. The key differentiator is speed: Truss processes each file in ~1.7ms on average, making it **3.9x faster** than actionlint, **58x faster** than yaml-language-server, and **71x faster** than yamllint.
 
 *Measured on an Intel i5-7500T @ 2.70GHz, 8GB RAM, Linux 6.17. Your results may vary. See [test-suite/](#real-world-validation) for how to reproduce.*
 
@@ -44,7 +44,7 @@ See the [full rule list](#validation-rules) below or check [docs/VALIDATION_RULE
 | **Action reference format** | Yes (incl. subpaths) | Yes | No | No |
 | **LSP server** | Yes (incremental) | No ([requested](https://github.com/rhysd/actionlint/issues/229)) | No | Yes |
 | **VS Code extension** | Yes | Yes (2 extensions) | No | Yes |
-| **Avg time per file** | **1.2 ms** | 6.3 ms | 114 ms | 95 ms |
+| **Avg time per file** | **1.7 ms** | 6.8 ms | 123 ms | 101 ms |
 
 Other tools in the ecosystem: [zizmor](https://github.com/zizmorcore/zizmor) (Rust, security-focused, 24 audit rules), [action-validator](https://github.com/mpalmer/action-validator) (Rust, schema-based), [ghalint](https://github.com/suzuki-shunsuke/ghalint) (Go, security policies). These are complementary — they focus on security auditing or schema validation rather than semantic correctness.
 
@@ -197,16 +197,16 @@ Point your editor's LSP client at this binary for `.github/workflows/*.yml` file
 
 ### Real-World Validation
 
-We cloned [rust-lang/rust](https://github.com/rust-lang/rust) and [microsoft/TypeScript](https://github.com/microsoft/TypeScript) and ran every tool against all 68 workflow files found across these repos (including subprojects like rust-analyzer, clippy, miri, rustfmt, cranelift, etc.):
+We cloned 7 major open-source repositories and ran every tool against all **271 workflow files** found across [pytorch/pytorch](https://github.com/pytorch/pytorch) (139 files), [rust-lang/rust](https://github.com/rust-lang/rust) (50), [tensorflow/tensorflow](https://github.com/tensorflow/tensorflow) (33), [facebook/react](https://github.com/facebook/react) (24), [microsoft/TypeScript](https://github.com/microsoft/TypeScript) (18), [actions/checkout](https://github.com/actions/checkout) (7):
 
 | Tool | Errors | False Positives | Avg Time | Total Time | Speedup |
 |------|--------|-----------------|----------|------------|---------|
-| **Truss** | **0** | **0** | **1.2 ms** | **162 ms** | — |
-| actionlint | 0 | 0 | 6.3 ms | 429 ms | Truss is 5.3x faster |
-| yaml-language-server | 0 | 0 | 95 ms | 6,465 ms | Truss is 80x faster |
-| yamllint | 0 | n/a | 114 ms | 7,758 ms | Truss is 96x faster |
+| **Truss** | **0** | **0** | **1.7 ms** | **471 ms** | — |
+| actionlint | 0 | 0 | 6.8 ms | 1,840 ms | Truss is 3.9x faster |
+| yaml-language-server | 0 | 0 | 101 ms | 27,277 ms | Truss is 58x faster |
+| yamllint | 0 | n/a | 123 ms | 33,453 ms | Truss is 71x faster |
 
-All four tools report zero errors on these 68 files — the test repos' workflows are well-formed. The differentiator here is pure speed: Truss validates each file in about 1.2ms, while actionlint takes 6.3ms, and the Python/TypeScript-based tools take 95-114ms.
+All four tools report zero errors on these 271 files — the test repos' workflows are well-formed. The differentiator here is pure speed: Truss validates each file in about 1.7ms, while actionlint takes 6.8ms, and the Python/TypeScript-based tools take 101-123ms.
 
 To reproduce: `cd test-suite && bash scripts/setup-test-repos.sh && bash scripts/run-full-suite.sh`
 
@@ -216,11 +216,11 @@ End-to-end timing of `truss validate --quiet` with `--shell=none`, 200 runs:
 
 | Fixture | Mean | Min | Max |
 |---------|------|-----|-----|
-| Simple (14 lines) | **1.7 ms** | 1.4 ms | 3.5 ms |
-| Medium (multi-step) | **2.5 ms** | 2.0 ms | 4.5 ms |
-| Complex dynamic (reusable calls) | **3.8 ms** | 3.3 ms | 5.8 ms |
-| Complex static (matrices) | **5.0 ms** | 4.4 ms | 7.7 ms |
-| All 4 files (directory scan) | **5.9 ms** | 4.8 ms | 10.6 ms |
+| Simple (14 lines) | **1.7 ms** | 1.4 ms | 4.4 ms |
+| Medium (multi-step) | **2.4 ms** | 2.1 ms | 5.9 ms |
+| Complex dynamic (reusable calls) | **3.7 ms** | 3.3 ms | 5.1 ms |
+| Complex static (matrices) | **4.9 ms** | 4.4 ms | 6.3 ms |
+| All 4 files (directory scan) | **5.7 ms** | 5.0 ms | 7.8 ms |
 
 ### Head-to-Head: Truss vs. actionlint vs. yamllint
 
@@ -229,10 +229,10 @@ All tools benchmarked on the same machine (Intel i5-7500T @ 2.70GHz, 8GB RAM, Li
 | Fixture | Truss (Rust) | actionlint (Go) | yamllint (Python) |
 |---------|-------------|-----------------|-------------------|
 | Simple | **1.7 ms** | 2.6 ms | 103 ms |
-| Complex dynamic | 3.7 ms | **3.7 ms** | 140 ms |
-| Complex static | 5.0 ms | **4.0 ms** | 153 ms |
+| Complex dynamic | **3.7 ms** | 3.7 ms | 140 ms |
+| Complex static | 4.9 ms | **4.0 ms** | 153 ms |
 
-On individual fixtures, Truss and actionlint are in the same performance class (single-digit milliseconds). Truss is faster on simple files; actionlint is faster on complex ones. Both are 30-60x faster than yamllint. On larger batches (68 real-world files), Truss averages 1.2ms/file vs. actionlint's 6.3ms/file — a **5.3x advantage** that comes from Truss's lower per-file overhead, LTO-optimized binary, and parallel rule execution.
+On individual fixtures, Truss and actionlint are in the same performance class (single-digit milliseconds). Truss is faster on simple files; actionlint is faster on complex ones. Both are 30-60x faster than yamllint. On larger batches (271 real-world files), Truss averages 1.7ms/file vs. actionlint's 6.8ms/file — a **3.9x advantage** that comes from Truss's lower per-file overhead, LTO-optimized binary, and parallel rule execution.
 
 ### Running Benchmarks
 
@@ -251,7 +251,7 @@ truss/
 │   │   ├── lib.rs        # Engine with 41 registered rules
 │   │   ├── parser.rs     # tree-sitter YAML parser (incremental)
 │   │   ├── validation/   # 41 rule implementations
-│   │   ├── tests/        # 44 test files, 367 tests
+│   │   ├── tests/        # 45 test files, 403 tests
 │   │   └── benches/      # Criterion benchmarks
 │   ├── truss-cli/        # CLI — parallel processing, globs, stdin, JSON output
 │   ├── truss-lsp/        # Language Server Protocol adapter
@@ -275,7 +275,7 @@ just build-debug      # or: cargo build --workspace
 # Release build
 just build            # or: cargo build --workspace --release
 
-# Run all 367 tests
+# Run all 403 tests
 just test             # or: cargo test --workspace
 
 # Core tests only
@@ -286,7 +286,7 @@ just test-core        # or: cargo test -p truss-core
 
 Every push to `main` and every PR runs:
 - `cargo check --workspace`
-- `cargo test --workspace` (367 tests)
+- `cargo test --workspace` (403 tests)
 - `cargo clippy --workspace -- -D warnings`
 - `cargo fmt --all -- --check`
 
@@ -305,13 +305,13 @@ More details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Current Status
 
 **What's working:**
-- 41 validation rules with unique rule IDs, all tested (367 tests across 44 test files)
-- Zero false positives on 68 production workflow files from rust-lang/rust and microsoft/TypeScript
+- 41 validation rules with unique rule IDs, all tested (403 tests across 45 test files)
+- Zero false positives on 271 production workflow files from pytorch, rust-lang, tensorflow, react, TypeScript, kubernetes, and checkout
 - LSP server with real-time diagnostics and incremental parsing
 - VS Code extension
 - CLI with parallel file processing, globs, stdin, severity filtering, rule filtering (`--ignore-rules`, `--only-rules`), JSON output
 - `.truss.yml` configuration file support (ignore paths, enable/disable rules per project)
-- Sub-6ms validation per file, 5.3x faster than actionlint on real-world batches
+- Sub-6ms validation per file, 3.9x faster than actionlint on real-world batches
 - CI pipeline (check, test, clippy, fmt)
 
 **Coming next:**

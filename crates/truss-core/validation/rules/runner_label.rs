@@ -103,7 +103,9 @@ impl ValidationRule for RunnerLabelRule {
                                         || runs_on_cleaned.starts_with("self-hosted[");
 
                                     if !is_known && !is_self_hosted {
-                                        // Basic format validation - warn on potentially invalid labels
+                                        // Only error on empty labels. Custom/self-hosted labels
+                                        // (e.g., linux.2xlarge, lf.c.grpc, buildjet-4vcpu-ubuntu-2204)
+                                        // are valid and should not produce warnings.
                                         if runs_on_cleaned.is_empty() {
                                             diagnostics.push(Diagnostic {
                                                 message: format!(
@@ -117,21 +119,9 @@ impl ValidationRule for RunnerLabelRule {
                                                 },
                                                 rule_id: String::new(),
                                             });
-                                        } else {
-                                            // Warn on unknown runner labels (might be valid self-hosted or custom)
-                                            diagnostics.push(Diagnostic {
-                                                message: format!(
-                                                    "Job '{}' uses unknown runner label: '{}'. This may be a valid self-hosted runner or custom label.",
-                                                    job_name, runs_on_cleaned
-                                                ),
-                                                severity: Severity::Warning,
-                                                span: Span {
-                                                    start: runs_on_node.start_byte(),
-                                                    end: runs_on_node.end_byte(),
-                                                },
-                                                rule_id: String::new(),
-                                            });
                                         }
+                                        // Don't warn on unknown labels — they are likely
+                                        // self-hosted or custom runner labels.
                                     }
                                 }
                             }
