@@ -396,3 +396,16 @@ fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
         .windows(needle.len())
         .any(|window| window.eq_ignore_ascii_case(needle.as_bytes()))
 }
+
+/// Case-insensitive substring search returning the byte offset, without allocating.
+///
+/// Used to replace `expr.to_lowercase().find("keyword")` patterns across rules.
+pub(crate) fn find_ignore_ascii_case(haystack: &str, needle: &str) -> Option<usize> {
+    if needle.len() > haystack.len() {
+        return None;
+    }
+    haystack
+        .as_bytes()
+        .windows(needle.len())
+        .position(|window| window.eq_ignore_ascii_case(needle.as_bytes()))
+}

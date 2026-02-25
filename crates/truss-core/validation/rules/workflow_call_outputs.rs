@@ -59,10 +59,10 @@ impl ValidationRule for WorkflowCallOutputsRule {
             // Check for invalid expressions (expressions that don't match jobs.X.outputs.Y pattern)
             for (expr_text, span) in all_expressions {
                 let expr_text_str: &str = &expr_text;
-                let expr_lower = expr_text_str.to_lowercase();
                 // Check if this expression contains a jobs.X.outputs.Y pattern
-                let has_valid_pattern =
-                    expr_lower.contains("jobs.") && expr_lower.contains(".outputs.");
+                let has_valid_pattern = utils::find_ignore_ascii_case(expr_text_str, "jobs.")
+                    .is_some()
+                    && utils::find_ignore_ascii_case(expr_text_str, ".outputs.").is_some();
                 if !has_valid_pattern && !expr_text_str.trim().is_empty() {
                     diagnostics.push(Diagnostic {
                         message: format!(
@@ -257,10 +257,11 @@ fn find_job_output_references(outputs_node: Node, source: &str) -> Vec<(String, 
 
                 if expr_start < expr_end && expr_end <= source_bytes.len() {
                     let expr_text = &node_text[expr_start..expr_end];
-                    let expr_lower = expr_text.to_lowercase();
                     let mut search_pos = 0;
 
-                    while let Some(pos) = expr_lower[search_pos..].find("jobs.") {
+                    while let Some(pos) =
+                        utils::find_ignore_ascii_case(&expr_text[search_pos..], "jobs.")
+                    {
                         let actual_pos = search_pos + pos;
                         let after_jobs = &expr_text[actual_pos + 5..];
 

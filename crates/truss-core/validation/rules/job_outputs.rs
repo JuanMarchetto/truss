@@ -203,10 +203,11 @@ fn find_output_expressions(
                     let expr_text = &outputs_text[expr_start..expr_end];
 
                     // Look for steps.*.outputs.* references
-                    let expr_lower = expr_text.to_lowercase();
                     let mut search_pos = 0;
 
-                    while let Some(pos) = expr_lower[search_pos..].find("steps.") {
+                    while let Some(pos) =
+                        utils::find_ignore_ascii_case(&expr_text[search_pos..], "steps.")
+                    {
                         let actual_pos = search_pos + pos;
                         let after_steps = &expr_text[actual_pos + 6..]; // Skip "steps."
 

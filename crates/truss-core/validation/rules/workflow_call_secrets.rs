@@ -217,10 +217,11 @@ impl WorkflowCallSecretsRule {
 
                     if expr_start < expr_end && expr_end <= source_bytes.len() {
                         let expr_text = &source[expr_start..expr_end];
-                        let expr_lower = expr_text.to_lowercase();
                         let mut search_pos = 0;
 
-                        while let Some(pos) = expr_lower[search_pos..].find("secrets.") {
+                        while let Some(pos) =
+                            utils::find_ignore_ascii_case(&expr_text[search_pos..], "secrets.")
+                        {
                             let actual_pos = search_pos + pos;
                             let after_secrets = &expr_text[actual_pos + 8..];
 

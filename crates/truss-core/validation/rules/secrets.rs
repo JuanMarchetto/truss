@@ -35,10 +35,9 @@ impl SecretsValidationRule {
         // Invalid: secret.SECRET_NAME (singular)
         // Invalid: secretsSECRET_NAME (missing dot)
 
-        let expr_lower = expr.to_lowercase();
         let mut search_pos = 0;
 
-        while let Some(pos) = expr_lower[search_pos..].find("secret") {
+        while let Some(pos) = utils::find_ignore_ascii_case(&expr[search_pos..], "secret") {
             let actual_pos = search_pos + pos;
             let remaining = &expr[actual_pos..];
 
