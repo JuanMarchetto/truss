@@ -60,6 +60,7 @@ impl ValidationRule for RunsOnRequiredRule {
                                                     start: value_node.start_byte(),
                                                     end: value_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }
@@ -75,6 +76,7 @@ impl ValidationRule for RunsOnRequiredRule {
                                                 start: key_node.start_byte(),
                                                 end: job_value.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                     }
                                 }

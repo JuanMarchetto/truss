@@ -113,6 +113,7 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
                 start: uses_node.start_byte(),
                 end: uses_node.end_byte(),
             },
+            rule_id: String::new(),
         });
         return;
     }
@@ -129,6 +130,7 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
                 start: uses_node.start_byte(),
                 end: uses_node.end_byte(),
             },
+            rule_id: String::new(),
         });
         return;
     }
@@ -147,6 +149,7 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
                 start: uses_node.start_byte(),
                 end: uses_node.end_byte(),
             },
+            rule_id: String::new(),
         });
         return;
     }
@@ -164,6 +167,7 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
                 start: uses_node.start_byte(),
                 end: uses_node.end_byte(),
             },
+            rule_id: String::new(),
         });
         return;
     }
@@ -182,6 +186,7 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
                 start: uses_node.start_byte(),
                 end: uses_node.end_byte(),
             },
+            rule_id: String::new(),
         });
     }
 
@@ -196,6 +201,7 @@ fn validate_action_reference(uses_node: Node, source: &str, diagnostics: &mut Ve
                 start: uses_node.start_byte(),
                 end: uses_node.end_byte(),
             },
+            rule_id: String::new(),
         });
     }
 }

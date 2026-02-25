@@ -88,6 +88,7 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
                     start: bi_node.start_byte(),
                     end: bi_node.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
     }
@@ -103,6 +104,7 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
                     start: ti_node.start_byte(),
                     end: ti_node.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
     }
@@ -118,6 +120,7 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
                     start: pi_node.start_byte(),
                     end: pi_node.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
     }
@@ -145,6 +148,7 @@ fn validate_push_event(push_node: Node, source: &str, diagnostics: &mut Vec<Diag
                                 start: key_node.start_byte(),
                                 end: key_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }
@@ -176,6 +180,7 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
                     start: bi_node.start_byte(),
                     end: bi_node.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
     }
@@ -191,6 +196,7 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
                     start: pi_node.start_byte(),
                     end: pi_node.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
     }
@@ -227,6 +233,7 @@ fn validate_pull_request_event(pr_node: Node, source: &str, diagnostics: &mut Ve
                                 start: key_node.start_byte(),
                                 end: key_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
 
@@ -298,6 +305,7 @@ fn validate_pr_types(types_node: Node, source: &str, diagnostics: &mut Vec<Diagn
                             start: node.start_byte(),
                             end: node.end_byte(),
                         },
+                        rule_id: String::new(),
                     });
                 }
             }
@@ -334,6 +342,7 @@ fn validate_cron_expression(
                 start: cron_node.start_byte(),
                 end: cron_node.end_byte(),
             },
+            rule_id: String::new(),
         });
         return;
     }
@@ -359,6 +368,7 @@ fn validate_cron_expression(
                     start: cron_node.start_byte(),
                     end: cron_node.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
     }
@@ -502,6 +512,7 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
                 start: schedule_to_check.start_byte(),
                 end: schedule_to_check.end_byte(),
             },
+            rule_id: String::new(),
         });
     } else if let Some(cron_node) = cron_value {
         let cron_text = utils::node_text(cron_node, source);
@@ -535,6 +546,7 @@ fn validate_schedule_event(schedule_node: Node, source: &str, diagnostics: &mut 
                                 start: key_node.start_byte(),
                                 end: key_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }
@@ -583,6 +595,7 @@ fn validate_workflow_dispatch_event(
                                 start: key_node.start_byte(),
                                 end: key_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }
@@ -627,6 +640,7 @@ fn validate_workflow_call_event(wc_node: Node, source: &str, diagnostics: &mut V
                                 start: key_node.start_byte(),
                                 end: key_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }
@@ -672,6 +686,7 @@ fn validate_issues_event(issues_node: Node, source: &str, diagnostics: &mut Vec<
                                 start: key_node.start_byte(),
                                 end: key_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
 
@@ -738,6 +753,7 @@ fn validate_issues_types(types_node: Node, source: &str, diagnostics: &mut Vec<D
                             start: node.start_byte(),
                             end: node.end_byte(),
                         },
+                        rule_id: String::new(),
                     });
                 }
             }

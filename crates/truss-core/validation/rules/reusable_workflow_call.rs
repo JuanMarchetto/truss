@@ -65,6 +65,7 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                                         start: uses_node.start_byte(),
                                                         end: uses_node.end_byte(),
                                                     },
+                                                    rule_id: String::new(),
                                                 });
                                             }
                                         }
@@ -84,6 +85,7 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                                     start: uses_node.start_byte(),
                                                     end: uses_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         } else {
                                             // Check if path is valid
@@ -102,6 +104,7 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                                             start: uses_node.start_byte(),
                                                             end: uses_node.start_byte() + path.len().min(uses_node.end_byte() - uses_node.start_byte()),
                                                         },
+                                                        rule_id: String::new(),
                                                     });
                                                 } else {
                                                     // Validate that with: and secrets: fields are properly structured
@@ -128,6 +131,7 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                                                     start: with_node.start_byte(),
                                                                     end: with_node.end_byte(),
                                                                 },
+                                                                rule_id: String::new(),
                                                             });
                                                         }
                                                     }
@@ -147,6 +151,7 @@ impl ValidationRule for ReusableWorkflowCallRule {
                                                                     start: secrets_node.start_byte(),
                                                                     end: secrets_node.end_byte(),
                                                                 },
+                                                                rule_id: String::new(),
                                                             });
                                                         }
                                                     }

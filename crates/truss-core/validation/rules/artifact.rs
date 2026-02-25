@@ -127,6 +127,7 @@ impl ValidationRule for ArtifactValidationRule {
                                                 start: name_node.start_byte(),
                                                 end: name_node.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                     } else {
                                         // Validate artifact name format (basic validation)
@@ -141,6 +142,7 @@ impl ValidationRule for ArtifactValidationRule {
                                                     start: name_node.start_byte(),
                                                     end: name_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }
@@ -168,6 +170,7 @@ impl ValidationRule for ArtifactValidationRule {
                                                 start: path_node.start_byte(),
                                                 end: path_node.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                     }
                                 }
@@ -196,6 +199,7 @@ impl ValidationRule for ArtifactValidationRule {
                                                         start: retention_node.start_byte(),
                                                         end: retention_node.end_byte(),
                                                     },
+                                                    rule_id: String::new(),
                                                 });
                                             }
                                         }
@@ -210,6 +214,7 @@ impl ValidationRule for ArtifactValidationRule {
                                                     start: retention_node.start_byte(),
                                                     end: retention_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }
@@ -246,6 +251,7 @@ impl ValidationRule for ArtifactValidationRule {
                                                             start: compression_node.start_byte(),
                                                             end: compression_node.end_byte(),
                                                         },
+                                                        rule_id: String::new(),
                                                     });
                                                 }
                                             }
@@ -260,6 +266,7 @@ impl ValidationRule for ArtifactValidationRule {
                                                         start: compression_node.start_byte(),
                                                         end: compression_node.end_byte(),
                                                     },
+                                                    rule_id: String::new(),
                                                 });
                                             }
                                         }

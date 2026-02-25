@@ -144,6 +144,7 @@ impl ValidationRule for StepTimeoutRule {
                         start: timeout_node.start_byte(),
                         end: timeout_node.end_byte(),
                     },
+                    rule_id: String::new(),
                 });
                 return;
             }
@@ -162,6 +163,7 @@ impl ValidationRule for StepTimeoutRule {
                                 start: timeout_node.start_byte(),
                                 end: timeout_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     } else if value == 0.0 {
                         diagnostics.push(Diagnostic {
@@ -174,6 +176,7 @@ impl ValidationRule for StepTimeoutRule {
                                 start: timeout_node.start_byte(),
                                 end: timeout_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }
@@ -188,6 +191,7 @@ impl ValidationRule for StepTimeoutRule {
                             start: timeout_node.start_byte(),
                             end: timeout_node.end_byte(),
                         },
+                        rule_id: String::new(),
                     });
                 }
             }

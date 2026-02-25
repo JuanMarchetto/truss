@@ -111,6 +111,7 @@ impl ValidationRule for StepEnvValidationRule {
                                                     start: key_node.start_byte(),
                                                     end: key_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
 
@@ -126,6 +127,7 @@ impl ValidationRule for StepEnvValidationRule {
                                                     start: key_node.start_byte(),
                                                     end: key_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }

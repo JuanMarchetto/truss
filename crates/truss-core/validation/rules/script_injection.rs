@@ -105,6 +105,7 @@ fn check_script_injection(
                         start: start_byte,
                         end: end_byte,
                     },
+                    rule_id: String::new(),
                 });
                 break;
             }
@@ -122,6 +123,7 @@ fn check_script_injection(
                         start: start_byte,
                         end: end_byte,
                     },
+                    rule_id: String::new(),
                 });
                 break;
             }

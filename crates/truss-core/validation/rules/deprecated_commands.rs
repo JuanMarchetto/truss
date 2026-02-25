@@ -90,6 +90,7 @@ fn check_deprecated_commands(
                     start: start_byte,
                     end: end_byte,
                 },
+                rule_id: String::new(),
             });
         }
     }

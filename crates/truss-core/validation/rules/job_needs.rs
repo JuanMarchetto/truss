@@ -120,6 +120,7 @@ impl ValidationRule for JobNeedsRule {
                                                 start: value_node.start_byte(),
                                                 end: value_node.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                     }
 
@@ -134,6 +135,7 @@ impl ValidationRule for JobNeedsRule {
                                                 start: value_node.start_byte(),
                                                 end: value_node.end_byte(),
                                             },
+                                            rule_id: String::new(),
                                         });
                                     }
                                 }
@@ -313,6 +315,7 @@ impl ValidationRule for JobNeedsRule {
                             start: 0,
                             end: source.len().min(100),
                         },
+                        rule_id: String::new(),
                     });
                 }
             }

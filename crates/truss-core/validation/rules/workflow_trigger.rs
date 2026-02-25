@@ -65,6 +65,7 @@ impl ValidationRule for WorkflowTriggerRule {
                         start: 0,
                         end: source.len().min(100),
                     },
+                    rule_id: String::new(),
                 });
                 return diagnostics;
             }
@@ -81,6 +82,7 @@ impl ValidationRule for WorkflowTriggerRule {
                     start: on_to_check.start_byte(),
                     end: on_to_check.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
 
@@ -126,6 +128,7 @@ impl ValidationRule for WorkflowTriggerRule {
                                     start: key_node.start_byte(),
                                     end: key_node.end_byte(),
                                 },
+                                rule_id: String::new(),
                             });
                         }
                     }
@@ -150,6 +153,7 @@ impl ValidationRule for WorkflowTriggerRule {
                                 start: node.start_byte(),
                                 end: node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     }
                 }
@@ -181,6 +185,7 @@ impl ValidationRule for WorkflowTriggerRule {
                         start: event_node.start_byte(),
                         end: event_node.end_byte(),
                     },
+                    rule_id: String::new(),
                 });
             }
         }

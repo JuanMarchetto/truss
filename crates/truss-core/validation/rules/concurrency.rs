@@ -103,6 +103,7 @@ fn validate_concurrency_node(
                         start: concurrency_to_check.start_byte(),
                         end: concurrency_to_check.end_byte(),
                     },
+                    rule_id: String::new(),
                 });
             }
             return;
@@ -124,6 +125,7 @@ fn validate_concurrency_node(
                 start: concurrency_to_check.start_byte(),
                 end: concurrency_to_check.end_byte(),
             },
+            rule_id: String::new(),
         });
         return;
     }
@@ -165,6 +167,7 @@ fn validate_concurrency_node(
                     start: group_node.start_byte(),
                     end: group_node.end_byte(),
                 },
+                rule_id: String::new(),
             });
         }
     }
@@ -194,6 +197,7 @@ fn validate_concurrency_node(
                     start: cancel_node.start_byte(),
                     end: cancel_node.end_byte(),
                 },
+                rule_id: String::new(),
             });
         } else {
             // Check the actual value
@@ -214,6 +218,7 @@ fn validate_concurrency_node(
                             start: cancel_node.start_byte(),
                             end: cancel_node.end_byte(),
                         },
+                        rule_id: String::new(),
                     });
                 }
             }

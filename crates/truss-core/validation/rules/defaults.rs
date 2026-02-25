@@ -106,6 +106,7 @@ fn validate_defaults(
                             start: shell_node.start_byte(),
                             end: shell_node.end_byte(),
                         },
+                        rule_id: String::new(),
                     });
                 }
             }
@@ -129,6 +130,7 @@ fn validate_defaults(
                         start: working_dir_node.start_byte(),
                         end: working_dir_node.end_byte(),
                     },
+                    rule_id: String::new(),
                 });
             }
         }

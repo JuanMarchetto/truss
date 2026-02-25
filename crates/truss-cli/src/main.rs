@@ -42,6 +42,14 @@ enum Commands {
         /// Minimum severity level to display and fail on
         #[arg(long, value_enum)]
         severity: Option<SeverityFilter>,
+
+        /// Ignore specific rules by name (can be repeated)
+        #[arg(long = "ignore-rule", num_args = 1)]
+        ignore_rules: Vec<String>,
+
+        /// Run only specific rules by name (can be repeated)
+        #[arg(long = "only-rule", num_args = 1)]
+        only_rules: Vec<String>,
     },
 }
 
@@ -200,6 +208,8 @@ fn validate_source(
     quiet: bool,
     json: bool,
     severity_filter: SeverityFilter,
+    ignore_rules: &[String],
+    only_rules: &[String],
 ) -> Result<FileResult, TrussError> {
     let file_size = content.len() as u64;
     let lines = content.lines().count();
@@ -208,11 +218,20 @@ fn validate_source(
     let result = engine.analyze(content);
     let duration_ms = start.elapsed().as_secs_f64() * 1000.0;
 
-    // Filter diagnostics by severity
+    // Filter diagnostics by severity and rule filters
     let filtered: Vec<truss_core::Diagnostic> = result
         .diagnostics
         .into_iter()
         .filter(|d| severity_filter.includes(d.severity))
+        .filter(|d| {
+            if !only_rules.is_empty() {
+                return only_rules.iter().any(|r| r == &d.rule_id);
+            }
+            if !ignore_rules.is_empty() {
+                return !ignore_rules.iter().any(|r| r == &d.rule_id);
+            }
+            true
+        })
         .collect();
 
     let valid = !filtered
@@ -257,10 +276,12 @@ fn validate_file(
     quiet: bool,
     json: bool,
     severity_filter: SeverityFilter,
+    ignore_rules: &[String],
+    only_rules: &[String],
 ) -> Result<FileResult, TrussError> {
     let content = read_source(path)?;
     let label = if path == "-" { "<stdin>" } else { path };
-    validate_source(engine, label, &content, quiet, json, severity_filter)
+    validate_source(engine, label, &content, quiet, json, severity_filter, ignore_rules, only_rules)
 }
 
 fn validate_files(
@@ -268,6 +289,8 @@ fn validate_files(
     quiet: bool,
     json: bool,
     severity_filter: SeverityFilter,
+    ignore_rules: &[String],
+    only_rules: &[String],
 ) -> Result<(), TrussError> {
     let expanded = expand_paths(&paths)?;
 
@@ -286,7 +309,7 @@ fn validate_files(
     // Process stdin first (sequential, reuse one engine)
     let mut engine = TrussEngine::new();
     for path in &stdin_paths {
-        let result = validate_file(&mut engine, path, quiet, json, severity_filter);
+        let result = validate_file(&mut engine, path, quiet, json, severity_filter, ignore_rules, only_rules);
         all_results.push((path.to_string(), result));
     }
 
@@ -296,7 +319,7 @@ fn validate_files(
         file_paths
             .iter()
             .map(|path| {
-                let result = validate_file(&mut engine, path, quiet, json, severity_filter);
+                let result = validate_file(&mut engine, path, quiet, json, severity_filter, ignore_rules, only_rules);
                 (path.to_string(), result)
             })
             .collect()
@@ -305,7 +328,7 @@ fn validate_files(
             .par_iter()
             .map(|path| {
                 let mut engine = TrussEngine::new();
-                let result = validate_file(&mut engine, path, quiet, json, severity_filter);
+                let result = validate_file(&mut engine, path, quiet, json, severity_filter, ignore_rules, only_rules);
                 (path.to_string(), result)
             })
             .collect()
@@ -374,6 +397,8 @@ fn main() {
             quiet,
             json,
             severity,
+            ignore_rules,
+            only_rules,
         } => {
             let severity_filter = severity.unwrap_or(SeverityFilter::Info);
 
@@ -384,7 +409,7 @@ fn main() {
                 std::process::exit(EXIT_USAGE);
             }
 
-            if let Err(e) = validate_files(paths, quiet, json, severity_filter) {
+            if let Err(e) = validate_files(paths, quiet, json, severity_filter, &ignore_rules, &only_rules) {
                 if !quiet && !json {
                     eprintln!("Error: {}", e);
                 }

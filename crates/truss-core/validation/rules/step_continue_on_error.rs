@@ -158,6 +158,7 @@ impl ValidationRule for StepContinueOnErrorRule {
                                 start: continue_node.start_byte(),
                                 end: continue_node.end_byte(),
                             },
+                            rule_id: String::new(),
                         });
                     } else {
                         // Check if it's a boolean
@@ -175,6 +176,7 @@ impl ValidationRule for StepContinueOnErrorRule {
                                         start: continue_node.start_byte(),
                                         end: continue_node.end_byte(),
                                     },
+                                    rule_id: String::new(),
                                 });
                             } else {
                                 diagnostics.push(Diagnostic {
@@ -187,6 +189,7 @@ impl ValidationRule for StepContinueOnErrorRule {
                                         start: continue_node.start_byte(),
                                         end: continue_node.end_byte(),
                                     },
+                                    rule_id: String::new(),
                                 });
                             }
                         }

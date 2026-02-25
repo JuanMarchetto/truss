@@ -115,6 +115,7 @@ impl ValidationRule for RunnerLabelRule {
                                                     start: runs_on_node.start_byte(),
                                                     end: runs_on_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         } else {
                                             // Warn on unknown runner labels (might be valid self-hosted or custom)
@@ -128,6 +129,7 @@ impl ValidationRule for RunnerLabelRule {
                                                     start: runs_on_node.start_byte(),
                                                     end: runs_on_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }

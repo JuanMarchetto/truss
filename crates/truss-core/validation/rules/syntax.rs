@@ -38,6 +38,7 @@ impl ValidationRule for SyntaxRule {
                     message: format!("Syntax error: {}", error_snippet),
                     severity: Severity::Error,
                     span: Span { start, end },
+                    rule_id: String::new(),
                 });
             }
         }
@@ -50,6 +51,7 @@ impl ValidationRule for SyntaxRule {
                     start: 0,
                     end: source.len().min(100),
                 },
+                rule_id: String::new(),
             });
         }
 

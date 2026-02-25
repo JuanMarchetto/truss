@@ -135,6 +135,7 @@ impl WorkflowCallSecretsRule {
                                         start: required_node.start_byte(),
                                         end: required_node.end_byte(),
                                     },
+                                    rule_id: String::new(),
                                 });
                             }
                         }
@@ -158,6 +159,7 @@ impl WorkflowCallSecretsRule {
                                         start: description_node.start_byte(),
                                         end: description_node.end_byte(),
                                     },
+                                    rule_id: String::new(),
                                 });
                             }
                         }

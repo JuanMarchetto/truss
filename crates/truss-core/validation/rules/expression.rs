@@ -28,6 +28,7 @@ impl ValidationRule for ExpressionValidationRule {
                         start: expr.start,
                         end: source.len().min(expr.start + 50),
                     },
+                    rule_id: String::new(),
                 });
                 continue;
             }
@@ -40,6 +41,7 @@ impl ValidationRule for ExpressionValidationRule {
                         start: expr.start,
                         end: expr.end,
                     },
+                    rule_id: String::new(),
                 });
             } else if !utils::is_valid_expression_syntax(inner) {
                 diagnostics.push(Diagnostic {
@@ -49,6 +51,7 @@ impl ValidationRule for ExpressionValidationRule {
                         start: expr.start,
                         end: expr.end,
                     },
+                    rule_id: String::new(),
                 });
             }
 
@@ -79,6 +82,7 @@ fn validate_expression_operators(
             ),
             severity: Severity::Error,
             span: Span { start, end },
+            rule_id: String::new(),
         });
     }
 
@@ -101,6 +105,7 @@ fn validate_expression_operators(
                     start,
                     end,
                 },
+                rule_id: String::new(),
             });
         }
     }
@@ -165,6 +170,7 @@ fn validate_expression_functions(
                             start: start + func_start + 1,
                             end: start + actual_pos,
                         },
+                        rule_id: String::new(),
                     });
                 }
             }

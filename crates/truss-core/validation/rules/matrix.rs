@@ -174,6 +174,7 @@ impl ValidationRule for MatrixStrategyRule {
                                             start: key_node.start_byte(),
                                             end: key_node.end_byte(),
                                         },
+                                        rule_id: String::new(),
                                     });
                                 }
 
@@ -212,6 +213,7 @@ impl ValidationRule for MatrixStrategyRule {
                                                     start: value_to_check.start_byte(),
                                                     end: value_to_check.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     } else {
@@ -309,6 +311,7 @@ impl ValidationRule for MatrixStrategyRule {
                                                     start: value_to_check.start_byte(),
                                                     end: value_to_check.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }
@@ -421,6 +424,7 @@ fn validate_matrix_array_elements(
                             start: element_to_check.start_byte(),
                             end: element_to_check.end_byte(),
                         },
+                        rule_id: String::new(),
                     });
                 }
             }

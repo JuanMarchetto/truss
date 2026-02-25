@@ -20,6 +20,7 @@ impl ValidationRule for NonEmptyRule {
                 message: "Document is empty".to_string(),
                 severity: Severity::Warning,
                 span: Span::default(),
+                rule_id: String::new(),
             }]
         } else {
             Vec::new()

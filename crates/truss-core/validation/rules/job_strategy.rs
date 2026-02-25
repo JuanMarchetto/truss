@@ -70,6 +70,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                     start: strategy_node.start_byte(),
                                                     end: strategy_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         } else {
                                             // Strategy has max-parallel or fail-fast but no matrix - this is valid but unusual
@@ -84,6 +85,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                     start: strategy_node.start_byte(),
                                                     end: strategy_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         }
                                     }
@@ -118,6 +120,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                     start: max_parallel_node.start_byte(),
                                                     end: max_parallel_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         } else {
                                             match max_parallel_cleaned.parse::<i64>() {
@@ -133,6 +136,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                                 start: max_parallel_node.start_byte(),
                                                                 end: max_parallel_node.end_byte(),
                                                             },
+                                                            rule_id: String::new(),
                                                         });
                                                     } else if value == 0 {
                                                         diagnostics.push(Diagnostic {
@@ -145,6 +149,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                                 start: max_parallel_node.start_byte(),
                                                                 end: max_parallel_node.end_byte(),
                                                             },
+                                                            rule_id: String::new(),
                                                         });
                                                     }
                                                 }
@@ -159,6 +164,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                             start: max_parallel_node.start_byte(),
                                                             end: max_parallel_node.end_byte(),
                                                         },
+                                                        rule_id: String::new(),
                                                     });
                                                 }
                                             }
@@ -195,6 +201,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                     start: fail_fast_node.start_byte(),
                                                     end: fail_fast_node.end_byte(),
                                                 },
+                                                rule_id: String::new(),
                                             });
                                         } else {
                                             // Check if it's a boolean
@@ -213,6 +220,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                             start: fail_fast_node.start_byte(),
                                                             end: fail_fast_node.end_byte(),
                                                         },
+                                                        rule_id: String::new(),
                                                     });
                                                 } else {
                                                     diagnostics.push(Diagnostic {
@@ -225,6 +233,7 @@ impl ValidationRule for JobStrategyValidationRule {
                                                             start: fail_fast_node.start_byte(),
                                                             end: fail_fast_node.end_byte(),
                                                         },
+                                                        rule_id: String::new(),
                                                     });
                                                 }
                                             }
