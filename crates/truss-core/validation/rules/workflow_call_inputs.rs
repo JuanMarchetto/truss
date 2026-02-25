@@ -294,94 +294,46 @@ impl WorkflowCallInputsRule {
 
     fn find_input_references(&self, source: &str) -> Vec<(String, Span)> {
         let mut references = Vec::new();
-        let source_bytes = source.as_bytes();
-        let mut i = 0;
 
-        while i < source_bytes.len() {
-            if i + 3 < source_bytes.len()
-                && source_bytes[i] == b'$'
-                && source_bytes[i + 1] == b'{'
-                && source_bytes[i + 2] == b'{'
+        for expr in utils::find_expressions(source) {
+            let mut search_pos = 0;
+
+            while let Some(pos) =
+                utils::find_ignore_ascii_case(&expr.inner[search_pos..], "inputs.")
             {
-                let mut j = i + 3;
-                let mut brace_count = 2;
-                let mut found_closing = false;
+                let actual_pos = search_pos + pos;
+                let after_inputs = &expr.inner[actual_pos + 7..];
 
-                while j < source_bytes.len() {
-                    if j + 1 < source_bytes.len()
-                        && source_bytes[j] == b'}'
-                        && source_bytes[j + 1] == b'}'
-                    {
-                        brace_count -= 2;
-                        if brace_count == 0 {
-                            found_closing = true;
-                            j += 2;
-                            break;
-                        }
-                        j += 2;
-                    } else if source_bytes[j] == b'{' {
-                        brace_count += 1;
-                        j += 1;
-                    } else if source_bytes[j] == b'}' {
-                        brace_count -= 1;
-                        j += 1;
-                    } else {
-                        j += 1;
-                    }
+                let name_end = after_inputs
+                    .find(|c: char| {
+                        c.is_whitespace()
+                            || c == '}'
+                            || c == ')'
+                            || c == ']'
+                            || c == '&'
+                            || c == '|'
+                            || c == '='
+                            || c == '!'
+                            || c == '<'
+                            || c == '>'
+                            || c == '.'
+                    })
+                    .unwrap_or(after_inputs.len());
+
+                let input_name = &after_inputs[..name_end.min(after_inputs.len())];
+
+                if !input_name.is_empty() {
+                    let name_start = expr.start + 3 + actual_pos + 7;
+                    references.push((
+                        input_name.to_string(),
+                        Span {
+                            start: name_start,
+                            end: name_start + name_end,
+                        },
+                    ));
                 }
 
-                if found_closing {
-                    let expr_start = i + 3;
-                    let expr_end = j - 2;
-
-                    if expr_start < expr_end && expr_end <= source_bytes.len() {
-                        let expr_text = &source[expr_start..expr_end];
-                        let mut search_pos = 0;
-
-                        while let Some(pos) =
-                            utils::find_ignore_ascii_case(&expr_text[search_pos..], "inputs.")
-                        {
-                            let actual_pos = search_pos + pos;
-                            let after_inputs = &expr_text[actual_pos + 7..];
-
-                            let name_end = after_inputs
-                                .find(|c: char| {
-                                    c.is_whitespace()
-                                        || c == '}'
-                                        || c == ')'
-                                        || c == ']'
-                                        || c == '&'
-                                        || c == '|'
-                                        || c == '='
-                                        || c == '!'
-                                        || c == '<'
-                                        || c == '>'
-                                        || c == '.'
-                                })
-                                .unwrap_or(after_inputs.len());
-
-                            let input_name = &after_inputs[..name_end.min(after_inputs.len())];
-
-                            if !input_name.is_empty() {
-                                references.push((
-                                    input_name.to_string(),
-                                    Span {
-                                        start: i + 3 + actual_pos + 7,
-                                        end: i + 3 + actual_pos + 7 + name_end,
-                                    },
-                                ));
-                            }
-
-                            search_pos = actual_pos + 7 + name_end;
-                        }
-                    }
-
-                    i = j;
-                } else {
-                    i += 1;
-                }
-            } else {
-                i += 1;
+                search_pos = actual_pos + 7 + name_end;
             }
         }
 

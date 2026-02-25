@@ -213,59 +213,41 @@ fn collect_output_names(node: Node, source: &str, names: &mut HashSet<String>) {
 fn find_job_output_references(outputs_node: Node, source: &str) -> Vec<(String, String, Span)> {
     let mut references = Vec::new();
     let node_text = utils::node_text(outputs_node, source);
-
-    let source_bytes = node_text.as_bytes();
-    let mut i = 0;
     let node_start = outputs_node.start_byte();
 
-    while i < source_bytes.len() {
-        if i + 3 < source_bytes.len()
-            && source_bytes[i] == b'$'
-            && source_bytes[i + 1] == b'{'
-            && source_bytes[i + 2] == b'{'
-        {
-            let mut j = i + 3;
-            let mut brace_count = 2;
-            let mut found_closing = false;
+    for expr in utils::find_expressions(node_text) {
+        let mut search_pos = 0;
 
-            while j < source_bytes.len() {
-                if j + 1 < source_bytes.len()
-                    && source_bytes[j] == b'}'
-                    && source_bytes[j + 1] == b'}'
-                {
-                    brace_count -= 2;
-                    if brace_count == 0 {
-                        found_closing = true;
-                        j += 2;
-                        break;
-                    }
-                    j += 2;
-                } else if source_bytes[j] == b'{' {
-                    brace_count += 1;
-                    j += 1;
-                } else if source_bytes[j] == b'}' {
-                    brace_count -= 1;
-                    j += 1;
-                } else {
-                    j += 1;
-                }
-            }
+        while let Some(pos) = utils::find_ignore_ascii_case(&expr.inner[search_pos..], "jobs.") {
+            let actual_pos = search_pos + pos;
+            let after_jobs = &expr.inner[actual_pos + 5..];
 
-            if found_closing {
-                let expr_start = i + 3;
-                let expr_end = j - 2;
+            let job_name_end = after_jobs
+                .find(|c: char| {
+                    c.is_whitespace()
+                        || c == '.'
+                        || c == '}'
+                        || c == ')'
+                        || c == ']'
+                        || c == '&'
+                        || c == '|'
+                        || c == '='
+                        || c == '!'
+                        || c == '<'
+                        || c == '>'
+                })
+                .unwrap_or(after_jobs.len());
 
-                if expr_start < expr_end && expr_end <= source_bytes.len() {
-                    let expr_text = &node_text[expr_start..expr_end];
-                    let mut search_pos = 0;
+            let job_name = &after_jobs[..job_name_end.min(after_jobs.len())];
 
-                    while let Some(pos) =
-                        utils::find_ignore_ascii_case(&expr_text[search_pos..], "jobs.")
-                    {
-                        let actual_pos = search_pos + pos;
-                        let after_jobs = &expr_text[actual_pos + 5..];
+            if !job_name.is_empty() {
+                let after_job = &after_jobs[job_name_end..];
 
-                        let job_name_end = after_jobs
+                if let Some(after_outputs) = after_job.strip_prefix(".outputs") {
+                    let after_outputs_trimmed = after_outputs.trim();
+
+                    if let Some(output_name) = after_outputs_trimmed.strip_prefix('.') {
+                        let output_name_end = output_name
                             .find(|c: char| {
                                 c.is_whitespace()
                                     || c == '.'
@@ -278,69 +260,29 @@ fn find_job_output_references(outputs_node: Node, source: &str) -> Vec<(String, 
                                     || c == '!'
                                     || c == '<'
                                     || c == '>'
+                                    || c == '['
                             })
-                            .unwrap_or(after_jobs.len());
+                            .unwrap_or(output_name.len());
 
-                        let job_name = &after_jobs[..job_name_end.min(after_jobs.len())];
+                        let output_name_cleaned = &output_name[..output_name_end];
 
-                        if !job_name.is_empty() {
-                            let after_job = &after_jobs[job_name_end..];
+                        if !output_name_cleaned.is_empty() {
+                            let job_name_start = node_start + expr.start + 3 + actual_pos + 5;
 
-                            // Check if followed by .outputs.
-                            if let Some(after_outputs) = after_job.strip_prefix(".outputs") {
-                                let after_outputs_trimmed = after_outputs.trim();
-
-                                // Extract output name after .outputs.
-                                if let Some(output_name) = after_outputs_trimmed.strip_prefix('.') {
-                                    let output_name_end = output_name
-                                        .find(|c: char| {
-                                            c.is_whitespace()
-                                                || c == '.'
-                                                || c == '}'
-                                                || c == ')'
-                                                || c == ']'
-                                                || c == '&'
-                                                || c == '|'
-                                                || c == '='
-                                                || c == '!'
-                                                || c == '<'
-                                                || c == '>'
-                                                || c == '['
-                                        })
-                                        .unwrap_or(output_name.len());
-
-                                    let output_name_cleaned = &output_name[..output_name_end];
-
-                                    if !output_name_cleaned.is_empty() {
-                                        // Calculate span relative to the original source
-                                        let expr_offset_in_source = node_start + i + 3;
-                                        let jobs_pos_in_expr = actual_pos;
-                                        let job_name_start =
-                                            expr_offset_in_source + jobs_pos_in_expr + 5; // +5 for "jobs."
-
-                                        references.push((
-                                            job_name.to_string(),
-                                            output_name_cleaned.to_string(),
-                                            Span {
-                                                start: job_name_start,
-                                                end: job_name_start + job_name.len(),
-                                            },
-                                        ));
-                                    }
-                                }
-                            }
+                            references.push((
+                                job_name.to_string(),
+                                output_name_cleaned.to_string(),
+                                Span {
+                                    start: job_name_start,
+                                    end: job_name_start + job_name.len(),
+                                },
+                            ));
                         }
-
-                        search_pos = actual_pos + 5 + job_name_end;
                     }
                 }
-
-                i = j;
-            } else {
-                i += 1;
             }
-        } else {
-            i += 1;
+
+            search_pos = actual_pos + 5 + job_name_end;
         }
     }
 
@@ -348,69 +290,19 @@ fn find_job_output_references(outputs_node: Node, source: &str) -> Vec<(String, 
 }
 
 fn find_all_expressions(outputs_node: Node, source: &str) -> Vec<(String, Span)> {
-    let mut expressions = Vec::new();
     let node_text = utils::node_text(outputs_node, source);
-
-    let source_bytes = node_text.as_bytes();
-    let mut i = 0;
     let node_start = outputs_node.start_byte();
 
-    while i < source_bytes.len() {
-        if i + 3 < source_bytes.len()
-            && source_bytes[i] == b'$'
-            && source_bytes[i + 1] == b'{'
-            && source_bytes[i + 2] == b'{'
-        {
-            let mut j = i + 3;
-            let mut brace_count = 2;
-            let mut found_closing = false;
-
-            while j < source_bytes.len() {
-                if j + 1 < source_bytes.len()
-                    && source_bytes[j] == b'}'
-                    && source_bytes[j + 1] == b'}'
-                {
-                    brace_count -= 2;
-                    if brace_count == 0 {
-                        found_closing = true;
-                        j += 2;
-                        break;
-                    }
-                    j += 2;
-                } else if source_bytes[j] == b'{' {
-                    brace_count += 1;
-                    j += 1;
-                } else if source_bytes[j] == b'}' {
-                    brace_count -= 1;
-                    j += 1;
-                } else {
-                    j += 1;
-                }
-            }
-
-            if found_closing {
-                let expr_start = i + 3;
-                let expr_end = j - 2;
-
-                if expr_start < expr_end && expr_end <= source_bytes.len() {
-                    let expr_text = &node_text[expr_start..expr_end];
-                    expressions.push((
-                        expr_text.to_string(),
-                        Span {
-                            start: node_start + i,
-                            end: node_start + j,
-                        },
-                    ));
-                }
-
-                i = j;
-            } else {
-                i += 1;
-            }
-        } else {
-            i += 1;
-        }
-    }
-
-    expressions
+    utils::find_expressions(node_text)
+        .into_iter()
+        .map(|expr| {
+            (
+                expr.inner.to_string(),
+                Span {
+                    start: node_start + expr.start,
+                    end: node_start + expr.end,
+                },
+            )
+        })
+        .collect()
 }

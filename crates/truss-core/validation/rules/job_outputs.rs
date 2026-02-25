@@ -154,150 +154,74 @@ fn find_output_expressions(
     let mut references = Vec::new();
     let mut incomplete_refs = Vec::new();
     let outputs_text = utils::node_text(outputs_node, source);
+    let node_start = outputs_node.start_byte();
 
-    // Find all ${{ ... }} expressions
-    let source_bytes = outputs_text.as_bytes();
-    let mut i = 0;
+    for expr in utils::find_expressions(outputs_text) {
+        let mut search_pos = 0;
 
-    while i < source_bytes.len() {
-        // Look for ${{ pattern
-        if i + 3 < source_bytes.len()
-            && source_bytes[i] == b'$'
-            && source_bytes[i + 1] == b'{'
-            && source_bytes[i + 2] == b'{'
-        {
-            // Find the closing }}
-            let mut j = i + 3;
-            let mut brace_count = 2;
-            let mut found_closing = false;
+        while let Some(pos) = utils::find_ignore_ascii_case(&expr.inner[search_pos..], "steps.") {
+            let actual_pos = search_pos + pos;
+            let after_steps = &expr.inner[actual_pos + 6..];
 
-            while j < source_bytes.len() {
-                if j + 1 < source_bytes.len()
-                    && source_bytes[j] == b'}'
-                    && source_bytes[j + 1] == b'}'
-                {
-                    brace_count -= 2;
-                    if brace_count == 0 {
-                        found_closing = true;
-                        j += 2;
-                        break;
+            let step_id_end = after_steps
+                .find(|c: char| {
+                    c.is_whitespace()
+                        || c == '.'
+                        || c == '}'
+                        || c == ')'
+                        || c == ']'
+                        || c == '&'
+                        || c == '|'
+                        || c == '='
+                        || c == '!'
+                        || c == '<'
+                        || c == '>'
+                })
+                .unwrap_or(after_steps.len());
+
+            let step_id = &after_steps[..step_id_end.min(after_steps.len())];
+
+            if !step_id.is_empty() {
+                let after_step_id = &after_steps[step_id_end..];
+
+                if let Some(after_outputs) = after_step_id.strip_prefix(".outputs") {
+                    let after_outputs_trimmed = after_outputs.trim();
+
+                    let span_start = node_start + expr.start + 3 + actual_pos + 6;
+                    let step_span = Span {
+                        start: span_start,
+                        end: span_start + step_id.len(),
+                    };
+
+                    let has_property_after = after_outputs_trimmed.starts_with(".")
+                        || after_outputs_trimmed.starts_with("[");
+
+                    let is_incomplete = after_outputs_trimmed.is_empty()
+                        || after_outputs_trimmed
+                            .chars()
+                            .all(|c| c.is_whitespace() || c == '}' || c == ')' || c == ']');
+
+                    let is_incomplete_ref = is_incomplete
+                        || (!has_property_after
+                            && after_outputs_trimmed.len() == 1
+                            && !after_outputs_trimmed.starts_with(".")
+                            && !after_outputs_trimmed.starts_with("["));
+
+                    if is_incomplete_ref && !has_property_after {
+                        incomplete_refs.push((
+                            Span {
+                                start: node_start + expr.start,
+                                end: node_start + expr.end,
+                            },
+                            step_id.to_string(),
+                        ));
+                    } else {
+                        references.push((step_id.to_string(), step_span));
                     }
-                    j += 2;
-                } else if source_bytes[j] == b'{' {
-                    brace_count += 1;
-                    j += 1;
-                } else if source_bytes[j] == b'}' {
-                    brace_count -= 1;
-                    j += 1;
-                } else {
-                    j += 1;
                 }
             }
 
-            if found_closing {
-                // Extract the expression content
-                let expr_start = i + 3;
-                let expr_end = j - 2;
-
-                if expr_start < expr_end && expr_end <= source_bytes.len() {
-                    let expr_text = &outputs_text[expr_start..expr_end];
-
-                    // Look for steps.*.outputs.* references
-                    let mut search_pos = 0;
-
-                    while let Some(pos) =
-                        utils::find_ignore_ascii_case(&expr_text[search_pos..], "steps.")
-                    {
-                        let actual_pos = search_pos + pos;
-                        let after_steps = &expr_text[actual_pos + 6..]; // Skip "steps."
-
-                        // Find where the step ID ends
-                        let step_id_end = after_steps
-                            .find(|c: char| {
-                                c.is_whitespace()
-                                    || c == '.'
-                                    || c == '}'
-                                    || c == ')'
-                                    || c == ']'
-                                    || c == '&'
-                                    || c == '|'
-                                    || c == '='
-                                    || c == '!'
-                                    || c == '<'
-                                    || c == '>'
-                            })
-                            .unwrap_or(after_steps.len());
-
-                        let step_id = &after_steps[..step_id_end.min(after_steps.len())];
-
-                        if !step_id.is_empty() {
-                            // Check if this is followed by .outputs
-                            let after_step_id = &after_steps[step_id_end..];
-
-                            if let Some(after_outputs) = after_step_id.strip_prefix(".outputs") {
-                                let after_outputs_trimmed = after_outputs.trim();
-
-                                // Calculate the actual span in the source
-                                let node_start = outputs_node.start_byte();
-                                let span_start = node_start + i + 3 + actual_pos + 6;
-                                let span_end = span_start + step_id.len();
-                                let step_span = Span {
-                                    start: span_start,
-                                    end: span_end,
-                                };
-
-                                // Check if after .outputs we have a property access (starts with . or [)
-                                let has_property_after = after_outputs_trimmed.starts_with(".")
-                                    || after_outputs_trimmed.starts_with("[");
-
-                                // Check if it's incomplete (empty or only whitespace/closing braces)
-                                // The expression text doesn't include the closing }}, so if after .outputs
-                                // we only have whitespace or nothing, it's incomplete
-                                let is_incomplete = after_outputs_trimmed.is_empty()
-                                    || (!after_outputs_trimmed.is_empty()
-                                        && after_outputs_trimmed.chars().all(|c| {
-                                            c.is_whitespace() || c == '}' || c == ')' || c == ']'
-                                        }));
-
-                                // It's incomplete if it doesn't have a property access after .outputs
-                                // After ".outputs", there MUST be a property access starting with . or [
-                                // Empty or whitespace/closing chars only is incomplete
-                                // Also check: if after_outputs_trimmed has a single non-whitespace char that's not . or [, it's likely incomplete
-                                // (this catches cases like "s" which shouldn't be there)
-                                let is_incomplete_ref = is_incomplete
-                                    || (!has_property_after
-                                        && after_outputs_trimmed.len() == 1
-                                        && !after_outputs_trimmed.starts_with(".")
-                                        && !after_outputs_trimmed.starts_with("["));
-
-                                if is_incomplete_ref && !has_property_after {
-                                    // Incomplete output reference: steps.X.outputs without property name
-                                    let full_expr_start = node_start + i;
-                                    let full_expr_end = node_start + j;
-                                    incomplete_refs.push((
-                                        Span {
-                                            start: full_expr_start,
-                                            end: full_expr_end,
-                                        },
-                                        step_id.to_string(),
-                                    ));
-                                } else {
-                                    // Valid reference - add to references for step ID validation
-                                    references.push((step_id.to_string(), step_span));
-                                }
-                            }
-                        }
-
-                        search_pos = actual_pos + 6 + step_id_end;
-                    }
-                }
-
-                i = j;
-            } else {
-                i += 1;
-            }
-        } else {
-            i += 1;
+            search_pos = actual_pos + 6 + step_id_end;
         }
     }
 
