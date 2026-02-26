@@ -28,12 +28,10 @@ impl ValidationRule for WorkflowInputsRule {
         let workflow_dispatch_value =
             utils::find_value_for_key(on_to_check, source, "workflow_dispatch");
 
-        if workflow_dispatch_value.is_none() {
+        let Some(workflow_dispatch) = workflow_dispatch_value else {
             // No workflow_dispatch, nothing to validate
             return diagnostics;
-        }
-
-        let workflow_dispatch = workflow_dispatch_value.unwrap();
+        };
         let dispatch_to_check = utils::unwrap_node(workflow_dispatch);
 
         // Extract defined inputs and their types

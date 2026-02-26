@@ -1,0 +1,59 @@
+name: Deploy Playground
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/truss-wasm/**"
+      - "crates/truss-core/**"
+      - "playground/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build WASM Playground
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM package
+        run: wasm-pack build crates/truss-wasm --target web --release
+
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p _site/pkg
+          cp playground/index.html _site/
+          cp crates/truss-wasm/pkg/truss_wasm.js _site/pkg/
+          cp crates/truss-wasm/pkg/truss_wasm_bg.wasm _site/pkg/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

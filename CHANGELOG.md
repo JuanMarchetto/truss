@@ -8,32 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Community infrastructure: issue templates, security policy, code of conduct
-- Release workflow for cross-platform binary distribution
-
-## [0.1.0] - 2025-01-15
-
-### Added
-- Initial release of Truss GitHub Actions workflow validator
-- 41 validation rules covering:
-  - Workflow structure and syntax validation
-  - Job configuration (needs, outputs, strategy, containers)
-  - Step validation (shell, timeout, env, working directory)
-  - Expression validation and script injection detection
-  - Action reference validation and deprecated command detection
-  - Permissions, secrets, and environment validation
-  - Reusable workflow call validation (inputs, outputs, secrets)
-  - Matrix strategy and concurrency configuration
-  - Artifact and event payload validation
-  - Runner label validation
-- Tree-sitter based YAML parsing for accurate AST analysis
+- 41 validation rules across 5 categories (core, job, step, workflow, expression/security)
+- Tree-sitter YAML parsing with incremental re-parsing support
 - Parallel rule execution via rayon
-- CLI with glob pattern support, directory recursion, stdin input
-- JSON output format for CI/CD integration
-- Severity filtering (error, warning, info)
-- LSP server for real-time editor integration
-- Zero false positives on real-world workflow testing
-- Performance: sub-millisecond single-file validation
+- CLI with glob patterns, directory recursion, stdin input, JSON output, severity filtering
+- Per-rule filtering: `--ignore-rules` and `--only-rules`
+- `.truss.yml` project configuration (ignore paths, enable/disable rules)
+- Unique rule IDs on all diagnostics
+- LSP server with real-time diagnostics and incremental parsing
+- VS Code extension
+- WASM bindings and browser playground
+- Zero false positives on 271 production workflow files from 7 major OSS projects
+- Cross-platform release workflow (Linux, macOS, Windows)
+- GitHub Pages deployment for WASM playground
+- Code coverage via cargo-tarpaulin in CI
 
-[Unreleased]: https://github.com/JuanMarchetto/truss/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/JuanMarchetto/truss/releases/tag/v0.1.0
+[Unreleased]: https://github.com/JuanMarchetto/truss/commits/main

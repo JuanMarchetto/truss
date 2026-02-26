@@ -69,9 +69,36 @@ jobs:
             ${{ matrix.artifact }}.zip
             ${{ matrix.artifact }}.zip.sha256
 
+  wasm:
+    name: Build WASM Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM package
+        run: wasm-pack build crates/truss-wasm --target web --release
+
+      - name: Package WASM
+        run: |
+          tar czf truss-wasm.tar.gz -C crates/truss-wasm/pkg .
+          shasum -a 256 truss-wasm.tar.gz > truss-wasm.tar.gz.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: truss-wasm
+          path: |
+            truss-wasm.tar.gz
+            truss-wasm.tar.gz.sha256
+
   release:
     name: Create Release
-    needs: build
+    needs: [build, wasm]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

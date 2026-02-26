@@ -114,7 +114,7 @@ fn validate_concurrency_node(
     // Mapping form: must have a `group` key
     let group_value = utils::find_value_for_key(concurrency_to_check, source, "group");
 
-    if group_value.is_none() {
+    let Some(group_node) = group_value else {
         diagnostics.push(Diagnostic {
             message: format!(
                 "Concurrency at {} level is missing required 'group' field.",
@@ -128,9 +128,7 @@ fn validate_concurrency_node(
             rule_id: String::new(),
         });
         return;
-    }
-
-    let group_node = group_value.unwrap();
+    };
     let group_text = utils::node_text(group_node, source);
     let group_cleaned =
         group_text.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
