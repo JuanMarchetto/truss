@@ -1,13 +1,9 @@
 name: Deploy Playground
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "crates/truss-wasm/**"
-      - "crates/truss-core/**"
-      - "playground/**"
-      - ".github/workflows/pages.yml"
+  # Auto-deploy disabled until tree-sitter is upgraded to 0.24+ with WASM support.
+  # tree-sitter 0.21 uses AsRawFd/dup() which don't exist on wasm32-unknown-unknown.
+  # Trigger manually once the upgrade is done.
   workflow_dispatch:
 
 permissions:
