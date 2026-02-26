@@ -12,7 +12,7 @@ If you discover a security vulnerability in Truss, please report it responsibly.
 
 **Do NOT open a public issue for security vulnerabilities.**
 
-Instead, please email **security@truss.dev** (or open a private security advisory via GitHub's "Report a vulnerability" button on the Security tab).
+Instead, please open a private security advisory via GitHub's "Report a vulnerability" button on the Security tab.
 
 ### What to include
 
