@@ -433,7 +433,15 @@ fn main() {
                         if !quiet && !json {
                             eprintln!("Using config: {}", path.display());
                         }
-                        TrussConfig::from_file(&path).unwrap_or_default()
+                        match TrussConfig::from_file(&path) {
+                            Ok(c) => c,
+                            Err(e) => {
+                                if !quiet && !json {
+                                    eprintln!("Warning: failed to parse {}: {}", path.display(), e);
+                                }
+                                TrussConfig::default()
+                            }
+                        }
                     }
                     None => TrussConfig::default(),
                 }

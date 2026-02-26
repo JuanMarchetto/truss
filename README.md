@@ -1,5 +1,8 @@
 # Truss
 
+[![CI](https://github.com/JuanMarchetto/truss/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanMarchetto/truss/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE-MIT)
+
 > **Heads up:** This project is still early. A good chunk of the code was AI-generated and is being actively reviewed, tested, and improved. All tests pass and the benchmarks are reproducible, but treat this as experimental for now. Bug reports and contributions are very welcome as we work toward a stable release.
 
 A fast GitHub Actions workflow validator written in Rust. Truss catches configuration errors, semantic issues, and common mistakes in your CI/CD pipelines before you push — so you spend less time debugging failed runs.
@@ -255,7 +258,7 @@ truss/
 │   │   └── benches/      # Criterion benchmarks
 │   ├── truss-cli/        # CLI — parallel processing, globs, stdin, JSON output
 │   ├── truss-lsp/        # Language Server Protocol adapter
-│   └── truss-wasm/       # WebAssembly bindings (placeholder)
+│   └── truss-wasm/       # WebAssembly bindings
 ├── editors/
 │   └── vscode/           # VS Code extension
 ├── benchmarks/           # Fixtures and Hyperfine results
@@ -312,11 +315,11 @@ More details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - CLI with parallel file processing, globs, stdin, severity filtering, rule filtering (`--ignore-rules`, `--only-rules`), JSON output
 - `.truss.yml` configuration file support (ignore paths, enable/disable rules per project)
 - Sub-6ms validation per file, 3.9x faster than actionlint on real-world batches
+- WASM bindings and online playground
 - CI pipeline (check, test, clippy, fmt)
 
 **Coming next:**
 - Contextual autocomplete
-- WASM bindings and online playground
 - `cargo install truss-cli` (crates.io)
 - Neovim and other editor integrations
 
