@@ -28,10 +28,19 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Install wasm-pack and wasi-sdk
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          WASI_VERSION=25
+          WASI_VERSION_FULL=${WASI_VERSION}.0
+          wget -q https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_VERSION}/wasi-sdk-${WASI_VERSION_FULL}-x86_64-linux.tar.gz
+          tar xzf wasi-sdk-${WASI_VERSION_FULL}-x86_64-linux.tar.gz
+          sudo mv wasi-sdk-${WASI_VERSION_FULL}-x86_64-linux /opt/wasi-sdk
 
       - name: Build WASM package
+        env:
+          CC: /opt/wasi-sdk/bin/clang
+          CFLAGS: "--sysroot=/opt/wasi-sdk/share/wasi-sysroot -target wasm32-unknown-unknown -fvisibility=default"
         run: wasm-pack build crates/truss-wasm --target web --release
 
       - name: Prepare deploy directory
