@@ -39,6 +39,7 @@ jobs:
         run: |
           mkdir -p _site/pkg
           cp playground/index.html _site/
+          cp playground/env.js _site/pkg/
           cp crates/truss-wasm/pkg/truss_wasm.js _site/pkg/
           cp crates/truss-wasm/pkg/truss_wasm_bg.wasm _site/pkg/
 
