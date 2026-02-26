@@ -33,7 +33,7 @@ jobs:
 
       - name: Build WASM package
         env:
-          CFLAGS_wasm32_unknown_unknown: "-Icrates/truss-wasm/wasm-shim"
+          CFLAGS_wasm32_unknown_unknown: "-I${{ github.workspace }}/crates/truss-wasm/wasm-shim"
         run: wasm-pack build crates/truss-wasm --target web --release
 
       - name: Prepare deploy directory
