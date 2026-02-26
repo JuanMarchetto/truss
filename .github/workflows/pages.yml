@@ -35,6 +35,15 @@ jobs:
           CFLAGS_wasm32_unknown_unknown: "-I${{ github.workspace }}/crates/truss-wasm/wasm-shim"
         run: wasm-pack build crates/truss-wasm --target web --release
 
+      - name: Strip dead env imports from wasm-bindgen output
+        run: |
+          # wasm-opt removes unused C stdlib imports from the binary,
+          # but wasm-bindgen already generated the JS before wasm-opt ran.
+          # Strip the dead "env" references so browsers don't choke on
+          # the bare module specifier.
+          sed -i '/^import .* from "env"/d' crates/truss-wasm/pkg/truss_wasm.js
+          sed -i '/"env":/d' crates/truss-wasm/pkg/truss_wasm.js
+
       - name: Prepare deploy directory
         run: |
           mkdir -p _site/pkg
