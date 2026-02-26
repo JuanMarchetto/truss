@@ -7,6 +7,8 @@ pub mod config;
 mod parser;
 mod validation;
 
+pub use validation::ValidationRule;
+
 use parser::{ParseError, YamlParser};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -18,9 +20,9 @@ use validation::{
     ReusableWorkflowCallRule, RuleSet, RunnerLabelRule, RunsOnRequiredRule, ScriptInjectionRule,
     SecretsValidationRule, StepContinueOnErrorRule, StepEnvValidationRule, StepIdUniquenessRule,
     StepIfExpressionRule, StepNameRule, StepOutputReferenceRule, StepShellRule, StepTimeoutRule,
-    StepValidationRule, StepWorkingDirectoryRule, SyntaxRule, TimeoutRule, ValidationRule,
-    WorkflowCallInputsRule, WorkflowCallOutputsRule, WorkflowCallSecretsRule, WorkflowInputsRule,
-    WorkflowNameRule, WorkflowTriggerRule,
+    StepValidationRule, StepWorkingDirectoryRule, SyntaxRule, TimeoutRule, WorkflowCallInputsRule,
+    WorkflowCallOutputsRule, WorkflowCallSecretsRule, WorkflowInputsRule, WorkflowNameRule,
+    WorkflowTriggerRule,
 };
 
 /// Entry point for the Truss validation engine.

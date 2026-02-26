@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-02-26
+
 ### Added
 - 41 validation rules across 5 categories (core, job, step, workflow, expression/security)
 - Tree-sitter YAML parsing with incremental re-parsing support

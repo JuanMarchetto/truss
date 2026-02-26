@@ -218,14 +218,6 @@ impl ValidationRule for MatrixStrategyRule {
                                                 rule_id: String::new(),
                                             });
                                         }
-                                    } else {
-                                        // Validate array elements (basic type validation)
-                                        validate_matrix_array_elements(
-                                            value_to_check,
-                                            source,
-                                            key_cleaned,
-                                            diagnostics,
-                                        );
                                     }
                                 }
                             }
@@ -359,70 +351,4 @@ fn is_valid_matrix_key_name(key_name: &str) -> bool {
     key_name
         .chars()
         .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
-}
-
-/// Validates matrix array elements (basic type validation)
-fn validate_matrix_array_elements(
-    array_node: Node,
-    _source: &str,
-    _key_name: &str,
-    _diagnostics: &mut Vec<Diagnostic>,
-) {
-    let mut cursor = array_node.walk();
-    for child in array_node.children(&mut cursor) {
-        // Skip bracket nodes in flow sequences: "[" and "]"
-        let child_kind = child.kind();
-        if child_kind == "[" || child_kind == "]" {
-            continue;
-        }
-
-        let mut element_to_check = child;
-
-        // Unwrap block_node and flow_node to get to the actual element
-        while matches!(element_to_check.kind(), "block_node" | "flow_node") {
-            if let Some(inner) = element_to_check.child(0) {
-                element_to_check = inner;
-            } else {
-                break;
-            }
-        }
-
-        // Unwrap block_sequence_item to get its content (skip "-" and comments)
-        if element_to_check.kind() == "block_sequence_item" {
-            for i in 0..element_to_check.child_count() {
-                if let Some(seq_child) = element_to_check.child(i) {
-                    if seq_child.kind() != "-" && seq_child.kind() != "comment" {
-                        element_to_check = seq_child;
-                        break;
-                    }
-                }
-            }
-            // Continue unwrapping block_node/flow_node after sequence item
-            while matches!(element_to_check.kind(), "block_node" | "flow_node") {
-                if let Some(inner) = element_to_check.child(0) {
-                    element_to_check = inner;
-                } else {
-                    break;
-                }
-            }
-        }
-
-        match element_to_check.kind() {
-            "plain_scalar" | "double_quoted_scalar" | "single_quoted_scalar" | "block_scalar" => {
-                // Scalar values are valid
-            }
-            "block_mapping" | "flow_mapping" => {
-                // Objects in arrays are valid (for include/exclude)
-            }
-            "block_sequence" | "flow_sequence" => {
-                // Nested arrays are valid
-            }
-            _ => {
-                // Other node types (integer_scalar, boolean_scalar, null_scalar,
-                // tag, anchor, alias, etc.) are valid in matrix arrays.
-                // Tree-sitter YAML can produce various node kinds depending on
-                // the YAML content; we only flag truly empty/whitespace-only nodes.
-            }
-        }
-    }
 }
