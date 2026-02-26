@@ -40,7 +40,7 @@ jobs:
       - name: Build WASM package
         env:
           CC: /opt/wasi-sdk/bin/clang
-          CFLAGS: "--sysroot=/opt/wasi-sdk/share/wasi-sysroot -target wasm32-unknown-unknown -fvisibility=default"
+          CFLAGS_wasm32_unknown_unknown: "-I/opt/wasi-sdk/share/wasi-sysroot/include/wasm32-wasi -fvisibility=default"
         run: wasm-pack build crates/truss-wasm --target web --release
 
       - name: Prepare deploy directory
