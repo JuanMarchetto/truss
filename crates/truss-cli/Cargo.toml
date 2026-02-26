@@ -16,7 +16,7 @@ name = "truss"
 path = "src/main.rs"
 
 [dependencies]
-truss-core = { path = "../truss-core" }
+truss-core = { version = "0.1.0", path = "../truss-core" }
 clap.workspace = true
 glob = "0.3"
 rayon.workspace = true
